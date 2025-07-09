@@ -130,7 +130,7 @@ def calculate_spatial_hazard(nticks, beta_jt_human, p, tau_i, S, V1sus, V2sus, N
     """
 
     for t in range(nticks):
-        beta_jt = beta_jt_human[t % p, :]
+        beta_jt = beta_jt_human[t, :]
         tau_j = tau_i
         S_j = S[t] + V1sus[t] + V2sus[t]  # Use S_j where S_j = S + V1sus + V2sus
         N_i = N_j = N[t]

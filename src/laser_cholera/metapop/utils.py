@@ -5,42 +5,17 @@ import numpy as np
 from laser_core.migration import distance
 
 
-def fourier_series_double(t, beta0, a1, b1, a2, b2, p):
-    """
-    Computes the value of a Fourier series with two harmonics at a given time.
-
-    Args:
-        t (array-like): Time values.
-        beta0 (float): Constant term of the Fourier series.
-        a1 (array-like): Amplitudes of the first harmonic (cosine component).
-        b1 (array-like): Amplitudes of the first harmonic (sine component).
-        a2 (array-like): Amplitudes of the second harmonic (cosine component).
-        b2 (array-like): Amplitudes of the second harmonic (sine component).
-        p (float): Period of the Fourier series.
-
-    Returns:
-        numpy.ndarray: The computed Fourier series values at the given time points.
-    """
-    return (
-        beta0
-        + a1[None, :] * np.cos(2 * np.pi * t / p)[:, None]
-        + b1[None, :] * np.sin(2 * np.pi * t / p)[:, None]
-        + a2[None, :] * np.cos(4 * np.pi * t / p)[:, None]
-        + b2[None, :] * np.sin(4 * np.pi * t / p)[:, None]
-    )
-
-
 def get_daily_seasonality(params):
-    beta_j0 = params.beta_j0_hum
+    beta_j0_hum = params.beta_j0_hum
     a1 = params.a_1_j
     b1 = params.b_1_j
     a2 = params.a_2_j
     b2 = params.b_2_j
     p = params.p
-    t = np.arange(0, p)
+    t = np.arange(0, params.nticks) + 1  # R is 1-indexed, so we start at 1
 
     seasonality = (
-        beta_j0
+        beta_j0_hum
         * (
             1.0
             + a1[None, :] * np.cos(2 * np.pi * t / p)[:, None]

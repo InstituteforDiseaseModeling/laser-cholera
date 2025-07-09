@@ -33,7 +33,7 @@ class HumanToHuman:
         assert "b_2_j" in self.model.params, "HumanToHuman: model params needs to have a 'b_2_j' (seasonality) parameter."
         assert "p" in self.model.params, "HumanToHuman: model params needs to have a 'p' (seasonality pahse) parameter."
 
-        model.patches.add_array_property("beta_jt_human", (model.params.p, model.patches.count), dtype=np.float32, default=0.0)
+        model.patches.add_array_property("beta_jt_human", (model.params.nticks, model.patches.count), dtype=np.float32, default=0.0)
         model.patches.beta_jt_human[:, :] = get_daily_seasonality(model.params)
 
         model.patches.add_vector_property("incidence_human", length=model.params.nticks + 1, dtype=np.int32, default=0)
@@ -87,7 +87,7 @@ class HumanToHuman:
         immigrating_i = ((model.params.tau_i * total_i) * model.patches.pi_ij.T).T.sum(axis=0).astype(Lambda.dtype)
         effective_i = local_i + immigrating_i
         power_adjusted = np.power(effective_i, model.params.alpha_1).astype(Lambda.dtype)
-        seasonality = (model.patches.beta_jt_human[tick % model.params.p, :]).astype(Lambda.dtype)
+        seasonality = (model.patches.beta_jt_human[tick, :]).astype(Lambda.dtype)
         adjusted = seasonality * power_adjusted
         denominator = np.power(N, model.params.alpha_2).astype(Lambda.dtype)
         rate = (adjusted / denominator).astype(Lambda.dtype)

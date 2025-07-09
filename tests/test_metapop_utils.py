@@ -17,7 +17,7 @@ class TestMetapopUtils(unittest.TestCase):
 
     def test_get_daily_seasonality(self):
         seasonality = get_daily_seasonality(self.params)
-        assert seasonality.shape == (self.params.p, self.npatches), "get_daily_seasonality: seasonality shape mismatch"
+        assert seasonality.shape == (self.params.nticks, self.npatches), "get_daily_seasonality: seasonality shape mismatch"
         assert seasonality.dtype == np.float32, "get_daily_seasonality: seasonality dtype mismatch"
 
         # TODO - test some values?
