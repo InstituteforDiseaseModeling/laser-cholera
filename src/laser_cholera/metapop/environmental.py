@@ -122,6 +122,15 @@ def map_suitability_to_decay(fast, slow, suitability, beta_a, beta_b):
     """
     Map suitability to decay using a beta distribution.
 
+    $ \\delta_{jt} = \frac { 1 } { \text {days}_short + f( \\psi_{jt}) ( \text {days}_long  - \text {days}_short ) } $
+
+    We use a parameterized beta distribution to map suitability values [0, 1] to [0, 1] in a, potentially, non-linear way.
+
+    The resulting suitability factor determines a decay rate that is large when suitability is low,
+    i.e., when suitability is 0, the decay rate is 1/fast and since fast is a short time or small number of days, 1/fast is relatively large,
+    and small when suitability is high,
+    i.e. when suitability is 1, the decay rate is 1/slow and since slow is a long time or larger number of days, 1/slow is relatively small.
+
     Parameters
     ----------
     fast : float
@@ -140,4 +149,4 @@ def map_suitability_to_decay(fast, slow, suitability, beta_a, beta_b):
     np.ndarray
         Decay rates corresponding to the suitability values.
     """
-    return 1.0 / fast + beta.cdf(suitability, beta_a, beta_b) * (1.0 / slow - 1.0 / fast)
+    return 1.0 / (fast + beta.cdf(suitability, beta_a, beta_b) * (slow - fast))
