@@ -50,8 +50,8 @@ class TestEnvToHumanVax(unittest.TestCase):
         assert np.all(np.diff(cls.baseline.people.V2inf, axis=0) >= 0), "V2inf: not increasing with environmental transmission."
 
         # Expect V1 and V2 to be in steady state with vaccine dynamics turned off.
-        assert np.all(cls.baseline.people.V1[1:] == cls.baseline.people.V1[0]), "V1: steady state not held."
-        assert np.all(cls.baseline.people.V2[1:] == cls.baseline.people.V2[0]), "V2: steady state not held."
+        assert np.all(cls.baseline.patches.V1[1:] == cls.baseline.patches.V1[0]), "V1: steady state not held."
+        assert np.all(cls.baseline.patches.V2[1:] == cls.baseline.patches.V2[0]), "V2: steady state not held."
 
         return
 

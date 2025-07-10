@@ -77,8 +77,8 @@ class TestHumanToHumanVax(unittest.TestCase):
                 assert np.all(model.people.V2sus[1:, index] == model.people.V2sus[0, index]), "V2sus: steady state not held."
                 assert np.all(model.people.V1inf[1:, index] == model.people.V1inf[0, index]), "V1inf: steady state not held."
                 assert np.all(model.people.V2inf[1:, index] == model.people.V2inf[0, index]), "V2inf: steady state not held."
-                assert np.all(model.people.V1[1:, index] == model.people.V1[0, index]), "V1: steady state not held."
-                assert np.all(model.people.V2[1:, index] == model.people.V2[0, index]), "V2: steady state not held."
+                assert np.all(model.patches.V1[1:, index] == model.patches.V1[0, index]), "V1: steady state not held."
+                assert np.all(model.patches.V2[1:, index] == model.patches.V2[0, index]), "V2: steady state not held."
             else:
                 # With infectious people in Nigeria, expect Lambda to be non-zero
                 assert np.any(model.patches.Lambda[:, index] != 0), "HumanToHuman: tau_i = 0, Lambda_jt zero in Nigeria."
@@ -92,8 +92,8 @@ class TestHumanToHumanVax(unittest.TestCase):
                 assert np.all(np.diff(model.people.V1inf, axis=0) >= 0), "V1inf: not increasing with human to human transmission."
                 assert np.all(np.diff(model.people.V2inf, axis=0) >= 0), "V2inf: not increasing with human to human transmission."
                 # Expect total vaccine populations to be in steady state
-                assert np.all(model.people.V1[1:, index] == model.people.V1[0, index]), "V1: steady state not held."
-                assert np.all(model.people.V2[1:, index] == model.people.V2[0, index]), "V2: steady state not held."
+                assert np.all(model.patches.V1[1:, index] == model.patches.V1[0, index]), "V1: steady state not held."
+                assert np.all(model.patches.V2[1:, index] == model.patches.V2[0, index]), "V2: steady state not held."
 
         return
 

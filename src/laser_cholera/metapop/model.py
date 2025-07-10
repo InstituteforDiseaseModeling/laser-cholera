@@ -35,6 +35,103 @@ from laser_cholera.metapop.utils import override_helper
 logger = logging.getLogger(__name__)
 
 
+class RInterface:
+    """A simple interface to store results trimmed and transposed for R."""
+
+    def __init__(self, model):
+        # self.S = model.people.S[1:, :].T
+        # self.E = model.people.E[1:, :].T
+        # self.Isym = model.people.Isym[1:, :].T
+        # self.Iasym = model.people.Iasym[1:, :].T
+        # self.R = model.people.R[1:, :].T
+        # self.V1imm = model.people.V1imm[1:, :].T
+        # self.V1sus = model.people.V1sus[1:, :].T
+        # self.V1inf = model.people.V1inf[1:, :].T
+        # self.V2imm = model.people.V2imm[1:, :].T
+        # self.V2sus = model.people.V2sus[1:, :].T
+        # self.V2inf = model.people.V2inf[1:, :].T
+
+        # Trim the first column (t=0) and transpose for R compatibility
+        for compartment in ["S", "E", "Isym", "Iasym", "R", "V1imm", "V1sus", "V1inf", "V2imm", "V2sus", "V2inf"]:
+            if hasattr(model.people, compartment):
+                attr = getattr(model.people, compartment)
+                setattr(self, compartment, attr[1:, :].T)
+
+        # self.births = model.patches.births[1:, :].T
+        # self.disease_deaths = model.patches.disease_deaths[1:, :].T
+        # self.expected_cases = model.patches.expected_cases[1:, :].T
+        # self.incidence = model.patches.incidence[1:, :].T
+        # self.incidence_env = model.patches.incidence_env[1:, :].T
+        # self.incidence_human = model.patches.incidence_human[1:, :].T
+        # self.Lambda = model.patches.Lambda[1:, :].T
+        # self.N = model.patches.N[1:, :].T
+        # self.non_disease_deaths = model.patches.non_disease_deaths[1:, :].T
+        # self.Psi = model.patches.Psi[1:, :].T
+        # self.spatial_hazard = model.patches.spatial_hazard[1:, :].T
+        # self.V1 = model.patches.V1[1:, :].T
+        # self.V1_incidence_env = model.patches.V1_incidence_env[1:, :].T
+        # self.V1_incidence_hum = model.patches.V1_incidence_hum[1:, :].T
+        # self.V2 = model.patches.V2[1:, :].T
+        # self.V2_incidence_env = model.patches.V2_incidence_env[1:, :].T
+        # self.V2_incidence_hum = model.patches.V2_incidence_hum[1:, :].T
+        # self.W = model.patches.W[1:, :].T
+
+        # Trim the first column (t=0) and transpose for R compatibility
+        for prop in [
+            "births",
+            "disease_deaths",
+            "expected_cases",
+            "incidence",
+            "incidence_env",
+            "incidence_human",
+            "Lambda",
+            "N",
+            "non_disease_deaths",
+            "Psi",
+            "spatial_hazard",
+            "V1",
+            "V1_incidence_env",
+            "V1_incidence_hum",
+            "V2",
+            "V2_incidence_env",
+            "V2_incidence_hum",
+            "W",
+        ]:
+            if hasattr(model.patches, prop):
+                attr = getattr(model.patches, prop)
+                setattr(self, prop, attr[1:, :].T)
+
+        # self.dose_one_doses = model.patches.dose_one_doses[:].T
+        # self.dose_two_doses = model.patches.dose_two_doses[:].T
+
+        # Transpose these for R compatibility
+        # Hmm, should these not be nticks+1 in length?
+        for prop in ["dose_one_doses", "dose_two_doses"]:
+            if hasattr(model.patches, prop):
+                attr = getattr(model.patches, prop)
+                setattr(self, prop, attr.T)
+
+        # self.beta_jt_env = model.patches.beta_jt_env.T
+        # self.beta_jt_human = model.patches.beta_jt_human.T
+        # self.delta_jt = model.patches.delta_jt.T
+
+        # Transpose these for R compatibility
+        for prop in ["beta_jt_env", "beta_jt_human", "delta_jt", "pi_ij"]:
+            if hasattr(model.patches, prop):
+                attr = getattr(model.patches, prop)
+                setattr(self, prop, attr.T)
+
+        # self.coupling = model.patches.coupling
+
+        # This could be in the list above, but coupling is symmetric, so we don't need to transpose it.
+        for prop in ["coupling"]:
+            if hasattr(model.patches, prop):
+                attr = getattr(model.patches, prop)
+                setattr(self, prop, attr)
+
+        return
+
+
 class Model:
     def __init__(self, parameters: PropertySet, name: str = "Cholera Metapop"):
         self.tinit = datetime.now(tz=None)  # noqa: DTZ005
@@ -136,6 +233,8 @@ class Model:
                 delta = tfinish - tstart
                 timing.append(delta.seconds * 1_000_000 + delta.microseconds)
             self.metrics.append(timing)
+
+        self.results = RInterface(self)
 
         self.tfinish = datetime.now(tz=None)  # noqa: DTZ005
         logger.info(f"{self.tfinish}: Completed the {self.name} model")

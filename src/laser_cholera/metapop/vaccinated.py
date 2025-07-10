@@ -12,8 +12,6 @@ class Vaccinated:
         self.model = model
 
         assert hasattr(model, "people"), "Vaccinated: model needs to have a 'people' attribute."
-        model.people.add_vector_property("V1", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        model.people.add_vector_property("V2", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.people.add_vector_property("V1imm", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.people.add_vector_property("V1sus", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.people.add_vector_property("V1inf", length=model.params.nticks + 1, dtype=np.int32, default=0)
@@ -21,6 +19,8 @@ class Vaccinated:
         model.people.add_vector_property("V2sus", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.people.add_vector_property("V2inf", length=model.params.nticks + 1, dtype=np.int32, default=0)
         # We will track doses on the date (tick) given to more easily match nu_1_jt and nu_2_jt.
+        model.patches.add_vector_property("V1", length=model.params.nticks + 1, dtype=np.int32, default=0)
+        model.patches.add_vector_property("V2", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("dose_one_doses", length=model.params.nticks, dtype=np.int32, default=0)
         model.patches.add_vector_property("dose_two_doses", length=model.params.nticks, dtype=np.int32, default=0)
         assert "V1_j_initial" in model.params, (
@@ -34,11 +34,11 @@ class Vaccinated:
         model.people.V1imm[0] = np.round(model.params.phi_1 * model.params.V1_j_initial)
         model.people.V1sus[0] = model.params.V1_j_initial - model.people.V1imm[0]
         model.people.V1inf[0] = 0
-        model.people.V1[0] = model.people.V1imm[0] + model.people.V1sus[0] + model.people.V1inf[0]
+        model.patches.V1[0] = model.people.V1imm[0] + model.people.V1sus[0] + model.people.V1inf[0]
         model.people.V2imm[0] = np.round(model.params.phi_2 * model.params.V2_j_initial)
         model.people.V2sus[0] = model.params.V2_j_initial - model.people.V2imm[0]
         model.people.V2inf[0] = 0
-        model.people.V2[0] = model.people.V2imm[0] + model.people.V2sus[0] + model.people.V2inf[0]
+        model.patches.V2[0] = model.people.V2imm[0] + model.people.V2sus[0] + model.people.V2inf[0]
 
         return
 
@@ -61,8 +61,8 @@ class Vaccinated:
         return
 
     def __call__(self, model, tick: int) -> None:
-        V1_next = model.people.V1[tick + 1]
-        V2_next = model.people.V2[tick + 1]
+        V1_next = model.patches.V1[tick + 1]
+        V2_next = model.patches.V2[tick + 1]
         V1imm = model.people.V1imm[tick]
         V1sus = model.people.V1sus[tick]
         V1inf = model.people.V1inf[tick]
@@ -181,7 +181,7 @@ class Vaccinated:
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Vaccinated (One Dose)") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:
-            plt.plot(self.model.people.V1[:, ipatch], label=f"{self.model.params.location_name[ipatch]}")
+            plt.plot(self.model.patches.V1[:, ipatch], label=f"{self.model.params.location_name[ipatch]}")
         plt.xlabel("Tick")
         plt.ylabel("Vaccinated (One Dose)")
         plt.legend()
@@ -191,7 +191,7 @@ class Vaccinated:
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Vaccinated (Two Doses)") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:
-            plt.plot(self.model.people.V2[:, ipatch], label=f"{self.model.params.location_name[ipatch]}")
+            plt.plot(self.model.patches.V2[:, ipatch], label=f"{self.model.params.location_name[ipatch]}")
         plt.xlabel("Tick")
         plt.ylabel("Vaccinated (Two Doses)")
         plt.legend()
