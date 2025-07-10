@@ -94,9 +94,10 @@ class Vaccinated:
         non_disease_deaths = model.prng.binomial(V1sus, -np.expm1(-model.params.d_jt[tick])).astype(V1sus.dtype)
         V1sus_next -= non_disease_deaths
         ndd_next += non_disease_deaths
+        # this won't exactly match reality as the _actual_ people merged back into the E compartment upon infection
         non_disease_deaths = model.prng.binomial(V1inf, -np.expm1(-model.params.d_jt[tick])).astype(V1inf.dtype)
         V1inf_next -= non_disease_deaths
-        ndd_next += non_disease_deaths
+        # ndd_next += non_disease_deaths  # don't include here as V1inf is just a counter
 
         non_disease_deaths = model.prng.binomial(V2imm, -np.expm1(-model.params.d_jt[tick])).astype(V2imm.dtype)
         V2imm_next -= non_disease_deaths
@@ -104,9 +105,10 @@ class Vaccinated:
         non_disease_deaths = model.prng.binomial(V2sus, -np.expm1(-model.params.d_jt[tick])).astype(V2sus.dtype)
         V2sus_next -= non_disease_deaths
         ndd_next += non_disease_deaths
+        # this won't exactly match reality as the _actual_ people merged back into the E compartment upon infection
         non_disease_deaths = model.prng.binomial(V2inf, -np.expm1(-model.params.d_jt[tick])).astype(V2inf.dtype)
         V2inf_next -= non_disease_deaths
-        ndd_next += non_disease_deaths
+        # ndd_next += non_disease_deaths # don't include here as V2inf is just a counter
 
         # -waning immunity
         waned = model.prng.binomial(V1imm_next, -np.expm1(-model.params.omega_1)).astype(V1imm_next.dtype)

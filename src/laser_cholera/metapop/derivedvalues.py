@@ -121,7 +121,7 @@ def calculate_spatial_hazard(nticks, beta_jt_human, p, tau_i, S, V1sus, V2sus, N
     """Calculate the spatial hazard for each location at each time step.
     The spatial hazard is calculated using the formula:
 
-    https://www.mosaicmod.org/model-description.html#the-spatial-hazard
+    https://institutefordiseasemodeling.github.io/MOSAIC-docs/model-description.html#the-spatial-hazard
 
     .. math::
 
@@ -163,7 +163,7 @@ def calculate_coupling_for_model(model):
 def calculate_coupling(Isym, Iasym, N, C):
     """Calculate the coupling between locations.
 
-    https://www.mosaicmod.org/model-description.html#coupling-among-locations
+    https://institutefordiseasemodeling.github.io/MOSAIC-docs/model-description.html#coupling-among-locations
 
     .. math::
 

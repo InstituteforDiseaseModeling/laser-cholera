@@ -240,7 +240,7 @@ class Model:
 
 @click.command()
 @click.option("--seed", default=20241107, help="Random seed")
-@click.option("--viz", "visualize", is_flag=True, default=False, help="Suppress displaying visualizations")
+@click.option("--viz", "visualize", is_flag=True, default=False, help="Display visualizations")
 @click.option("--pdf", is_flag=True, default=False, help="Output visualization results as a PDF")
 @click.option("--outdir", "-o", default=Path.cwd(), help="Output file for results")
 @click.option("--params", "-p", default=None, help="JSON file with parameters")

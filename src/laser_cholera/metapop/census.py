@@ -19,7 +19,7 @@ class Census:
         return
 
     def __call__(self, model, tick: int) -> None:
-        for compartment in ["S", "E", "Isym", "Iasym", "R", "V1", "V2"]:
+        for compartment in ["S", "E", "Isym", "Iasym", "R", "V1imm", "V1sus", "V2imm", "V2sus"]:
             if hasattr(model.people, compartment):
                 model.patches.N[tick + 1] += getattr(model.people, compartment)[tick + 1]
 
