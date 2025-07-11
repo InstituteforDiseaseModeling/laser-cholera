@@ -12,7 +12,7 @@
 ![implementation](https://img.shields.io/pypi/implementation/laser-cholera.svg)
 ![license](https://img.shields.io/pypi/l/laser-cholera.svg)
 
-![commits since v0.7.10](https://img.shields.io/github/commits-since/InstituteforDiseaseModeling/laser-cholera/v0.7.10.svg)
+![commits since v0.7.11](https://img.shields.io/github/commits-since/InstituteforDiseaseModeling/laser-cholera/v0.7.11.svg)
 
 -----
 
