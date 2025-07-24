@@ -116,15 +116,16 @@ class RInterface:
         # self.delta_jt = model.patches.delta_jt.T
 
         # Transpose these for R compatibility
-        for prop in ["beta_jt_env", "beta_jt_human", "delta_jt", "pi_ij"]:
+        for prop in ["beta_jt_env", "beta_jt_human", "delta_jt"]:
             if hasattr(model.patches, prop):
                 attr = getattr(model.patches, prop)
                 setattr(self, prop, attr.T)
 
         # self.coupling = model.patches.coupling
 
-        # This could be in the list above, but coupling is symmetric, so we don't need to transpose it.
-        for prop in ["coupling"]:
+        # Coupling could be in the list above, but coupling is symmetric, so we don't need to transpose it.
+        # pi_ij doesn't need transposing.
+        for prop in ["coupling", "pi_ij"]:
             if hasattr(model.patches, prop):
                 attr = getattr(model.patches, prop)
                 setattr(self, prop, attr)

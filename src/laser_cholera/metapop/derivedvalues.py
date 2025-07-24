@@ -9,6 +9,7 @@ class DerivedValues:
         assert hasattr(model, "patches"), "DerivedValues: model needs to have a 'patches' attribute."
         assert hasattr(model, "params"), "DerivedValues: model needs to have a 'params' attribute."
 
+        # There's no spatial hazard calculation at the start of the simulation, but we will allocate nticks + 1 to match other outputs.
         model.patches.add_vector_property("spatial_hazard", length=model.params.nticks + 1, dtype=np.float32, default=0.0)
         model.patches.add_array_property("coupling", shape=(model.patches.count, model.patches.count), dtype=np.float32, default=0.0)
 
@@ -63,17 +64,16 @@ class DerivedValues:
         if tick == model.params.nticks - 1:
             calculate_spatial_hazard(
                 model.params.nticks,
-                model.patches.beta_jt_human,
-                model.params.p,
+                model.patches.beta_jt_human.T,
                 model.params.tau_i,
-                model.people.S,
-                model.people.V1sus,
-                model.people.V2sus,
-                model.patches.N,
+                model.people.S[1:, :].T,
+                model.people.V1sus[1:, :].T,
+                model.people.V2sus[1:, :].T,
+                model.patches.N[1:, :].T,
                 model.patches.pi_ij,
-                model.people.Iasym,
-                model.people.Isym,
-                model.patches.spatial_hazard,
+                model.people.Iasym[1:, :].T,
+                model.people.Isym[1:, :].T,
+                model.patches.spatial_hazard[1:, :].T,
             )
 
             calculate_coupling(model.people.Isym, model.people.Iasym, model.patches.N, model.patches.coupling)
@@ -101,23 +101,22 @@ def calculate_spatial_hazard_for_model(model):
     """
     calculate_spatial_hazard(
         model.params.nticks,
-        model.patches.beta_jt_human,
-        model.params.p,
+        model.patches.beta_jt_human.T,
         model.params.tau_i,
-        model.people.S,
-        model.people.V1sus,
-        model.people.V2sus,
-        model.patches.N,
+        model.people.S[1:, :].T,
+        model.people.V1sus[1:, :].T,
+        model.people.V2sus[1:, :].T,
+        model.patches.N[1:, :].T,
         model.patches.pi_ij,
-        model.people.Iasym,
-        model.people.Isym,
-        model.patches.spatial_hazard,
+        model.people.Iasym[1:, :].T,
+        model.people.Isym[1:, :].T,
+        model.patches.spatial_hazard[1:, :].T,
     )
 
     return
 
 
-def calculate_spatial_hazard(nticks, beta_jt_human, p, tau_i, S, V1sus, V2sus, N, pi_ij, Iasym, Isym, spatial_hazard):
+def calculate_spatial_hazard(nticks, beta_jt_human, tau_i, S, V1sus, V2sus, Njt, pi_ij, Iasym, Isym, spatial_hazard):
     """Calculate the spatial hazard for each location at each time step.
     The spatial hazard is calculated using the formula:
 
@@ -127,25 +126,55 @@ def calculate_spatial_hazard(nticks, beta_jt_human, p, tau_i, S, V1sus, V2sus, N
 
         h(j,t) = \\frac {\\beta^{hum}_{jt} (1 - e^{-((1 - \\tau_j) (S_{jt} + V^{sus}_{1,jt} + V^{sus}_{2,jt}) / N_{jt}) \\sum_{\\forall i \\ne j} \\pi_{ij} \\tau_i ((I^{sym}_{it} + I^{asym}_{it}) / N_{it})})} {1/(1 + \\beta^{hum}_{jt}(1 - \\tau_j) (S_{jt} + V^{sus}_{1,jt} + V^{sus}_{2,jt}))}
 
+    Note: To simplify coding and debugging, all arrays are passed in R order: [j, t]
+
     """
 
-    for t in range(nticks):
-        beta_jt = beta_jt_human[t, :]
-        tau_j = tau_i
-        S_j = S[t] + V1sus[t] + V2sus[t]  # Use S_j where S_j = S + V1sus + V2sus
-        N_i = N_j = N[t]
-        # pi_ij = pi_ij
-        # tau_i = tau_i
-        I_i = Isym[t] + Iasym[t]  # Use I_i where I_i = Isym + Iasym
+    beta = beta_jt_human
 
-        S_effective = (1 - tau_j) * S_j / N_j  # Use S_effective where S_effective = (1 - tau_j) * S_j / N_j
-        # This odd formulation (vector * matrix.T).T ensures that the result is indexed [src, dst] just like the matrix pi_ij
-        I_incoming = ((tau_i * I_i / N_i) * pi_ij.T).sum(axis=0)
-        rate = S_effective * I_incoming
-        probability = -np.expm1(-rate)  # expm1 = exp(x) - 1, ∴ -expm1(-x) = 1 - exp(-x)
-        denominator = 1 / (1 + beta_jt * (1 - tau_j) * S_j)
-        hazard = (beta_jt * probability) / denominator
-        spatial_hazard[t] = hazard
+    # Reference implementation:
+
+    # values for comparison/debugging
+    # S_star = np.zeros_like(S, dtype=np.float64)
+    # x = np.zeros_like(S, dtype=np.float64)
+    # y_bar = np.zeros_like(S, dtype=np.float64)
+
+    # nlocs = Njt.shape[0]
+    # for t in range(nticks):
+    #     Nkt = Njt[:, t].sum()
+    #     for j in range(nlocs):
+    #         S_star_jt = (1.0 - tau_i[j]) * (S[j, t] + V1sus[j, t] + V2sus[j, t])
+    #         # S_star[j, t] = S_star_jt
+    #         x_jt = S_star_jt / Njt[j, t]
+    #         # x[j, t] = x_jt
+    #         sum_tau_pi_i = 0.0
+    #         for i in range(nlocs):
+    #             if i != j:
+    #                 sum_tau_pi_i += tau_i[i] * pi_ij[i, j] * (Isym[i, t] + Iasym[i, t])
+    #         y_bar_jt = ((1.0 - tau_i[j]) * (Isym[j, t] + Iasym[j, t]) + sum_tau_pi_i) / Nkt
+    #         # y_bar[j, t] = y_bar_jt
+    #         H_jt = beta[j, t] * S_star_jt * (1.0 - np.exp(-x_jt * y_bar_jt)) / (1.0 + beta[j, t] * S_star_jt)
+    #         spatial_hazard[j, t] = H_jt
+
+    # Opimized implementation:
+
+    Nt = Njt.sum(axis=0)  # Total population at time t
+    xfer_ij = (tau_i * pi_ij.T).T  # fraction emmigrating from i * fraction going to j = fraction of i going to j
+    S_star_jt = ((1.0 - tau_i) * (S + V1sus + V2sus).T).T
+    x_jt = S_star_jt / Njt  # S_star / N for each location and time step
+    beta_S_star_jt = beta * S_star_jt  # beta_jt_human * S_star for each location and time step
+
+    Ijt = Isym + Iasym
+    # (Remaining) infections in location j at time t accounting for the fraction of emmigrants by location
+    Iloc_jt = ((1.0 - tau_i) * Ijt.T).T
+
+    for t in range(nticks):
+        I_local = Iloc_jt[:, t]  # Local infections at time t, syntactic sugar
+        # Calculate the incoming infections at time t
+        I_incoming = np.dot(Ijt[:, t], xfer_ij)  # @, matmul, raises RuntimeWarnings on MacOS, but works fine on Linux
+        y_bar_t = (I_local + I_incoming) / Nt[t]
+        H_t = beta_S_star_jt[:, t] * (-np.expm1(-x_jt[:, t] * y_bar_t)) / (1.0 + beta_S_star_jt[:, t])
+        spatial_hazard[:, t] = H_t
 
     return
 
