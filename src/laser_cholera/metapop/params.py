@@ -109,6 +109,22 @@ def load_compressed_json_parameters(filename: Union[str, Path]) -> PropertySetEx
     return dict_to_propertysetex(parameters)
 
 
+def as_ndarray(input, dtype):
+    retval = None
+
+    if isinstance(input, np.ndarray):
+        # Don't make yet another NumPy array ...
+        retval = input
+    elif isinstance(input, list):
+        # Convert lists to NumPy arrays
+        retval = np.array(input, dtype=dtype)
+    else:
+        # Convert other (assumed to be scalar) to a single entry NumPy array
+        retval = np.array([input], dtype=dtype)
+
+    return retval
+
+
 def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
     # Note the following canonicalizes the order of the locations based on the
     # order in the JSON file.
@@ -125,18 +141,23 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
     params.nticks = (params.date_stop - params.date_start).days + 1
     logger.info(f"Simulation calendar dates: {params.date_start} to {params.date_stop} ({params.nticks} ticks)")
 
+    # Handle single location instance (incoming data is scalar rather than list)
+    if not isinstance(params.location_name, list):
+        params.location_name = [params.location_name]
+
     num_ticks = params.nticks
     num_nodes = len(params.location_name)
 
     # IDs are 1-based not 0-based like indices
     # Map string IDs to names and names to indices (0-based)
 
-    params.S_j_initial = np.array(params.S_j_initial, dtype=np.uint32)
-    params.E_j_initial = np.array(params.E_j_initial, dtype=np.uint32)
-    params.I_j_initial = np.array(params.I_j_initial, dtype=np.uint32)
-    params.R_j_initial = np.array(params.R_j_initial, dtype=np.uint32)
-    params.V1_j_initial = np.array(params.V1_j_initial, dtype=np.uint32)
-    params.V2_j_initial = np.array(params.V2_j_initial, dtype=np.uint32)
+    params.N_j_initial = as_ndarray(params.N_j_initial, dtype=np.uint32)
+    params.S_j_initial = as_ndarray(params.S_j_initial, dtype=np.uint32)
+    params.E_j_initial = as_ndarray(params.E_j_initial, dtype=np.uint32)
+    params.I_j_initial = as_ndarray(params.I_j_initial, dtype=np.uint32)
+    params.R_j_initial = as_ndarray(params.R_j_initial, dtype=np.uint32)
+    params.V1_j_initial = as_ndarray(params.V1_j_initial, dtype=np.uint32)
+    params.V2_j_initial = as_ndarray(params.V2_j_initial, dtype=np.uint32)
 
     params.b_jt = np.array(params.b_jt, dtype=np.float32)
     if params.b_jt.shape == (num_nodes, num_ticks):
@@ -168,21 +189,21 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
     # No processing of "rho"
     # No processing of "sigma"
 
-    params.latitude = np.array(params.latitude, dtype=np.float32)
-    params.longitude = np.array(params.longitude, dtype=np.float32)
+    params.latitude = as_ndarray(params.latitude, dtype=np.float32)
+    params.longitude = as_ndarray(params.longitude, dtype=np.float32)
 
     # No processing of "mobility_omega"
     # No processing of "mobility_gamma"
 
-    params.tau_i = np.array(params.tau_i, dtype=np.float32)
+    params.tau_i = as_ndarray(params.tau_i, dtype=np.float32)
     assert np.all((params.tau_i >= 0.0) & (params.tau_i <= 1.0)), "tau_i values must be in the range [0, 1]"
 
-    params.beta_j0_hum = np.array(params.beta_j0_hum, dtype=np.float32)
+    params.beta_j0_hum = as_ndarray(params.beta_j0_hum, dtype=np.float32)
 
-    params.a_1_j = np.array(params.a_1_j, dtype=np.float32)
-    params.b_1_j = np.array(params.b_1_j, dtype=np.float32)
-    params.a_2_j = np.array(params.a_2_j, dtype=np.float32)
-    params.b_2_j = np.array(params.b_2_j, dtype=np.float32)
+    params.a_1_j = as_ndarray(params.a_1_j, dtype=np.float32)
+    params.b_1_j = as_ndarray(params.b_1_j, dtype=np.float32)
+    params.a_2_j = as_ndarray(params.a_2_j, dtype=np.float32)
+    params.b_2_j = as_ndarray(params.b_2_j, dtype=np.float32)
 
     assert int(params.p) == params.p, f"p must be an integer, but got {params.p}"
     params.p = int(params.p)
@@ -190,8 +211,8 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
     # No processing of "alpha_1"
     # No processing of "alpha_2"
 
-    params.beta_j0_env = np.array(params.beta_j0_env, dtype=np.float32).reshape(-1, 1)
-    params.theta_j = np.array(params.theta_j, dtype=np.float32)
+    params.beta_j0_env = as_ndarray(params.beta_j0_env, dtype=np.float32).reshape(-1, 1)
+    params.theta_j = as_ndarray(params.theta_j, dtype=np.float32)
 
     params.psi_jt = np.array(params.psi_jt, dtype=np.float32)
     if params.psi_jt.shape == (num_nodes, num_ticks):
@@ -314,27 +335,27 @@ def validate_parameters(params: PropertySetEx) -> None:
 
     npatches = len(params.location_name)
 
-    assert len(params.S_j_initial) == npatches, (
+    assert params.S_j_initial.shape == (npatches,), (
         f"Number of S_j_initial values ({len(params.S_j_initial)}) does not match number of locations ({npatches})"
     )
     assert np.all(params.S_j_initial >= 0), "S_j_initial values must be non-negative"
-    assert len(params.E_j_initial) == npatches, (
+    assert params.E_j_initial.shape == (npatches,), (
         f"Number of E_j_initial values ({len(params.E_j_initial)}) does not match number of locations ({npatches})"
     )
     assert np.all(params.E_j_initial >= 0), "E_j_initial values must be non-negative"
-    assert len(params.I_j_initial) == npatches, (
+    assert params.I_j_initial.shape == (npatches,), (
         f"Number of I_j_initial values ({len(params.I_j_initial)}) does not match number of locations ({npatches})"
     )
     assert np.all(params.I_j_initial >= 0), "I_j_initial values must be non-negative"
-    assert len(params.R_j_initial) == npatches, (
+    assert params.R_j_initial.shape == (npatches,), (
         f"Number of R_j_initial values ({len(params.R_j_initial)}) does not match number of locations ({npatches})"
     )
     assert np.all(params.R_j_initial >= 0), "R_j_initial values must be non-negative"
-    assert len(params.V1_j_initial) == npatches, (
+    assert params.V1_j_initial.shape == (npatches,), (
         f"Number of V1_j_initial values ({len(params.V1_j_initial)}) does not match number of locations ({npatches})"
     )
     assert np.all(params.V1_j_initial >= 0), "V1_j_initial values must be non-negative"
-    assert len(params.V2_j_initial) == npatches, (
+    assert params.V2_j_initial.shape == (npatches,), (
         f"Number of V2_j_initial values ({len(params.V2_j_initial)}) does not match number of locations ({npatches})"
     )
     assert np.all(params.V2_j_initial >= 0), "V2_j_initial values must be non-negative"

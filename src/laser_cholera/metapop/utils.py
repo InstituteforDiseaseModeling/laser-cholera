@@ -48,6 +48,10 @@ def get_pi_from_lat_long(params):
     # }
 
     d = distance(params.latitude, params.longitude, params.latitude, params.longitude)
+    # Handle single location case in which return from distance() is a scalar
+    if not d.shape:
+        # Convert to (1, 1) array.
+        d = np.array([[d]], dtype=d.dtype)
     x = np.zeros_like(d, dtype=np.float32)
     omega = params.mobility_omega
     gamma = params.mobility_gamma
