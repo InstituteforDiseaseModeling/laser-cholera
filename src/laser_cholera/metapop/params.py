@@ -366,14 +366,14 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert params.b_jt.shape == (nticks, npatches), (
         f"Shape of b_jt {params.b_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     )
-    # 0 <= b_jt <= 0.0001369863 (5% annual / 365 days)
+    # 0 <= b_jt
     assert np.all(params.b_jt >= 0.0), "b_jt rate values must be positive"
 
     # shape of b_jt = (nticks, npatches)
     assert params.d_jt.shape == (nticks, npatches), (
         f"Shape of d_jt {params.d_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     )
-    # 0 <= d_jt <= 0.0002739726 (10% annual / 365 days)
+    # 0 <= d_jt
     assert np.all(params.d_jt >= 0.0), "d_jt rate values must be positive"
 
     # shape of nu_1_jt = (nticks, npatches)
