@@ -367,14 +367,14 @@ def validate_parameters(params: PropertySetEx) -> None:
         f"Shape of b_jt {params.b_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     )
     # 0 <= b_jt <= 0.0001369863 (5% annual / 365 days)
-    assert np.all((params.b_jt >= 0.0) & (params.b_jt <= 0.0001369863)), "b_jt values must be in the range [0, 0.0001369863]"
+    assert np.all(params.b_jt >= 0.0), "b_jt rate values must be positive"
 
     # shape of b_jt = (nticks, npatches)
     assert params.d_jt.shape == (nticks, npatches), (
         f"Shape of d_jt {params.d_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     )
     # 0 <= d_jt <= 0.0002739726 (10% annual / 365 days)
-    assert np.all((params.d_jt >= 0.0) & (params.d_jt <= 0.0002739726)), "d_jt values must be in the range [0, 0.0002739726]"
+    assert np.all(params.d_jt >= 0.0), "d_jt rate values must be positive"
 
     # shape of nu_1_jt = (nticks, npatches)
     assert params.nu_1_jt.shape == (nticks, npatches), (
@@ -398,26 +398,26 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert (params.phi_1 >= 0.0) & (params.phi_1 <= 1.0), "phi_1 value must be in the range [0, 1]"
     assert (params.phi_2 >= 0.0) & (params.phi_2 <= 1.0), "phi_2 value must be in the range [0, 1]"
 
-    # omega_1 and omega_2 must be between 0 (no waning) and 1 (1 day duration)
-    assert (params.omega_1 >= 0.0) & (params.omega_1 <= 1.0), "omega_1 value must be in the range [0, 1]"
-    assert (params.omega_2 >= 0.0) & (params.omega_2 <= 1.0), "omega_2 value must be in the range [0, 1]"
+    # omega_1 and omega_2 must be above zero
+    assert (params.omega_1 >= 0.0), "omega_1 value must be positive"
+    assert (params.omega_2 >= 0.0), "omega_2 value must be positive"
 
-    # iota must be between 0.002739726 (1/365 days) and 1 (1 day duration)
-    assert (params.iota >= 0.002739726) & (params.iota <= 1.0), "iota value must be in the range [0.002739726, 1]"
+    # iota must be above zero
+    assert (params.iota >= 0.0), "iota value must be positive"
 
-    # gamma_1 and gamma_2 must be between 0.002739726 (1/365 days) and 1 (1 day duration)
-    assert (params.gamma_1 >= 0.002739726) & (params.gamma_1 <= 1.0), "gamma_1 value must be in the range [0.002739726, 1]"
-    assert (params.gamma_2 >= 0.002739726) & (params.gamma_2 <= 1.0), "gamma_2 value must be in the range [0.002739726, 1]"
+    # gamma_1 and gamma_2 must be positive
+    assert (params.gamma_1 >= 0.0), "gamma_1 value must be positive"
+    assert (params.gamma_2 >= 0.0), "gamma_2 value must be positive"
 
-    # epsilon must be between 0 (no waning) and 1 (1 day duration)
-    assert (params.epsilon >= 0.0) & (params.epsilon <= 1.0), "epsilon value must be in the range [0, 1]"
+    # epsilon must be positive
+    assert (params.epsilon >= 0.0), "epsilon value must be positive"
 
     # shape of mu_jt = (nticks, npatches)
     assert params.mu_jt.shape == (nticks, npatches), (
         f"Shape of mu_jt {params.mu_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     )
-    # all mu_jt must be between 0 (no mortality) and 1 (100% mortality)
-    assert np.all((params.mu_jt >= 0.0) & (params.mu_jt <= 1.0)), "mu_jt values must be in the range [0, 1]"
+    # all mu_jt must be above zero
+    assert np.all((params.mu_jt >= 0.0)), "mu_jt values must be positive"
 
     # rho must be between 0 (all false positives) and 1 (no false positives)
     assert (params.rho >= 0.0) & (params.rho <= 1.0), "rho value must be in the range [0, 1]"
@@ -457,6 +457,12 @@ def validate_parameters(params: PropertySetEx) -> None:
 
     # alpha_1 and alpha_2
     # TODO - TBD
+
+    # alpha_1 must be above 0 (zero population mixing) and below 1 (full mass action), cannot equal zero
+    assert (params.alpha_1 > 0.0) & (params.alpha_1 <= 1.0), "alpha_1 value must be in the range [0, 1]"
+
+    # alpha_2 must be between 0 (full density dependence) and 1 (full frequency dependence)
+    assert (params.alpha_2 >= 0.0) & (params.alpha_2 <= 1.0), "alpha_1 value must be in the range [0, 1]"
 
     # length of beta_j0_env must be equal to number of locations
     assert len(params.beta_j0_env) == npatches, (
