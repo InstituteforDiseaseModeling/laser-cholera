@@ -59,6 +59,7 @@ class RInterface:
 
         # self.births = model.patches.births[1:, :].T
         # self.disease_deaths = model.patches.disease_deaths[1:, :].T
+        # self.new_symptomatic = model.patches.new_symptomatic[1:, :].T
         # self.expected_cases = model.patches.expected_cases[1:, :].T
         # self.incidence = model.patches.incidence[1:, :].T
         # self.incidence_env = model.patches.incidence_env[1:, :].T
@@ -80,6 +81,7 @@ class RInterface:
         for prop in [
             "births",
             "disease_deaths",
+            "new_symptomatic",
             "expected_cases",
             "incidence",
             "incidence_env",

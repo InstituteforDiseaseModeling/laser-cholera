@@ -13,6 +13,7 @@ class Infectious:
         assert hasattr(model, "patches"), "Infectious: model needs to have a 'patches' attribute."
         model.patches.add_vector_property("expected_cases", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("disease_deaths", length=model.params.nticks + 1, dtype=np.int32, default=0)
+        model.patches.add_vector_property("new_symptomatic", length=model.params.nticks + 1, dtype=np.int32, default=0)
         assert hasattr(model, "params"), "Infectious: model needs to have a 'params' attribute."
         assert hasattr(model.params, "I_j_initial"), (
             "Infectious: model params needs to have a 'I_j_initial' (initial infectious population) parameter."
@@ -92,6 +93,7 @@ class Infectious:
         new_asymptomatic = progressing - new_symptomatic
         Is_next += new_symptomatic
         Ia_next += new_asymptomatic
+        model.patches.new_symptomatic[tick + 1] = new_symptomatic
 
         # Update expected cases
         expected_cases = model.patches.expected_cases[tick + 1]
