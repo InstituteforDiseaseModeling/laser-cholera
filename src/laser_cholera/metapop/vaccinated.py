@@ -171,11 +171,11 @@ class Vaccinated:
         # TODO - use new_two_doses here or (v1imm_contribution + v1sus_contribution)?
         new_immunized = np.round(model.params.phi_2 * ((V1imm + V1sus) / V1) * new_two_doses).astype(V2imm_next.dtype)
         V2imm_next += new_immunized
-        # infective doses
-        new_infective = np.round((1 - model.params.phi_2) * ((V1imm + V1sus) / V1) * new_two_doses).astype(V2sus.dtype)
-        V2sus_next += new_infective
+        # ineffective doses
+        new_ineffective = np.round((1 - model.params.phi_2) * ((V1imm + V1sus) / V1) * new_two_doses).astype(V2sus.dtype)
+        V2sus_next += new_ineffective
         # doses applied to previously infected one dose recipients
-        v2inf_delta = new_two_doses - new_immunized - new_infective
+        v2inf_delta = new_two_doses - new_immunized - new_ineffective
         if np.any(v2inf_delta < 0):
             logger.debug(f"WARNING: v2inf_delta < 0 ({tick=}\n\t{v2inf_delta=})")
             v2inf_delta = np.maximum(v2inf_delta, 0)
