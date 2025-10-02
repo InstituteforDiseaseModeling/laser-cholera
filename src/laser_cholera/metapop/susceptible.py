@@ -31,13 +31,14 @@ class Susceptible(Component):
 
     def __call__(self, model, tick: int) -> None:
         S_next = model.people.S[tick + 1]
-        S = model.people.S[tick]
-        S_next[:] = S
+        S_next[:] = model.people.S[tick]
 
         # natural mortality
-        non_disease_deaths = model.prng.binomial(S, -np.expm1(-model.params.d_jt[tick])).astype(S_next.dtype)
+        non_disease_deaths = model.prng.binomial(S_next, -np.expm1(-model.params.d_jt[tick])).astype(S_next.dtype)
         S_next -= non_disease_deaths
         model.patches.non_disease_deaths[tick] += non_disease_deaths
+
+        assert np.all(S_next >= 0), f"Negative susceptible populations at tick {tick + 1}.\n\t{S_next=}"
 
         # births
         N = model.patches.N[tick]
