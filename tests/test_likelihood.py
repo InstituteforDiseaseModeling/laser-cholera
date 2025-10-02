@@ -147,7 +147,7 @@ class LikelihoodTests(unittest.TestCase):
             )
 
         # all weights_location are zero
-        with pytest.raises(ValueError, match="weights_location and weights_time must not all be zero."):
+        with pytest.raises(ValueError, match=r"weights_location and weights_time must not all be zero."):
             get_model_likelihood(
                 obs_cases=self.obs_cases,
                 sim_cases=self.sim_cases,
@@ -157,7 +157,7 @@ class LikelihoodTests(unittest.TestCase):
             )
 
         # all weights_time are zero
-        with pytest.raises(ValueError, match="weights_location and weights_time must not all be zero."):
+        with pytest.raises(ValueError, match=r"weights_location and weights_time must not all be zero."):
             get_model_likelihood(
                 obs_cases=self.obs_cases,
                 sim_cases=self.sim_cases,
@@ -314,17 +314,17 @@ class LikelihoodTests(unittest.TestCase):
         sim_cases = self.sim_cases[23]
         weights = np.zeros_like(obs_cases)
 
-        with pytest.raises(ValueError, match="All weights are zero, cannot compute likelihood."):
+        with pytest.raises(ValueError, match=r"All weights are zero, cannot compute likelihood."):
             _beta = calc_log_likelihood_beta(obs_cases, sim_cases, weights=weights, verbose=False)
-        with pytest.raises(ValueError, match="All weights are zero, cannot compute likelihood."):
+        with pytest.raises(ValueError, match=r"All weights are zero, cannot compute likelihood."):
             _binomial = calc_log_likelihood_binomial(obs_cases, sim_cases, np.ones(self.n_steps), weights=weights, verbose=False)
-        with pytest.raises(ValueError, match="All weights are zero, cannot compute likelihood."):
+        with pytest.raises(ValueError, match=r"All weights are zero, cannot compute likelihood."):
             _gamma = calc_log_likelihood_gamma(obs_cases, sim_cases, weights=weights, verbose=False)
-        with pytest.raises(ValueError, match="All weights are zero, cannot compute likelihood."):
+        with pytest.raises(ValueError, match=r"All weights are zero, cannot compute likelihood."):
             _negbin = calc_log_likelihood_negbin(obs_cases, sim_cases, weights=weights, verbose=False)
-        with pytest.raises(ValueError, match="All weights are zero, cannot compute likelihood."):
+        with pytest.raises(ValueError, match=r"All weights are zero, cannot compute likelihood."):
             _normal = calc_log_likelihood_normal(obs_cases, sim_cases, weights=weights, verbose=False)
-        with pytest.raises(ValueError, match="All weights are zero, cannot compute likelihood."):
+        with pytest.raises(ValueError, match=r"All weights are zero, cannot compute likelihood."):
             _poisson = calc_log_likelihood_poisson(obs_cases, sim_cases, weights=weights, verbose=False)
 
         return
@@ -366,11 +366,11 @@ class TestThatLikelihoodTests(unittest.TestCase):
             calc_log_likelihood_poisson(observed=np.array([1, 2]), simulated=np.array([1, 2]), weights=np.array([1, -1]), verbose=False)
 
     def test_poisson_errors_on_zero_sum_weights(self):
-        with pytest.raises(ValueError, match="All weights are zero, cannot compute likelihood."):
+        with pytest.raises(ValueError, match=r"All weights are zero, cannot compute likelihood."):
             calc_log_likelihood_poisson(observed=np.array([1, 2]), simulated=np.array([1, 2]), weights=np.array([0, 0]), verbose=False)
 
     def test_poisson_errors_on_non_interger_observed_values(self):
-        with pytest.raises(ValueError, match="observed must contain non-negative integer counts for Poisson."):
+        with pytest.raises(ValueError, match=r"observed must contain non-negative integer counts for Poisson."):
             calc_log_likelihood_poisson(observed=np.array([1.5, 2]), simulated=np.array([1, 2]), weights=None, verbose=False)
 
     def test_poisson_warns_on_overdispersion(self):
@@ -408,11 +408,11 @@ class TestThatLikelihoodTests(unittest.TestCase):
             calc_log_likelihood_negbin(observed=np.array([1, 2]), simulated=np.array([1, 2]), k=1, weights=np.array([1, -1]), verbose=False)
 
     def test_negbin_errors_on_zero_sum_weights(self):
-        with pytest.raises(ValueError, match="All weights are zero, cannot compute likelihood."):
+        with pytest.raises(ValueError, match=r"All weights are zero, cannot compute likelihood."):
             calc_log_likelihood_negbin(observed=np.array([1, 2]), simulated=np.array([1, 2]), k=1, weights=np.array([0, 0]), verbose=False)
 
     def test_negbin_errors_on_non_interger_observed_values(self):
-        with pytest.raises(ValueError, match="observed must contain non-negative integer counts."):
+        with pytest.raises(ValueError, match=r"observed must contain non-negative integer counts."):
             calc_log_likelihood_negbin(observed=np.array([1.5, 2]), simulated=np.array([1, 2]), k=1, weights=None, verbose=False)
 
     def test_negbin_cushions_zero_or_negative_simulated_values(self):

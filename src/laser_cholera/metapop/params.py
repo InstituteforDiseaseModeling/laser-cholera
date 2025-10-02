@@ -399,25 +399,25 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert (params.phi_2 >= 0.0) & (params.phi_2 <= 1.0), "phi_2 value must be in the range [0, 1]"
 
     # omega_1 and omega_2 must be above zero
-    assert (params.omega_1 >= 0.0), "omega_1 value must be positive"
-    assert (params.omega_2 >= 0.0), "omega_2 value must be positive"
+    assert params.omega_1 >= 0.0, "omega_1 value must be positive"
+    assert params.omega_2 >= 0.0, "omega_2 value must be positive"
 
     # iota must be above zero
-    assert (params.iota >= 0.0), "iota value must be positive"
+    assert params.iota >= 0.0, "iota value must be positive"
 
     # gamma_1 and gamma_2 must be positive
-    assert (params.gamma_1 >= 0.0), "gamma_1 value must be positive"
-    assert (params.gamma_2 >= 0.0), "gamma_2 value must be positive"
+    assert params.gamma_1 >= 0.0, "gamma_1 value must be positive"
+    assert params.gamma_2 >= 0.0, "gamma_2 value must be positive"
 
     # epsilon must be positive
-    assert (params.epsilon >= 0.0), "epsilon value must be positive"
+    assert params.epsilon >= 0.0, "epsilon value must be positive"
 
     # shape of mu_jt = (nticks, npatches)
     assert params.mu_jt.shape == (nticks, npatches), (
         f"Shape of mu_jt {params.mu_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     )
     # all mu_jt must be above zero
-    assert np.all((params.mu_jt >= 0.0)), "mu_jt values must be positive"
+    assert np.all(params.mu_jt >= 0.0), "mu_jt values must be positive"
 
     # rho must be between 0 (all false positives) and 1 (no false positives)
     assert (params.rho >= 0.0) & (params.rho <= 1.0), "rho value must be in the range [0, 1]"
