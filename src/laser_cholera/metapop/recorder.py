@@ -28,9 +28,7 @@ class Recorder:
         # write the current state of the model to an HDF5 file if it is the last tick of the simulation
         if tick == (model.params.nticks - 1):
             # To get output must a) specify hdf5_output = true in the params file and b) specify properties to return
-            write_output = (
-                ("hdf5_output" in model.params) and model.params.hdf5_output and ("return" in model.params) and model.params["return"]
-            )
+            write_output = ("hdf5_output" in model.params) and model.params.hdf5_output and ("return" in model.params) and model.params["return"]
 
             if write_output:
                 root = Path(model.params.outdir) if "outdir" in model.params and model.params.outdir else Path.cwd()

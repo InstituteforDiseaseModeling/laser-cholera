@@ -45,9 +45,7 @@ class TestInfectious(unittest.TestCase):
         assert np.all(model.people.Isym[0] == np.round(model.params.sigma * model.params.I_j_initial)), (
             "I symptomatic: initial distribution not correct."
         )
-        assert np.all(model.people.Iasym[0] == (params.I_j_initial - model.people.Isym[0])), (
-            "I asymptomatic: initial distribution not correct."
-        )
+        assert np.all(model.people.Iasym[0] == (params.I_j_initial - model.people.Isym[0])), "I asymptomatic: initial distribution not correct."
 
     # Test initial distribution of infectious people - sigma = 0
     def test_initial_distribution_sigma_zero(self):
@@ -130,9 +128,7 @@ class TestInfectious(unittest.TestCase):
         model.run()
 
         assert np.all(model.people.Isym[-1] < model.people.Isym[0]), "I symptomatic: disease deaths not occurring."
-        assert np.all(model.people.Iasym[-1] == model.people.Iasym[0]), (
-            "I asymptomatic: disease deaths occurring in the asymptomatic population."
-        )
+        assert np.all(model.people.Iasym[-1] == model.people.Iasym[0]), "I asymptomatic: disease deaths occurring in the asymptomatic population."
 
         return
 
@@ -192,9 +188,7 @@ class TestInfectious(unittest.TestCase):
         model.run()
 
         assert np.all(model.people.Isym[-1] > model.people.Isym[0]), "I symptomatic: progression from exposed to infectious not occurring."
-        assert np.all(model.people.Iasym[-1] > model.people.Iasym[0]), (
-            "I asymptomatic: progression from exposed to infectious not occurring."
-        )
+        assert np.all(model.people.Iasym[-1] > model.people.Iasym[0]), "I asymptomatic: progression from exposed to infectious not occurring."
 
         return
 

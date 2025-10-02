@@ -23,18 +23,10 @@ class HumanToHumanVax:
 
         assert hasattr(self.model, "people"), "HumanToHuman: model needs to have a 'people' attribute."
         assert hasattr(self.model.people, "E"), "HumanToHuman: model people needs to have a 'E' (exposed) attribute."
-        assert hasattr(self.model.people, "V1sus"), (
-            "HumanToHuman: model people needs to have a 'V1sus' (vaccinated 1 susceptible) attribute."
-        )
-        assert hasattr(self.model.people, "V1inf"), (
-            "HumanToHuman: model people needs to have a 'V1inf' (vaccinated 1 infectious) attribute."
-        )
-        assert hasattr(self.model.people, "V2sus"), (
-            "HumanToHuman: model people needs to have a 'V2sus' (vaccinated 2 susceptible) attribute."
-        )
-        assert hasattr(self.model.people, "V2inf"), (
-            "HumanToHuman: model people needs to have a 'V2inf' (vaccinated 2 infectious) attribute."
-        )
+        assert hasattr(self.model.people, "V1sus"), "HumanToHuman: model people needs to have a 'V1sus' (vaccinated 1 susceptible) attribute."
+        assert hasattr(self.model.people, "V1inf"), "HumanToHuman: model people needs to have a 'V1inf' (vaccinated 1 infectious) attribute."
+        assert hasattr(self.model.people, "V2sus"), "HumanToHuman: model people needs to have a 'V2sus' (vaccinated 2 susceptible) attribute."
+        assert hasattr(self.model.people, "V2inf"), "HumanToHuman: model people needs to have a 'V2inf' (vaccinated 2 infectious) attribute."
 
         assert hasattr(self.model, "params"), "HumanToHuman: model needs to have a 'params' attribute."
         assert "tau_i" in self.model.params, "HumanToHuman: model params needs to have a 'tau_i' (emmigration probability) parameter."

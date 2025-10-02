@@ -103,9 +103,7 @@ class TestEnvToHumanVax(unittest.TestCase):
         # Expect more transmission with increased environmental transmission
         nz = np.nonzero(self.baseline.people.V1inf)
         assert len(nz) > 0, "V1inf: no infected individuals."  # All zeros would give a false positive
-        assert np.all(model.people.V1inf[nz] >= self.baseline.people.V1inf[nz]), (
-            "V1inf: not increasing with increased environmental transmission."
-        )
+        assert np.all(model.people.V1inf[nz] >= self.baseline.people.V1inf[nz]), "V1inf: not increasing with increased environmental transmission."
         # nz = np.nonzero(self.baseline.people.V2inf)
         # assert len(nz) > 0, "V2inf: no infected individuals"  # All zeros would give a false positive
         # assert np.all(model.people.V2inf[nz] >= self.baseline.people.V2inf[nz]), (

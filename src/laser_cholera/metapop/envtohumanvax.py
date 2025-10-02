@@ -26,9 +26,7 @@ class EnvToHumanVax:
         assert hasattr(self.model.people, "V2inf"), "EnvToHuman: model people needs to have a 'V2inf' (vaccinated 2 infected) attribute."
 
         assert hasattr(self.model, "patches"), "EnvToHuman: model needs to have a 'patches' attribute."
-        assert hasattr(self.model.patches, "Psi"), (
-            "EnvToHuman: model patches needs to have a 'Psi' (environmental transmission rate) attribute."
-        )
+        assert hasattr(self.model.patches, "Psi"), "EnvToHuman: model patches needs to have a 'Psi' (environmental transmission rate) attribute."
 
         assert hasattr(self.model, "params"), "EnvToHuman: model needs to have a 'params' attribute."
         assert "tau_i" in self.model.params, "EnvToHuman: model params needs to have a 'tau_i' (emmigration probability) parameter."

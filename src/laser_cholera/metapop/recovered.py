@@ -10,9 +10,7 @@ class Recovered:
         assert hasattr(model, "people"), "Recovered: model needs to have a 'people' attribute."
         model.people.add_vector_property("R", length=model.params.nticks + 1, dtype=np.int32, default=0)
         assert hasattr(model, "params"), "Recovered: model needs to have a 'params' attribute."
-        assert "R_j_initial" in model.params, (
-            "Recovered: model params needs to have a 'R_j_initial' (initial recovered population) parameter."
-        )
+        assert "R_j_initial" in model.params, "Recovered: model params needs to have a 'R_j_initial' (initial recovered population) parameter."
 
         model.people.R[0] = model.params.R_j_initial
 

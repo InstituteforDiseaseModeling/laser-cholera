@@ -13,9 +13,7 @@ class EnvToHuman:
         model.patches.add_vector_property("Psi", length=model.params.nticks + 1, dtype=np.float32, default=np.float32(0.0))
 
         assert hasattr(model, "params"), "EnvToHuman: model needs to have a 'params' attribute."
-        assert hasattr(model.params, "psi_jt"), (
-            "EnvToHuman: model params needs to have a 'psi_jt' (environmental contamination rate) parameter."
-        )
+        assert hasattr(model.params, "psi_jt"), "EnvToHuman: model params needs to have a 'psi_jt' (environmental contamination rate) parameter."
 
         psi = model.params.psi_jt  # convenience
         # TODO - use newer laser_core with add_array_property and psi.shape
@@ -40,9 +38,7 @@ class EnvToHuman:
         assert hasattr(self.model.patches, "W"), "EnvToHuman: model patches needs to have a 'W' (environmental) attribute."
 
         assert "tau_i" in self.model.params, "EnvToHuman: model params needs to have a 'tau_i' (emmigration probability) parameter."
-        assert "theta_j" in self.model.params, (
-            "EnvToHuman: model params needs to have a 'theta_j' (fraction of population with WASH) attribute."
-        )
+        assert "theta_j" in self.model.params, "EnvToHuman: model params needs to have a 'theta_j' (fraction of population with WASH) attribute."
         assert "kappa" in self.model.params, "EnvToHuman: model params needs to have a 'kappa' (environmental transmission rate) parameter."
 
         return

@@ -54,9 +54,7 @@ class HumanToHuman:
 
         assert hasattr(self.model, "params"), "HumanToHuman: model needs to have a 'params' attribute."
         assert "tau_i" in self.model.params, "HumanToHuman: model params needs to have a 'tau_i' (emmigration probability) parameter."
-        assert "beta_j0_hum" in self.model.params, (
-            "HumanToHuman: model params needs to have a 'beta_j0_hum' (baseline transmission rate) parameter."
-        )
+        assert "beta_j0_hum" in self.model.params, "HumanToHuman: model params needs to have a 'beta_j0_hum' (baseline transmission rate) parameter."
 
         assert "alpha_1" in self.model.params, "HumanToHuman: model params needs to have an 'alpha_1' (numerator power) parameter."
         assert "alpha_2" in self.model.params, "HumanToHuman: model params needs to have an 'alpha_2' (denominator power) parameter."
@@ -137,11 +135,7 @@ class HumanToHuman:
         yield "Spatial Connectivity Matrix (pi_ij)"
 
         # Seasonality factor by location over time
-        _fig = (
-            plt.figure(figsize=(12, 9), dpi=128, num="Seasonal Human-Human Transmission Factor by Location Over Time")
-            if fig is None
-            else fig
-        )
+        _fig = plt.figure(figsize=(12, 9), dpi=128, num="Seasonal Human-Human Transmission Factor by Location Over Time") if fig is None else fig
 
         indices = np.argsort(self.model.params.latitude)[::-1]
         plt.imshow(self.model.patches.beta_jt_human[:, indices].T, aspect="auto", cmap="Blues", interpolation="nearest")

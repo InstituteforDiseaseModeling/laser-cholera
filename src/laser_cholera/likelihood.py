@@ -57,9 +57,7 @@ def get_model_likelihood(
         or not isinstance(obs_deaths, np.ndarray)
         or not isinstance(sim_deaths, np.ndarray)
     ):
-        raise TypeError(
-            f"obs_* and est_* must be numpy arrays ({type(obs_cases)=}, {type(sim_cases)=}, {type(obs_deaths)=}, {type(sim_deaths)=})."
-        )
+        raise TypeError(f"obs_* and est_* must be numpy arrays ({type(obs_cases)=}, {type(sim_cases)=}, {type(obs_deaths)=}, {type(sim_deaths)=}).")
 
     n_locations, n_time_steps = obs_cases.shape
 
@@ -134,9 +132,7 @@ def get_model_likelihood(
         family_deaths = "negbin" if (mean_deaths > 0) and ((var_deaths / mean_deaths) >= 1.5) else "poisson"
 
         # Calculate log-likelihood for cases
-        ll_cases = calc_log_likelihood(
-            observed=obs_cases[j,], simulated=sim_cases[j,], family=family_cases, weights=weights_time, verbose=verbose
-        )
+        ll_cases = calc_log_likelihood(observed=obs_cases[j,], simulated=sim_cases[j,], family=family_cases, weights=weights_time, verbose=verbose)
 
         ll_max_cases = calc_log_likelihood(
             observed=np.array([np.nanmax(obs_cases[j,])]),
@@ -147,9 +143,7 @@ def get_model_likelihood(
         )
 
         # Calculate log-likelihood for deaths
-        ll_deaths = calc_log_likelihood(
-            observed=obs_deaths[j,], simulated=sim_deaths[j,], family=family_deaths, weights=weights_time, verbose=False
-        )
+        ll_deaths = calc_log_likelihood(observed=obs_deaths[j,], simulated=sim_deaths[j,], family=family_deaths, weights=weights_time, verbose=False)
 
         ll_max_deaths = calc_log_likelihood(
             observed=np.array([np.nanmax(obs_deaths[j,])]),
@@ -629,9 +623,7 @@ def calc_log_likelihood_validation(observed, simulated, weights, trials=None, ve
     # Check lengths
     n = len(observed)
     if len(simulated) != n or len(weights) != n:
-        raise ValueError(
-            f"Lengths of observed ({len(observed)}), simulated ({len(simulated)}), and weights ({len(weights)}) must all match."
-        )
+        raise ValueError(f"Lengths of observed ({len(observed)}), simulated ({len(simulated)}), and weights ({len(weights)}) must all match.")
 
     # Remove NaNs
     if trials is None:

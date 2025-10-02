@@ -44,20 +44,12 @@ class TestVaccinated(unittest.TestCase):
         model.components = [Susceptible, Exposed, Vaccinated, Census]  # , Infectious, Recovered]
         # model.run() # don't need to run, just check initial distribution
 
-        assert np.all(model.people.V1imm[0] == np.round(model.params.phi_1 * model.params.V1_j_initial)), (
-            "V1_imm: initial distribution not correct."
-        )
-        assert np.all(model.people.V1sus[0] == (model.params.V1_j_initial - model.people.V1imm[0])), (
-            "V1_sus: initial distribution not correct."
-        )
+        assert np.all(model.people.V1imm[0] == np.round(model.params.phi_1 * model.params.V1_j_initial)), "V1_imm: initial distribution not correct."
+        assert np.all(model.people.V1sus[0] == (model.params.V1_j_initial - model.people.V1imm[0])), "V1_sus: initial distribution not correct."
         assert np.all(model.people.V1inf[0] == 0), "V1_inf: initial distribution not correct."
         assert np.all(model.patches.V1[0] == model.params.V1_j_initial), "V1: initial distribution not correct."
-        assert np.all(model.people.V2imm[0] == np.round(model.params.phi_2 * model.params.V2_j_initial)), (
-            "V2_imm: initial distribution not correct."
-        )
-        assert np.all(model.people.V2sus[0] == (model.params.V2_j_initial - model.people.V2imm[0])), (
-            "V2_sus: initial distribution not correct."
-        )
+        assert np.all(model.people.V2imm[0] == np.round(model.params.phi_2 * model.params.V2_j_initial)), "V2_imm: initial distribution not correct."
+        assert np.all(model.people.V2sus[0] == (model.params.V2_j_initial - model.people.V2imm[0])), "V2_sus: initial distribution not correct."
         assert np.all(model.people.V2inf[0] == 0), "V2_inf: initial distribution not correct."
         assert np.all(model.patches.V2[0] == model.params.V2_j_initial), "V2: initial distribution not correct."
 

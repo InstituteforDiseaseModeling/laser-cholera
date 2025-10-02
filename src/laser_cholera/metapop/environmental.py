@@ -12,9 +12,7 @@ class Environmental:
 
         model.patches.add_vector_property("W", length=model.params.nticks + 1, dtype=np.float32, default=0.0)
         assert hasattr(model, "params"), "Environmental: model needs to have a 'params' attribute."
-        assert hasattr(model.params, "psi_jt"), (
-            "Environmental: model params needs to have a 'psi_jt' (environmental contamination rate) parameter."
-        )
+        assert hasattr(model.params, "psi_jt"), "Environmental: model params needs to have a 'psi_jt' (environmental contagion rate) parameter."
         psi = model.params.psi_jt  # convenience
         # TODO - use newer laser_core with add_array_property and psi.shape
         model.patches.add_vector_property("delta_jt", length=psi.shape[0], dtype=np.float32, default=0.0)
@@ -48,9 +46,7 @@ class Environmental:
         assert hasattr(self.model.people, "Iasym"), "Environmental: model people needs to have a 'Iasym' (asymptomatic) attribute."
         assert "zeta_1" in self.model.params, "Environmental: model params needs to have a 'zeta_1' (symptomatic shedding rate) parameter."
         assert "zeta_2" in self.model.params, "Environmental: model params needs to have a 'zeta_2' (asymptomatic shedding rate) parameter."
-        assert "theta_j" in self.model.params, (
-            "Environmental: model params needs to have a 'theta_j' (fraction of population with WASH) attribute."
-        )
+        assert "theta_j" in self.model.params, "Environmental: model params needs to have a 'theta_j' (fraction of population with WASH) attribute."
 
         return
 
@@ -122,7 +118,7 @@ def map_suitability_to_decay(fast, slow, suitability, beta_a, beta_b):
     """
     Map suitability to decay using a beta distribution.
 
-    $ \\delta_{jt} = \frac { 1 } { \text {days}_short + f( \\psi_{jt}) ( \text {days}_long  - \text {days}_short ) } $
+    $ \\delta_{jt} = \\frac { 1 } { \\text {days}_short + f( \\psi_{jt}) ( \\text {days}_long  - \\text {days}_short ) } $
 
     We use a parameterized beta distribution to map suitability values [0, 1] to [0, 1] in a, potentially, non-linear way.
 
