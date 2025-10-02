@@ -16,19 +16,24 @@ class Analyzer:
 
     def __call__(self, model, tick: int) -> None:
         """Calculate log likelihood on the final tick."""
+        # If model.params.calc_likelihood is True, calculate the log likelihood on the final tick.
         if tick == model.params.nticks - 1:
-            # Use the smaller of reported cases or the number of timesteps (not including the initial state)
-            nreports = min(model.params.reported_cases.shape[1], model.patches.incidence.shape[0] - 1)
-            try:
-                model.log_likelihood = get_model_likelihood(
-                    obs_cases=model.params.reported_cases[:, :nreports],
-                    sim_cases=model.patches.incidence[1 : nreports + 1, :].T,
-                    obs_deaths=model.params.reported_deaths[:, :nreports],
-                    sim_deaths=model.patches.disease_deaths[1 : nreports + 1, :].T,
-                )
-            except ValueError as e:
-                print(f"Error calculating log likelihood: {e}")
-                model.log_likelihood = -np.inf
+            if ("calc_likelihood" in model.params) and model.params.calc_likelihood:
+                # Use the smaller of reported cases or the number of timesteps (not including the initial state)
+                nreports = min(model.params.reported_cases.shape[1], model.patches.incidence.shape[0] - 1)
+                try:
+                    model.log_likelihood = get_model_likelihood(
+                        obs_cases=model.params.reported_cases[:, :nreports],
+                        sim_cases=model.patches.incidence[1 : nreports + 1, :].T,
+                        obs_deaths=model.params.reported_deaths[:, :nreports],
+                        sim_deaths=model.patches.disease_deaths[1 : nreports + 1, :].T,
+                    )
+                except ValueError as e:
+                    print(f"Error calculating log likelihood: {e}")
+                    model.log_likelihood = -np.inf
+            else:
+                model.log_likelihood = np.nan
+
         return
 
     def plot(self, fig: Figure = None):  # pragma: no cover

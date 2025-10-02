@@ -237,9 +237,7 @@ class TestVitalStatistics(unittest.TestCase):
             + model.people.V2sus
             + model.people.V2inf
         )
-        assert np.all(model.patches.non_disease_deaths[:-1] == (aggregate[:-1] - aggregate[1:])), (
-            "total population: deaths not recorded correctly."
-        )
+        assert np.all(model.patches.non_disease_deaths[:-1] == (aggregate[:-1] - aggregate[1:])), "total population: deaths not recorded correctly."
 
         return
 

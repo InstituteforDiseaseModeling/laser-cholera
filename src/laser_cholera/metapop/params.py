@@ -363,16 +363,12 @@ def validate_parameters(params: PropertySetEx) -> None:
     nticks = params.nticks
 
     # shape of b_jt = (nticks, npatches)
-    assert params.b_jt.shape == (nticks, npatches), (
-        f"Shape of b_jt {params.b_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
-    )
+    assert params.b_jt.shape == (nticks, npatches), f"Shape of b_jt {params.b_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     # 0 <= b_jt
     assert np.all(params.b_jt >= 0.0), "b_jt rate values must be positive"
 
     # shape of b_jt = (nticks, npatches)
-    assert params.d_jt.shape == (nticks, npatches), (
-        f"Shape of d_jt {params.d_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
-    )
+    assert params.d_jt.shape == (nticks, npatches), f"Shape of d_jt {params.d_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     # 0 <= d_jt
     assert np.all(params.d_jt >= 0.0), "d_jt rate values must be positive"
 
@@ -413,9 +409,7 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert params.epsilon >= 0.0, "epsilon value must be positive"
 
     # shape of mu_jt = (nticks, npatches)
-    assert params.mu_jt.shape == (nticks, npatches), (
-        f"Shape of mu_jt {params.mu_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
-    )
+    assert params.mu_jt.shape == (nticks, npatches), f"Shape of mu_jt {params.mu_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     # all mu_jt must be above zero
     assert np.all(params.mu_jt >= 0.0), "mu_jt values must be positive"
 
@@ -426,12 +420,8 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert (params.sigma >= 0.0) & (params.sigma <= 1.0), "sigma value must be in the range [0, 1]"
 
     # Number of lat/long values must match number of patches
-    assert len(params.latitude) == npatches, (
-        f"Number of latitude values ({len(params.latitude)}) does not match number of locations ({npatches})"
-    )
-    assert len(params.longitude) == npatches, (
-        f"Number of longitude values ({len(params.longitude)}) does not match number of locations ({npatches})"
-    )
+    assert len(params.latitude) == npatches, f"Number of latitude values ({len(params.latitude)}) does not match number of locations ({npatches})"
+    assert len(params.longitude) == npatches, f"Number of longitude values ({len(params.longitude)}) does not match number of locations ({npatches})"
     # omega and gamma required to build pi_ij matrix with "power_norm"
     assert "mobility_omega" in params, "Parameters: 'mobility_omega' not found in parameters"
     assert "mobility_gamma" in params, "Parameters: 'mobility_gamma' not found in parameters"
@@ -472,9 +462,7 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert np.all(params.beta_j0_env >= 0.0), "beta_j0_env values must be >= 0"
 
     # length of theta_j must be equal to number of locations
-    assert len(params.theta_j) == npatches, (
-        f"Number of theta_j values ({len(params.theta_j)}) does not match number of locations ({npatches})"
-    )
+    assert len(params.theta_j) == npatches, f"Number of theta_j values ({len(params.theta_j)}) does not match number of locations ({npatches})"
     # theta_j must be between 0 (no WASH intervention) and 1 (full WASH protection)
     assert np.all((params.theta_j >= 0.0) & (params.theta_j <= 1.0)), "theta_j values must be in the range [0, 1]"
 

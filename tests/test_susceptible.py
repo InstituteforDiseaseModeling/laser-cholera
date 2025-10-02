@@ -56,9 +56,7 @@ class TestSusceptible(unittest.TestCase):
         model.run()
 
         delta = model.patches.births[:-1] - model.patches.non_disease_deaths[:-1]
-        assert np.all(delta == (model.people.S[1:] - model.people.S[:-1])), (
-            "Susceptible: births - deaths != change in susceptible population."
-        )
+        assert np.all(delta == (model.people.S[1:] - model.people.S[:-1])), "Susceptible: births - deaths != change in susceptible population."
 
         return
 
@@ -88,9 +86,7 @@ class TestSusceptible(unittest.TestCase):
         model.run()
 
         assert np.all(model.people.S[-1] > model.people.S[0]), "Susceptible: births not occurring."
-        assert np.all(model.patches.births[:-1] == (model.people.S[1:] - model.people.S[:-1])), (
-            "Susceptible: births not recorded correctly."
-        )
+        assert np.all(model.patches.births[:-1] == (model.people.S[1:] - model.people.S[:-1])), "Susceptible: births not recorded correctly."
 
         return
 

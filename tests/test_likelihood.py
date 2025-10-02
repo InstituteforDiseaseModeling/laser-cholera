@@ -398,9 +398,7 @@ class TestThatLikelihoodTests(unittest.TestCase):
             calc_log_likelihood_negbin(observed=np.array([1, 2]), simulated=np.array([1]), k=1, weights=None, verbose=False)
 
     def test_negbin_returns_NA_for_all_NA_input(self):
-        ll = calc_log_likelihood_negbin(
-            observed=np.array([np.nan, np.nan]), simulated=np.array([np.nan, np.nan]), k=1, weights=None, verbose=False
-        )
+        ll = calc_log_likelihood_negbin(observed=np.array([np.nan, np.nan]), simulated=np.array([np.nan, np.nan]), k=1, weights=None, verbose=False)
         assert np.all(np.isnan(ll))
 
     def test_negbin_errors_on_negative_weights(self):

@@ -59,7 +59,7 @@ metapop = "laser_cholera.metapop.model:cli_run"
 
 [tool.ruff]
 extend-exclude = ["static", "ci/templates"]
-line-length = 140
+line-length = 150
 src = ["src", "tests"]
 target-version = "py39"
 
