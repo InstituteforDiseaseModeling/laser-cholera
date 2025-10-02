@@ -56,11 +56,10 @@ class EnvToHuman:
         Psi[:] = normalized
 
         # PsiS
-        S = model.people.S[tick]
         S_next = model.people.S[tick + 1]
         E_next = model.people.E[tick + 1]
         # Use S_next here since some S will have been removed by natural mortality and by human-to-human transmission
-        local_s = np.round(local_frac * S_next).astype(S.dtype)
+        local_s = np.round(local_frac * S_next).astype(S_next.dtype)
         new_infections = model.prng.binomial(local_s, -np.expm1(-Psi)).astype(S_next.dtype)
         S_next -= new_infections
         E_next += new_infections

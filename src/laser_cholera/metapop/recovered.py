@@ -41,6 +41,8 @@ class Recovered:
         R_next -= waned
         S_next += waned
 
+        assert np.all(R_next >= 0), f"Negative recovered populations at tick {tick + 1}.\n\t{R_next=}"
+
         return
 
     def plot(self, fig: Figure = None):  # pragma: no cover

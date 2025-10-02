@@ -74,7 +74,6 @@ class HumanToHuman:
         Isym = model.people.Isym[tick]
         Iasym = model.people.Iasym[tick]
         N = model.patches.N[tick]
-        S = model.people.S[tick]
         S_next = model.people.S[tick + 1]
         E_next = model.people.E[tick + 1]
 
@@ -96,10 +95,11 @@ class HumanToHuman:
             rate = np.maximum(rate, 0.0)
 
         Lambda[:] = rate
-        local = np.round(local_frac * S).astype(S.dtype)
+        # Use S_next here since some S will have been removed by natural mortality and by environmental transmission
+        local = np.round(local_frac * S_next).astype(S_next.dtype)
         if np.any(np.isnan(rate)):
             logger.debug(f"NaN transmission rate at tick {tick + 1}.\n\t{rate=}")
-        new_infections = model.prng.binomial(local, -np.expm1(-rate)).astype(S.dtype)
+        new_infections = model.prng.binomial(local, -np.expm1(-rate)).astype(S_next.dtype)
         S_next -= new_infections
         E_next += new_infections
         model.patches.incidence_human[tick + 1] += new_infections
