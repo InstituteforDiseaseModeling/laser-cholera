@@ -201,7 +201,7 @@ def calculate_coupling(Isym, Iasym, N, C):
     """
     assert Isym.shape == Iasym.shape, "Isym and Iasym must have the same shape."
     assert Isym.shape == N.shape, "Isym and N must have the same shape."
-    T, L = N.shape
+    _T, L = N.shape
     assert C.shape == (L, L), "C must be a square matrix of shape (L, L)."
 
     y = (Isym + Iasym) / N
