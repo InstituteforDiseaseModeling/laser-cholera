@@ -20,7 +20,6 @@ class TestModel(unittest.TestCase):
             params.d_jt = params.d_jt[: params.nticks, :]
             params.nu_1_jt = params.nu_1_jt[: params.nticks, :]
             params.nu_2_jt = params.nu_2_jt[: params.nticks, :]
-            params.mu_jt = params.mu_jt[: params.nticks, :]
             params.psi_jt = params.psi_jt[: params.nticks, :]
 
         # S - use given susceptible populations

@@ -27,7 +27,18 @@ class Infectious:
     def check(self):
         assert hasattr(self.model.people, "R"), "Infectious: model.people needs to have a 'S' attribute."
         assert "d_jt" in self.model.params, "Infectious: model params needs to have a 'd_jt' (mortality rate) parameter."
-        assert "mu_jt" in self.model.params, "Infectious: model params needs to have a 'mu_jt' (disease mortality rate) parameter."
+
+        assert "mu_j_baseline" in self.model.params, (
+            "Infectious: model params needs to have a 'mu_j_baseline' (baseline disease mortality rate) parameter."
+        )
+        assert "mu_j_slope" in self.model.params, "Infectious: model params needs to have a 'mu_j_slope' (disease mortality rate slope) parameter."
+        assert "mu_j_epidemic_factor" in self.model.params, (
+            "Infectious: model params needs to have a 'mu_j_epidemic_factor' (disease mortality rate epidemic factor) parameter."
+        )
+        assert "epidemic_threshold" in self.model.params, (
+            "Infectious: model params needs to have a 'epidemic_threshold' (disease mortality rate epidemic threshold) parameter."
+        )
+
         assert "gamma_1" in self.model.params, "Infectious: model params needs to have a 'gamma_1' (recovery rate) parameter."
         assert "gamma_2" in self.model.params, "Infectious: model params needs to have a 'gamma_2' (recovery rate) parameter."
         assert "iota" in self.model.params, "Infectious: model params needs to have a 'iota' (progression rate) parameter."
@@ -52,7 +63,21 @@ class Infectious:
         assert np.all(Is_next >= 0), f"Is_next should not go negative ({tick=}\n\t{Is_next=})"
 
         ## disease deaths (mu)
-        disease_deaths = model.prng.binomial(Is_next, -np.expm1(-model.params.mu_jt[tick])).astype(Is_next.dtype)
+
+        t_factor = tick / model.params.nticks
+        N = model.people.S[tick] + model.people.E[tick] + model.people.Isym[tick] + model.people.Iasym[tick] + model.people.R[tick]
+        if hasattr(model.people, "V1imm"):
+            N += model.people.V1imm[tick] + model.people.V1sus[tick] + model.people.V2imm[tick] + model.people.V2sus[tick]
+        # Don't include V1inf or V2inf above, they're not "real" but just bookkeeping
+        if tick >= (delta := model.params.delta_reporting_cases):
+            treport = int(tick - delta)
+            Ireported = model.people.Isym[treport]
+            epidemic_flag = (Ireported > (model.params.epidemic_threshold * N)).astype(np.int32)
+        else:
+            epidemic_flag = np.zeros_like(N).astype(np.float32)
+        mu_jt = model.params.mu_j_baseline * (1 + model.params.mu_j_slope * t_factor) * (1 + model.params.mu_j_epidemic_factor * epidemic_flag)
+
+        disease_deaths = model.prng.binomial(Is_next, -np.expm1(-mu_jt)).astype(Is_next.dtype)
         model.patches.disease_deaths[tick] = disease_deaths
         Is_next -= disease_deaths
         assert np.all(Is_next >= 0), f"Is_next should not go negative ({tick=}\n\t{Is_next=})"
