@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import datetime
 from datetime import timedelta
+from numbers import Number
 from pathlib import Path
 from typing import Optional
 from typing import Union
@@ -117,7 +118,8 @@ def as_ndarray(input, dtype):
         retval = input
     elif isinstance(input, list):
         # Convert lists to NumPy arrays
-        retval = np.array(input, dtype=dtype)
+        sanitized = [value if value != "NA" else 0 for value in input]
+        retval = np.array(sanitized, dtype=dtype)
     else:
         # Convert other (assumed to be scalar) to a single entry NumPy array
         retval = np.array([input], dtype=dtype)
@@ -182,9 +184,23 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
     # No processing of "gamma_2"
     # No processing of "epsilon"
 
-    params.mu_jt = np.array(params.mu_jt, dtype=np.float32)
-    if params.mu_jt.shape == (num_nodes, num_ticks):
-        params.mu_jt = np.array(params.mu_jt.T)  # index on time, then location
+    # epidemic_threshold: scalar or 1-D array of length num_nodes
+    if not isinstance(params.epidemic_threshold, Number):
+        params.epidemic_threshold = np.array(params.epidemic_threshold, dtype=np.float32)
+
+    # mu_j_baseline: 1-D array of length num_nodes
+    params.mu_j_baseline = np.array(params.mu_j_baseline, dtype=np.float32)
+
+    # mu_j_slope: 1-D array of length num_nodes
+    params.mu_j_slope = np.array(params.mu_j_slope, dtype=np.float32)
+
+    # mu_j_epidemic_factor: 1-D array of length num_nodes
+    params.mu_j_epidemic_factor = np.array(params.mu_j_epidemic_factor, dtype=np.float32)
+
+    # # delta_reporting_cases: scalar
+    # params.delta_reporting_cases = np.int32(np.round(np.float32(params.delta_reporting_cases)))
+    # # delta_reporting_deaths: scalar
+    # params.delta_reporting_deaths = np.int32(np.round(np.float32(params.delta_reporting_deaths)))
 
     # No processing of "rho"
     # No processing of "sigma"
@@ -408,10 +424,26 @@ def validate_parameters(params: PropertySetEx) -> None:
     # epsilon must be positive
     assert params.epsilon >= 0.0, "epsilon value must be positive"
 
-    # shape of mu_jt = (nticks, npatches)
-    assert params.mu_jt.shape == (nticks, npatches), f"Shape of mu_jt {params.mu_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
-    # all mu_jt must be above zero
-    assert np.all(params.mu_jt >= 0.0), "mu_jt values must be positive"
+    if isinstance(params.epidemic_threshold, (Number, np.number)):
+        assert params.epidemic_threshold >= 0, f"epidemic_threshold {params.epidemic_threshold} must be >= 0"
+    elif isinstance(params.epidemic_threshold, np.ndarray):
+        assert np.all(params.epidemic_threshold >= 0), f"epidemic_threshold values must be >= 0 ({params.epidemic_threshold.min()=})"
+    else:
+        raise RuntimeError(f"params.epidemic_threshold is of an unexpected type: {type(params.epidemic_threshold)}")
+
+    assert params.mu_j_baseline.shape == (npatches,), f"Shape of params.mu_j_baseline ({params.mu_j_baseline.shape}) does not match ({npatches},)"
+    assert np.all(params.mu_j_baseline >= 0), f"mu_j_baseline values must be >= 0 {params.mu_j_baseline.min()=}"
+
+    assert params.mu_j_slope.shape == (npatches,), f"Shape of params.mu_j_slope ({params.mu_j_slope.shape}) does not match ({npatches},)"
+    # no range constraints on mu_j_slope
+
+    assert params.mu_j_epidemic_factor.shape == (npatches,), (
+        f"Shape of params.mu_j_epidemic_factor ({params.mu_j_epidemic_factor.shape}) does not match ({npatches},)"
+    )
+    assert np.all(params.mu_j_epidemic_factor >= 0), f"mu_j_epidemic_factor values must be >= 0 ({params.mu_j_epidemic_factor.min()=})"
+
+    assert params.delta_reporting_cases >= 0, f"delta_reporting_cases {params.delta_reporting_cases} must be >= 0"
+    assert params.delta_reporting_deaths >= 0, f"delta_reporting_deaths {params.delta_reporting_deaths} must be >= 0"
 
     # rho must be between 0 (all false positives) and 1 (no false positives)
     assert (params.rho >= 0.0) & (params.rho <= 1.0), "rho value must be in the range [0, 1]"

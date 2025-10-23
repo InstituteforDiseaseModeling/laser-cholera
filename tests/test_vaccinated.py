@@ -356,7 +356,8 @@ class TestVaccinated(unittest.TestCase):
         model.components = [Susceptible, Exposed, Vaccinated, Census]
         model.run()
 
-        nonzero_param_indices = np.nonzero(model.params.nu_1_jt)
+        # Test runs shorter duration than vaccination schedule, just check relevant entries
+        nonzero_param_indices = np.nonzero(model.params.nu_1_jt[0 : model.params.nticks])
         if len(nonzero_param_indices[0]) > 0:
             # Check any non-zero days in nu_1_jt should have non-zero doses in dose_one_doses
             assert np.all(model.patches.dose_one_doses[nonzero_param_indices] != 0), (

@@ -57,7 +57,7 @@ class TestVitalStatistics(unittest.TestCase):
         params.b_jt *= 0  # turn off births
         params.d_jt *= 0  # turn off deaths
         params.iota *= 0  # turn off progression from E to I
-        params.mu_jt *= 0  # turn off disease deaths
+        params.mu_j_baseline *= 0  # turn off disease deaths
         params.gamma_1 *= 0  # turn off recovery of symptomatic (Isym to R)
         params.gamma_2 *= 0  # turn off recovery of asymptomatic (Iasym to R)
         params.epsilon *= 0  # turn off waning natural immunity (R to S)
@@ -93,7 +93,7 @@ class TestVitalStatistics(unittest.TestCase):
         params.d_jt *= 5  # turn _up_ deaths
 
         params.iota *= 0  # turn off progression from E to I
-        params.mu_jt *= 0  # turn off disease deaths
+        params.mu_j_baseline *= 0  # turn off disease deaths
         params.gamma_1 *= 0  # turn off recovery of symptomatic (Isym to R)
         params.gamma_2 *= 0  # turn off recovery of asymptomatic (Iasym to R)
         params.epsilon *= 0  # turn off waning natural immunity (R to S)
@@ -131,7 +131,7 @@ class TestVitalStatistics(unittest.TestCase):
 
         params.b_jt *= 5  # turn _up_ births
         params.d_jt *= 5  # turn _up_ deaths
-        params.mu_jt *= 5  # turn _up_ disease deaths
+        params.mu_j_baseline *= 5  # turn _up_ disease deaths
 
         params.iota *= 0  # turn off progression from E to I
         params.gamma_1 *= 0  # turn off recovery of symptomatic (Isym to R)
@@ -170,7 +170,7 @@ class TestVitalStatistics(unittest.TestCase):
         params = self.get_test_parameters(overrides={"date_start": datetime(2025, 3, 24), "date_stop": datetime(2025, 4, 25), "nticks": 32})
 
         params.d_jt *= 0  # turn off non-disease deaths
-        params.mu_jt *= 0  # turn off disease deaths
+        params.mu_j_baseline *= 0  # turn off disease deaths
 
         model = Model(parameters=params)
         model.components = [Susceptible, Exposed, Recovered, Infectious, Vaccinated, Census]
@@ -198,7 +198,7 @@ class TestVitalStatistics(unittest.TestCase):
 
         params.b_jt *= 0  # turn off births
         params.iota *= 0  # turn off progression from E to I
-        params.mu_jt *= 0  # turn off disease deaths
+        params.mu_j_baseline *= 0  # turn off disease deaths
         params.gamma_1 *= 0  # turn off recovery of symptomatic (Isym to R)
         params.gamma_2 *= 0  # turn off recovery of asymptomatic (Iasym to R)
         params.epsilon *= 0  # turn off waning natural immunity (R to S)

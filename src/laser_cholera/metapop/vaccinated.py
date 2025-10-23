@@ -128,7 +128,10 @@ class Vaccinated:
         V2sus_next += waned
 
         # +newly vaccinated (successful take)
-        new_one_doses = model.prng.poisson(model.params.nu_1_jt[tick] * S / (S + E)).astype(V1imm.dtype)
+        fraction = np.zeros_like(S).astype(np.float32)
+        non_zero = S + E > 0
+        fraction[non_zero] = S[non_zero] / (S[non_zero] + E[non_zero])
+        new_one_doses = model.prng.poisson(model.params.nu_1_jt[tick] * fraction).astype(V1imm.dtype)
         # poisson can return more than current susceptible population, so we will clip
         if np.any(new_one_doses > S_next):
             logger.debug(f"WARNING: new_one_doses > S_next ({tick=})")
