@@ -70,9 +70,7 @@ class TestSusceptible(unittest.TestCase):
         model.run()
 
         assert np.all(model.people.S[-1] < model.people.S[0]), "Susceptible: deaths not occurring."
-        assert np.all(model.patches.non_disease_deaths[:-1] == (model.people.S[:-1] - model.people.S[1:])), (
-            "Susceptible: deaths not recorded correctly."
-        )
+        assert np.all(model.patches.non_disease_deaths[:-1] == (model.people.S[:-1] - model.people.S[1:])), "Susceptible: deaths not recorded correctly."
 
         return
 

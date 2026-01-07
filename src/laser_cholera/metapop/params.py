@@ -19,15 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 class PseEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, PropertySet):
-            return obj.to_dict()
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, datetime):
-            return f"{obj:%Y-%m-%d}"
+    def default(self, o):
+        if isinstance(o, PropertySet):
+            return o.to_dict()
+        elif isinstance(o, np.ndarray):
+            return o.tolist()
+        elif isinstance(o, datetime):
+            return f"{o:%Y-%m-%d}"
         else:
-            return super().default(obj)
+            return super().default(o)
 
 
 class PropertySetEx(PropertySet):
@@ -44,9 +44,7 @@ class PropertySetEx(PropertySet):
         return json.dumps(self.to_dict(), cls=PseEncoder, indent=4)
 
 
-def get_parameters(
-    paramsource: Optional[Union[str, Path, dict]] = None, do_validation: bool = True, overrides: Optional[dict] = None
-) -> PropertySetEx:
+def get_parameters(paramsource: Optional[Union[str, Path, dict]] = None, do_validation: bool = True, overrides: Optional[dict] = None) -> PropertySetEx:
     fn_map = {
         (".json",): load_json_parameters,
         (".json", ".gz"): load_compressed_json_parameters,
@@ -127,6 +125,22 @@ def as_ndarray(input, dtype):
     return retval
 
 
+def handle_nan(values, dtype) -> np.ndarray:
+    def convert(item):
+        try:
+            return int(item)
+        except ValueError:
+            pass
+        return np.nan
+
+    if isinstance(values, list):
+        values = np.array([[convert(element) for element in row] for row in values], dtype=dtype)
+    else:
+        assert isinstance(values, np.ndarray)
+
+    return values
+
+
 def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
     # Note the following canonicalizes the order of the locations based on the
     # order in the JSON file.
@@ -136,7 +150,7 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
 
     params = PropertySetEx(parameters)
 
-    # No processing of "seed"
+    # No processing of "params.seed"
 
     params.date_start = datetime.strptime(params.date_start, "%Y-%m-%d") if isinstance(params.date_start, (str,)) else params.date_start  # noqa: DTZ007
     params.date_stop = datetime.strptime(params.date_stop, "%Y-%m-%d") if isinstance(params.date_stop, (str,)) else params.date_stop  # noqa: DTZ007
@@ -150,118 +164,117 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
     num_ticks = params.nticks
     num_nodes = len(params.location_name)
 
-    # IDs are 1-based not 0-based like indices
-    # Map string IDs to names and names to indices (0-based)
+    assert int(params.p) == params.p, f"p must be an integer, but got {params.p}"
 
-    params.N_j_initial = as_ndarray(params.N_j_initial, dtype=np.uint32)
-    params.S_j_initial = as_ndarray(params.S_j_initial, dtype=np.uint32)
-    params.E_j_initial = as_ndarray(params.E_j_initial, dtype=np.uint32)
-    params.I_j_initial = as_ndarray(params.I_j_initial, dtype=np.uint32)
-    params.R_j_initial = as_ndarray(params.R_j_initial, dtype=np.uint32)
-    params.V1_j_initial = as_ndarray(params.V1_j_initial, dtype=np.uint32)
-    params.V2_j_initial = as_ndarray(params.V2_j_initial, dtype=np.uint32)
+    assert isinstance(params.reported_cases, (list, np.ndarray)), f"reported_cases must be a list of lists or a NumPy array, got {type(params.reported_cases)}"
+    assert isinstance(params.reported_deaths, (list, np.ndarray)), f"reported_deaths must be a list of lists or a NumPy array, got {type(params.reported_deaths)}"
 
-    params.b_jt = np.array(params.b_jt, dtype=np.float32)
+    # scalars
+    scalars = [
+        ("phi_1", np.float32),
+        ("phi_2", np.float32),
+        ("omega_1", np.float32),
+        ("omega_2", np.float32),
+        ("iota", np.float32),
+        ("gamma_1", np.float32),
+        ("gamma_2", np.float32),
+        ("epsilon", np.float32),
+        ("rho", np.float32),
+        ("sigma", np.float32),
+        ("chi_endemic", np.float32),
+        ("chi_epidemic", np.float32),
+        # ("epidemic_threshold", np.float32),
+        ("mobility_omega", np.float32),
+        ("mobility_gamma", np.float32),
+        ("p", np.int32),
+        ("alpha_1", np.float32),
+        ("alpha_2", np.float32),
+        ("zeta_1", np.float32),
+        ("zeta_2", np.float32),
+        ("kappa", np.float32),
+        ("decay_days_short", np.float32),
+        ("decay_days_long", np.float32),
+        ("decay_shape_1", np.float32),
+        ("decay_shape_2", np.float32),
+        ("delta_reporting_cases", np.int32),
+        ("delta_reporting_deaths", np.int32),
+    ]
+    for name, transform in scalars:
+        setattr(params, name, transform(getattr(params, name)))
+
+    # arrays
+    arrays = [
+        ("N_j_initial", as_ndarray, np.uint32),
+        ("S_j_initial", as_ndarray, np.uint32),
+        ("E_j_initial", as_ndarray, np.uint32),
+        ("I_j_initial", as_ndarray, np.uint32),
+        ("R_j_initial", as_ndarray, np.uint32),
+        ("V1_j_initial", as_ndarray, np.uint32),
+        ("V2_j_initial", as_ndarray, np.uint32),
+        ("b_jt", np.array, np.float32),
+        ("d_jt", np.array, np.float32),
+        ("nu_1_jt", np.array, np.float32),
+        ("nu_2_jt", np.array, np.float32),
+        # ("epidemic_threshold", np.array, np.float32),
+        ("longitude", as_ndarray, np.float32),
+        ("latitude", as_ndarray, np.float32),
+        ("tau_i", as_ndarray, np.float32),
+        ("beta_j0_hum", as_ndarray, np.float32),
+        ("a_1_j", as_ndarray, np.float32),
+        ("a_2_j", as_ndarray, np.float32),
+        ("b_1_j", as_ndarray, np.float32),
+        ("b_2_j", as_ndarray, np.float32),
+        ("beta_j0_env", as_ndarray, np.float32),
+        ("theta_j", as_ndarray, np.float32),
+        ("psi_jt", np.array, np.float32),
+        ("psi_star_a", np.array, np.float32),
+        ("psi_star_b", np.array, np.float32),
+        ("psi_star_z", np.array, np.float32),
+        ("psi_star_k", np.array, np.float32),
+        ("reported_cases", handle_nan, np.float32),
+        ("reported_deaths", handle_nan, np.float32),
+        ("beta_j0_tot", np.array, np.float32),
+        ("p_beta", np.array, np.float32),
+        ("prop_S_initial", np.array, np.float32),
+        ("prop_E_initial", np.array, np.float32),
+        ("prop_I_initial", np.array, np.float32),
+        ("prop_R_initial", np.array, np.float32),
+        ("prop_V1_initial", np.array, np.float32),
+        ("prop_V2_initial", np.array, np.float32),
+        ("mu_j_baseline", np.array, np.float32),
+        ("mu_j_slope", np.array, np.float32),
+        ("mu_j_epidemic_factor", np.array, np.float32),
+        ("mu_jt", np.array, np.float32),
+    ]
+    for name, transform, dtype in arrays:
+        setattr(params, name, transform(getattr(params, name), dtype=dtype))
+
     if params.b_jt.shape == (num_nodes, num_ticks):
         params.b_jt = np.array(params.b_jt.T)  # index on time, then location
-    params.d_jt = np.array(params.d_jt, dtype=np.float32)
+
     if params.d_jt.shape == (num_nodes, num_ticks):
         params.d_jt = np.array(params.d_jt.T)  # index on time, then location
 
-    params.nu_1_jt = np.array(params.nu_1_jt, dtype=np.float32)
     if params.nu_1_jt.shape == (num_nodes, num_ticks):
         params.nu_1_jt = np.array(params.nu_1_jt.T)  # index on time, then location
-    params.nu_2_jt = np.array(params.nu_2_jt, dtype=np.float32)
+
     if params.nu_2_jt.shape == (num_nodes, num_ticks):
         params.nu_2_jt = np.array(params.nu_2_jt.T)  # index on time, then location
 
-    # No processing of "phi_1"
-    # No processing of "phi_2"
-    # No processing of "omega_1"
-    # No processing of "omega_2"
-    # No processing of "iota"
-    # No processing of "gamma_1"
-    # No processing of "gamma_2"
-    # No processing of "epsilon"
-
     # epidemic_threshold: scalar or 1-D array of length num_nodes
-    if not isinstance(params.epidemic_threshold, Number):
+    if isinstance(params.epidemic_threshold, Number):
+        params.epidemic_threshold = np.float32(params.epidemic_threshold)
+    else:
+        assert isinstance(params.epidemic_threshold, list), f"epidemic_threshold must be a scalar or list of values, got {type(params.epidemic_threshold)}"
         params.epidemic_threshold = np.array(params.epidemic_threshold, dtype=np.float32)
 
-    # mu_j_baseline: 1-D array of length num_nodes
-    params.mu_j_baseline = np.array(params.mu_j_baseline, dtype=np.float32)
-
-    # mu_j_slope: 1-D array of length num_nodes
-    params.mu_j_slope = np.array(params.mu_j_slope, dtype=np.float32)
-
-    # mu_j_epidemic_factor: 1-D array of length num_nodes
-    params.mu_j_epidemic_factor = np.array(params.mu_j_epidemic_factor, dtype=np.float32)
-
-    # # delta_reporting_cases: scalar
-    # params.delta_reporting_cases = np.int32(np.round(np.float32(params.delta_reporting_cases)))
-    # # delta_reporting_deaths: scalar
-    # params.delta_reporting_deaths = np.int32(np.round(np.float32(params.delta_reporting_deaths)))
-
-    # No processing of "rho"
-    # No processing of "sigma"
-
-    params.latitude = as_ndarray(params.latitude, dtype=np.float32)
-    params.longitude = as_ndarray(params.longitude, dtype=np.float32)
-
-    # No processing of "mobility_omega"
-    # No processing of "mobility_gamma"
-
-    params.tau_i = as_ndarray(params.tau_i, dtype=np.float32)
     assert np.all((params.tau_i >= 0.0) & (params.tau_i <= 1.0)), "tau_i values must be in the range [0, 1]"
 
-    params.beta_j0_hum = as_ndarray(params.beta_j0_hum, dtype=np.float32)
+    # TODO - is this necessary?
+    params.beta_j0_env = params.beta_j0_env.reshape(-1, 1)
 
-    params.a_1_j = as_ndarray(params.a_1_j, dtype=np.float32)
-    params.b_1_j = as_ndarray(params.b_1_j, dtype=np.float32)
-    params.a_2_j = as_ndarray(params.a_2_j, dtype=np.float32)
-    params.b_2_j = as_ndarray(params.b_2_j, dtype=np.float32)
-
-    assert int(params.p) == params.p, f"p must be an integer, but got {params.p}"
-    params.p = int(params.p)
-
-    # No processing of "alpha_1"
-    # No processing of "alpha_2"
-
-    params.beta_j0_env = as_ndarray(params.beta_j0_env, dtype=np.float32).reshape(-1, 1)
-    params.theta_j = as_ndarray(params.theta_j, dtype=np.float32)
-
-    params.psi_jt = np.array(params.psi_jt, dtype=np.float32)
     if params.psi_jt.shape == (num_nodes, num_ticks):
         params.psi_jt = np.array(params.psi_jt.T)  # index on time, then location
-
-    # No processing of "zeta_1"
-    # No processing of "zeta_2"
-    # No processing of "kappa"
-    # No processing of "decay_days_short"
-    # No processing of "decay_days_long"
-    # No processing of "decay_shape_1"
-    # No processing of "decay_shape_2"
-
-    def convert(item):
-        try:
-            return int(item)
-        except ValueError:
-            pass
-        return np.nan
-
-    # If it's a list (of lists), convert to a numpy array. Otherwise assume it's already a numpy array.
-    if isinstance(params.reported_cases, list):
-        params.reported_cases = np.array([[convert(element) for element in row] for row in params.reported_cases])
-    else:
-        assert isinstance(params.reported_cases, np.ndarray), "reported_cases must be a list of lists or a numpy array"
-
-    # If it's a list (of lists), convert to a numpy array. Otherwise assume it's already a numpy array.
-    if isinstance(params.reported_deaths, list):
-        params.reported_deaths = np.array([[convert(element) for element in row] for row in params.reported_deaths])
-    else:
-        assert isinstance(params.reported_deaths, np.ndarray), "reported_deaths must be a list of lists or a numpy array"
-
-    # No processing of "return"
 
     return params
 
@@ -351,29 +364,17 @@ def validate_parameters(params: PropertySetEx) -> None:
 
     npatches = len(params.location_name)
 
-    assert params.S_j_initial.shape == (npatches,), (
-        f"Number of S_j_initial values ({len(params.S_j_initial)}) does not match number of locations ({npatches})"
-    )
+    assert params.S_j_initial.shape == (npatches,), f"Number of S_j_initial values ({len(params.S_j_initial)}) does not match number of locations ({npatches})"
     assert np.all(params.S_j_initial >= 0), "S_j_initial values must be non-negative"
-    assert params.E_j_initial.shape == (npatches,), (
-        f"Number of E_j_initial values ({len(params.E_j_initial)}) does not match number of locations ({npatches})"
-    )
+    assert params.E_j_initial.shape == (npatches,), f"Number of E_j_initial values ({len(params.E_j_initial)}) does not match number of locations ({npatches})"
     assert np.all(params.E_j_initial >= 0), "E_j_initial values must be non-negative"
-    assert params.I_j_initial.shape == (npatches,), (
-        f"Number of I_j_initial values ({len(params.I_j_initial)}) does not match number of locations ({npatches})"
-    )
+    assert params.I_j_initial.shape == (npatches,), f"Number of I_j_initial values ({len(params.I_j_initial)}) does not match number of locations ({npatches})"
     assert np.all(params.I_j_initial >= 0), "I_j_initial values must be non-negative"
-    assert params.R_j_initial.shape == (npatches,), (
-        f"Number of R_j_initial values ({len(params.R_j_initial)}) does not match number of locations ({npatches})"
-    )
+    assert params.R_j_initial.shape == (npatches,), f"Number of R_j_initial values ({len(params.R_j_initial)}) does not match number of locations ({npatches})"
     assert np.all(params.R_j_initial >= 0), "R_j_initial values must be non-negative"
-    assert params.V1_j_initial.shape == (npatches,), (
-        f"Number of V1_j_initial values ({len(params.V1_j_initial)}) does not match number of locations ({npatches})"
-    )
+    assert params.V1_j_initial.shape == (npatches,), f"Number of V1_j_initial values ({len(params.V1_j_initial)}) does not match number of locations ({npatches})"
     assert np.all(params.V1_j_initial >= 0), "V1_j_initial values must be non-negative"
-    assert params.V2_j_initial.shape == (npatches,), (
-        f"Number of V2_j_initial values ({len(params.V2_j_initial)}) does not match number of locations ({npatches})"
-    )
+    assert params.V2_j_initial.shape == (npatches,), f"Number of V2_j_initial values ({len(params.V2_j_initial)}) does not match number of locations ({npatches})"
     assert np.all(params.V2_j_initial >= 0), "V2_j_initial values must be non-negative"
 
     nticks = params.nticks
@@ -389,18 +390,14 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert np.all(params.d_jt >= 0.0), "d_jt rate values must be positive"
 
     # shape of nu_1_jt = (nticks, npatches)
-    assert params.nu_1_jt.shape == (nticks, npatches), (
-        f"Shape of nu_1_jt {params.nu_1_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
-    )
+    assert params.nu_1_jt.shape == (nticks, npatches), f"Shape of nu_1_jt {params.nu_1_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     # # nu_1_jt - no daily value can be larger than the country population (N_j_initial) / 7
     # assert np.all(params.nu_1_jt <= params.N_j_initial[np.newaxis, :] / 7), (
     #     "nu_1_jt values must not exceed N_j_initial / 7 for any location"
     # )
 
     # shape of nu_2_jt = (nticks, npatches)
-    assert params.nu_2_jt.shape == (nticks, npatches), (
-        f"Shape of nu_2_jt {params.nu_2_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
-    )
+    assert params.nu_2_jt.shape == (nticks, npatches), f"Shape of nu_2_jt {params.nu_2_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
     # # nu_2_jt - no daily value can be larger than the country population (N_j_initial) / 7
     # assert np.all(params.nu_2_jt <= params.N_j_initial[np.newaxis, :] / 7), (
     #     "nu_2_jt values must not exceed N_j_initial / 7 for any location"
@@ -437,9 +434,7 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert params.mu_j_slope.shape == (npatches,), f"Shape of params.mu_j_slope ({params.mu_j_slope.shape}) does not match ({npatches},)"
     # no range constraints on mu_j_slope
 
-    assert params.mu_j_epidemic_factor.shape == (npatches,), (
-        f"Shape of params.mu_j_epidemic_factor ({params.mu_j_epidemic_factor.shape}) does not match ({npatches},)"
-    )
+    assert params.mu_j_epidemic_factor.shape == (npatches,), f"Shape of params.mu_j_epidemic_factor ({params.mu_j_epidemic_factor.shape}) does not match ({npatches},)"
     assert np.all(params.mu_j_epidemic_factor >= 0), f"mu_j_epidemic_factor values must be >= 0 ({params.mu_j_epidemic_factor.min()=})"
 
     assert params.delta_reporting_cases >= 0, f"delta_reporting_cases {params.delta_reporting_cases} must be >= 0"
@@ -466,9 +461,7 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert "p" in params, "Parameters: 'p' (seasonality phase) not found in parameters"
 
     # length of beta_j0_hum must be equal to number of locations
-    assert len(params.beta_j0_hum) == npatches, (
-        f"Number of beta_j0_hum values ({len(params.beta_j0_hum)}) does not match number of locations ({npatches})"
-    )
+    assert len(params.beta_j0_hum) == npatches, f"Number of beta_j0_hum values ({len(params.beta_j0_hum)}) does not match number of locations ({npatches})"
     # beta_j0_hum must be >= 0
     assert np.all(params.beta_j0_hum >= 0.0), "beta_j0_hum values must be >= 0"
 
@@ -487,9 +480,7 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert (params.alpha_2 >= 0.0) & (params.alpha_2 <= 1.0), "alpha_1 value must be in the range [0, 1]"
 
     # length of beta_j0_env must be equal to number of locations
-    assert len(params.beta_j0_env) == npatches, (
-        f"Number of beta_j0_env values ({len(params.beta_j0_env)}) does not match number of locations ({npatches})"
-    )
+    assert len(params.beta_j0_env) == npatches, f"Number of beta_j0_env values ({len(params.beta_j0_env)}) does not match number of locations ({npatches})"
     # beta_j0_env must be >= 0
     assert np.all(params.beta_j0_env >= 0.0), "beta_j0_env values must be >= 0"
 
@@ -499,9 +490,7 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert np.all((params.theta_j >= 0.0) & (params.theta_j <= 1.0)), "theta_j values must be in the range [0, 1]"
 
     # shape of psi_jt = (nticks, npatches)
-    assert params.psi_jt.shape == (nticks, npatches), (
-        f"Shape of psi_jt {params.psi_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
-    )
+    assert params.psi_jt.shape == (nticks, npatches), f"Shape of psi_jt {params.psi_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
 
     # psi_jt
     # TODO - TBD
@@ -517,9 +506,7 @@ def validate_parameters(params: PropertySetEx) -> None:
     # decay_days_short > 0.0
     assert params.decay_days_short > 0.0, f"decay_days_short value must be > 0 {params.decay_days_short=}"
     # decay_days_short <= decay_days_long
-    assert params.decay_days_short <= params.decay_days_long, (
-        f"decay_days_short ({params.decay_days_short}) value must be <= decay_days_long ({params.decay_days_long})"
-    )
+    assert params.decay_days_short <= params.decay_days_long, f"decay_days_short ({params.decay_days_short}) value must be <= decay_days_long ({params.decay_days_long})"
 
     return
 

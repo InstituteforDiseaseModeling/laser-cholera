@@ -110,9 +110,7 @@ class TestEnvToHumanVax(unittest.TestCase):
         #     "V2inf: not increasing with increased environmental transmission."
         significant = np.nonzero(self.baseline.people.V2inf > 10)  # Only check where V2inf is significant
         assert len(significant) > 0, "V2inf: no significantg count of infected individuals"  # All zeros would give a false positive
-        assert np.all(model.people.V2inf[significant] >= self.baseline.people.V2inf[significant]), (
-            "V2inf: not increasing with increased environmental transmission."
-        )
+        assert np.all(model.people.V2inf[significant] >= self.baseline.people.V2inf[significant]), "V2inf: not increasing with increased environmental transmission."
 
         return
 
@@ -139,12 +137,8 @@ class TestEnvToHumanVax(unittest.TestCase):
         model.run()
 
         # Expect less transmission with decreased environmental transmission
-        assert np.all(model.people.V1inf[-1, :] <= self.baseline.people.V1inf[-1, :]), (
-            "V1inf: not decreasing with decreased environmental transmission."
-        )
-        assert np.all(model.people.V2inf[-1, :] <= self.baseline.people.V2inf[-1, :]), (
-            "V2inf: not decreasing with decreased environmental transmission."
-        )
+        assert np.all(model.people.V1inf[-1, :] <= self.baseline.people.V1inf[-1, :]), "V1inf: not decreasing with decreased environmental transmission."
+        assert np.all(model.people.V2inf[-1, :] <= self.baseline.people.V2inf[-1, :]), "V2inf: not decreasing with decreased environmental transmission."
 
         return
 
