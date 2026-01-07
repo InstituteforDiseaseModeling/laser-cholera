@@ -48,8 +48,7 @@ class Recorder:
                     + (f" hdf5_output = {model.params.hdf5_output}" if "hdf5_output" in model.params else "")
                 )
                 logger.info(
-                    f"\t'return' {'is' if 'return' in model.params else 'is not'} in the params file."
-                    + (f" return = {model.params['return']}" if "return" in model.params else "")
+                    f"\t'return' {'is' if 'return' in model.params else 'is not'} in the params file." + (f" return = {model.params['return']}" if "return" in model.params else "")
                 )
 
         return

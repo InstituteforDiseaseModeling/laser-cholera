@@ -15,9 +15,7 @@ class Infectious:
         model.patches.add_vector_property("disease_deaths", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("new_symptomatic", length=model.params.nticks + 1, dtype=np.int32, default=0)
         assert hasattr(model, "params"), "Infectious: model needs to have a 'params' attribute."
-        assert hasattr(model.params, "I_j_initial"), (
-            "Infectious: model params needs to have a 'I_j_initial' (initial infectious population) parameter."
-        )
+        assert "I_j_initial" in model.params, "Infectious: model params needs to have a 'I_j_initial' (initial infectious population) parameter."
         assert "sigma" in self.model.params, "Infectious: model params needs to have a 'sigma' (symptomatic fraction) parameter."
         model.people.Isym[0] = np.round(model.params.sigma * model.params.I_j_initial).astype(model.people.Isym.dtype)
         model.people.Iasym[0] = model.params.I_j_initial - model.people.Isym[0]
@@ -28,16 +26,10 @@ class Infectious:
         assert hasattr(self.model.people, "R"), "Infectious: model.people needs to have a 'S' attribute."
         assert "d_jt" in self.model.params, "Infectious: model params needs to have a 'd_jt' (mortality rate) parameter."
 
-        assert "mu_j_baseline" in self.model.params, (
-            "Infectious: model params needs to have a 'mu_j_baseline' (baseline disease mortality rate) parameter."
-        )
+        assert "mu_j_baseline" in self.model.params, "Infectious: model params needs to have a 'mu_j_baseline' (baseline disease mortality rate) parameter."
         assert "mu_j_slope" in self.model.params, "Infectious: model params needs to have a 'mu_j_slope' (disease mortality rate slope) parameter."
-        assert "mu_j_epidemic_factor" in self.model.params, (
-            "Infectious: model params needs to have a 'mu_j_epidemic_factor' (disease mortality rate epidemic factor) parameter."
-        )
-        assert "epidemic_threshold" in self.model.params, (
-            "Infectious: model params needs to have a 'epidemic_threshold' (disease mortality rate epidemic threshold) parameter."
-        )
+        assert "mu_j_epidemic_factor" in self.model.params, "Infectious: model params needs to have a 'mu_j_epidemic_factor' (disease mortality rate epidemic factor) parameter."
+        assert "epidemic_threshold" in self.model.params, "Infectious: model params needs to have a 'epidemic_threshold' (disease mortality rate epidemic threshold) parameter."
 
         assert "gamma_1" in self.model.params, "Infectious: model params needs to have a 'gamma_1' (recovery rate) parameter."
         assert "gamma_2" in self.model.params, "Infectious: model params needs to have a 'gamma_2' (recovery rate) parameter."

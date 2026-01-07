@@ -13,7 +13,7 @@ class EnvToHuman:
         model.patches.add_vector_property("Psi", length=model.params.nticks + 1, dtype=np.float32, default=np.float32(0.0))
 
         assert hasattr(model, "params"), "EnvToHuman: model needs to have a 'params' attribute."
-        assert hasattr(model.params, "psi_jt"), "EnvToHuman: model params needs to have a 'psi_jt' (environmental contamination rate) parameter."
+        assert "psi_jt" in model.params, "EnvToHuman: model params needs to have a 'psi_jt' (environmental contamination rate) parameter."
 
         psi = model.params.psi_jt  # convenience
         # TODO - use newer laser_core with add_array_property and psi.shape

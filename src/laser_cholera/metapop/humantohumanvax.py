@@ -96,7 +96,7 @@ def plot_helper(fig, title, data, names):  # pragma: no cover
         sharex = x_axes_refs[col]
         sharey = y_axes_refs[row]
         ax = _fig.add_subplot(rows, cols, i + 1, sharex=sharex, sharey=sharey)
-        color = ["green", "red"][np.any(data[:, i] > 0)]
+        color = ["green", "red"][1 if np.any(data[:, i] > 0) else 0]
         ax.plot(data[:, i], color)  # , label=f"{self.model.params.location_name[ipatch]}")
         ax.set_ylim(ymin, ymax)
         ax.set_title(f"{names[i]}", fontsize=8)
