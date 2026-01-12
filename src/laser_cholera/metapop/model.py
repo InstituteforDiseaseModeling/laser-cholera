@@ -68,6 +68,7 @@ class RInterface:
         # self.N = model.patches.N[1:, :].T
         # self.non_disease_deaths = model.patches.non_disease_deaths[1:, :].T
         # self.Psi = model.patches.Psi[1:, :].T
+        # self.reported_cases = model.patches.reported_cases[1:, :].T
         # self.spatial_hazard = model.patches.spatial_hazard[1:, :].T
         # self.V1 = model.patches.V1[1:, :].T
         # self.V1_incidence_env = model.patches.V1_incidence_env[1:, :].T
@@ -90,6 +91,7 @@ class RInterface:
             "N",
             "non_disease_deaths",
             "Psi",
+            "reported_cases",
             "spatial_hazard",
             "V1",
             "V1_incidence_env",

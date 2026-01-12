@@ -1,3 +1,5 @@
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
@@ -14,6 +16,7 @@ class Infectious:
         model.patches.add_vector_property("expected_cases", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("disease_deaths", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("new_symptomatic", length=model.params.nticks + 1, dtype=np.int32, default=0)
+        model.patches.add_vector_property("reported_cases", length=model.params.nticks + 1, dtype=np.int32, default=0)
         assert hasattr(model, "params"), "Infectious: model needs to have a 'params' attribute."
         assert "I_j_initial" in model.params, "Infectious: model params needs to have a 'I_j_initial' (initial infectious population) parameter."
         assert "sigma" in self.model.params, "Infectious: model params needs to have a 'sigma' (symptomatic fraction) parameter."
@@ -116,13 +119,22 @@ class Infectious:
         expected_cases = model.patches.expected_cases[tick + 1]
         expected_cases += np.round(new_symptomatic / model.params.rho).astype(expected_cases.dtype)
 
+        # Update reported cases
+        idx_probe = tick - model.params.delta_reporting_cases
+        if idx_probe >= 0:
+            infected_fraction = model.people.Isym[idx_probe] / model.patches.N[idx_probe]
+            # Use chi_endemic or chi_epidemic depending on local infected fraction.
+            chi_eff = np.where(infected_fraction < model.params.epidemic_threshold, model.params.chi_endemic, model.params.chi_epidemic)
+            # Note that sigma is already factored into the calculation of Isym (see above).
+            model.patches.reported_cases[tick+1] += np.round(model.people.Isym[idx_probe] * model.params.rho / chi_eff).astype(model.patches.reported_cases.dtype)
+
         # human-to-human infection in humantohuman.py
         # environmental infection in envtohuman.py
         # recovery from infection in recovered.py
 
         return
 
-    def plot(self, fig: Figure = None):  # pragma: no cover
+    def plot(self, fig: Optional[Figure] = None):  # pragma: no cover
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Infectious (Symptomatic)") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:
@@ -152,4 +164,14 @@ class Infectious:
         plt.legend()
 
         yield "Infectious (Total)"
+
+        _fig = plt.figure(figsize=(12, 9), dpi=128, num="Reported vs. Actual Cases") if fig is None else fig
+
+        plt.plot(self.model.patches.reported_cases.sum(axis=1), color="blue", label="Reported")
+        plt.plot(self.model.people.Isym.sum(axis=1), color="red", label="Actual")
+        plt.xlabel("Tick")
+        plt.ylabel("Cases")
+        plt.legend()
+
+        yield "Reported Cases"
         return
