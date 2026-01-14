@@ -51,7 +51,12 @@ def get_model_likelihood(
     """
 
     # 1) Matrix dimension checks
-    if not isinstance(obs_cases, np.ndarray) or not isinstance(sim_cases, np.ndarray) or not isinstance(obs_deaths, np.ndarray) or not isinstance(sim_deaths, np.ndarray):
+    if (
+        not isinstance(obs_cases, np.ndarray)
+        or not isinstance(sim_cases, np.ndarray)
+        or not isinstance(obs_deaths, np.ndarray)
+        or not isinstance(sim_deaths, np.ndarray)
+    ):
         raise TypeError(f"obs_* and est_* must be numpy arrays ({type(obs_cases)=}, {type(sim_cases)=}, {type(obs_deaths)=}, {type(sim_deaths)=}).")
 
     n_locations, n_time_steps = obs_cases.shape
@@ -149,7 +154,9 @@ def get_model_likelihood(
         )
 
         # Weighted sum for location j
-        ll_location_tmp = weights_location[j] * (weight_cases * ll_cases + weight_cases * ll_max_cases + weight_deaths * ll_deaths + weight_deaths * ll_max_deaths)
+        ll_location_tmp = weights_location[j] * (
+            weight_cases * ll_cases + weight_cases * ll_max_cases + weight_deaths * ll_deaths + weight_deaths * ll_max_deaths
+        )
         ll_locations[j] = ll_location_tmp
 
         if verbose:
@@ -448,7 +455,13 @@ def calc_log_likelihood_negbin(observed, simulated, k=None, weights=None, verbos
     else:
         if k < 1.5 and verbose:
             warnings.warn(f"k ({k:.2f}) < 1.5 indicates near-Poisson dispersion.")  # noqa: B028
-        ll_vec = gammaln(observed + k) - gammaln(k) - gammaln(observed + 1) + k * np.log(k / (k + simulated)) + observed * np.log(simulated / (k + simulated))
+        ll_vec = (
+            gammaln(observed + k)
+            - gammaln(k)
+            - gammaln(observed + 1)
+            + k * np.log(k / (k + simulated))
+            + observed * np.log(simulated / (k + simulated))
+        )
 
     # Weighted likelihood
     ll = np.sum(weights * ll_vec)
