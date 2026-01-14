@@ -44,7 +44,9 @@ class PropertySetEx(PropertySet):
         return json.dumps(self.to_dict(), cls=PseEncoder, indent=4)
 
 
-def get_parameters(paramsource: Optional[Union[str, Path, dict]] = None, do_validation: bool = True, overrides: Optional[dict] = None) -> PropertySetEx:
+def get_parameters(
+    paramsource: Optional[Union[str, Path, dict]] = None, do_validation: bool = True, overrides: Optional[dict] = None
+) -> PropertySetEx:
     fn_map = {
         (".json",): load_json_parameters,
         (".json", ".gz"): load_compressed_json_parameters,
@@ -166,8 +168,12 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
 
     assert int(params.p) == params.p, f"p must be an integer, but got {params.p}"
 
-    assert isinstance(params.reported_cases, (list, np.ndarray)), f"reported_cases must be a list of lists or a NumPy array, got {type(params.reported_cases)}"
-    assert isinstance(params.reported_deaths, (list, np.ndarray)), f"reported_deaths must be a list of lists or a NumPy array, got {type(params.reported_deaths)}"
+    assert isinstance(params.reported_cases, (list, np.ndarray)), (
+        f"reported_cases must be a list of lists or a NumPy array, got {type(params.reported_cases)}"
+    )
+    assert isinstance(params.reported_deaths, (list, np.ndarray)), (
+        f"reported_deaths must be a list of lists or a NumPy array, got {type(params.reported_deaths)}"
+    )
 
     # scalars
     scalars = [
@@ -265,7 +271,9 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
     if isinstance(params.epidemic_threshold, Number):
         params.epidemic_threshold = np.float32(params.epidemic_threshold)
     else:
-        assert isinstance(params.epidemic_threshold, list), f"epidemic_threshold must be a scalar or list of values, got {type(params.epidemic_threshold)}"
+        assert isinstance(params.epidemic_threshold, list), (
+            f"epidemic_threshold must be a scalar or list of values, got {type(params.epidemic_threshold)}"
+        )
         params.epidemic_threshold = np.array(params.epidemic_threshold, dtype=np.float32)
 
     assert np.all((params.tau_i >= 0.0) & (params.tau_i <= 1.0)), "tau_i values must be in the range [0, 1]"
@@ -364,17 +372,29 @@ def validate_parameters(params: PropertySetEx) -> None:
 
     npatches = len(params.location_name)
 
-    assert params.S_j_initial.shape == (npatches,), f"Number of S_j_initial values ({len(params.S_j_initial)}) does not match number of locations ({npatches})"
+    assert params.S_j_initial.shape == (npatches,), (
+        f"Number of S_j_initial values ({len(params.S_j_initial)}) does not match number of locations ({npatches})"
+    )
     assert np.all(params.S_j_initial >= 0), "S_j_initial values must be non-negative"
-    assert params.E_j_initial.shape == (npatches,), f"Number of E_j_initial values ({len(params.E_j_initial)}) does not match number of locations ({npatches})"
+    assert params.E_j_initial.shape == (npatches,), (
+        f"Number of E_j_initial values ({len(params.E_j_initial)}) does not match number of locations ({npatches})"
+    )
     assert np.all(params.E_j_initial >= 0), "E_j_initial values must be non-negative"
-    assert params.I_j_initial.shape == (npatches,), f"Number of I_j_initial values ({len(params.I_j_initial)}) does not match number of locations ({npatches})"
+    assert params.I_j_initial.shape == (npatches,), (
+        f"Number of I_j_initial values ({len(params.I_j_initial)}) does not match number of locations ({npatches})"
+    )
     assert np.all(params.I_j_initial >= 0), "I_j_initial values must be non-negative"
-    assert params.R_j_initial.shape == (npatches,), f"Number of R_j_initial values ({len(params.R_j_initial)}) does not match number of locations ({npatches})"
+    assert params.R_j_initial.shape == (npatches,), (
+        f"Number of R_j_initial values ({len(params.R_j_initial)}) does not match number of locations ({npatches})"
+    )
     assert np.all(params.R_j_initial >= 0), "R_j_initial values must be non-negative"
-    assert params.V1_j_initial.shape == (npatches,), f"Number of V1_j_initial values ({len(params.V1_j_initial)}) does not match number of locations ({npatches})"
+    assert params.V1_j_initial.shape == (npatches,), (
+        f"Number of V1_j_initial values ({len(params.V1_j_initial)}) does not match number of locations ({npatches})"
+    )
     assert np.all(params.V1_j_initial >= 0), "V1_j_initial values must be non-negative"
-    assert params.V2_j_initial.shape == (npatches,), f"Number of V2_j_initial values ({len(params.V2_j_initial)}) does not match number of locations ({npatches})"
+    assert params.V2_j_initial.shape == (npatches,), (
+        f"Number of V2_j_initial values ({len(params.V2_j_initial)}) does not match number of locations ({npatches})"
+    )
     assert np.all(params.V2_j_initial >= 0), "V2_j_initial values must be non-negative"
 
     nticks = params.nticks
@@ -390,14 +410,18 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert np.all(params.d_jt >= 0.0), "d_jt rate values must be positive"
 
     # shape of nu_1_jt = (nticks, npatches)
-    assert params.nu_1_jt.shape == (nticks, npatches), f"Shape of nu_1_jt {params.nu_1_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
+    assert params.nu_1_jt.shape == (nticks, npatches), (
+        f"Shape of nu_1_jt {params.nu_1_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
+    )
     # # nu_1_jt - no daily value can be larger than the country population (N_j_initial) / 7
     # assert np.all(params.nu_1_jt <= params.N_j_initial[np.newaxis, :] / 7), (
     #     "nu_1_jt values must not exceed N_j_initial / 7 for any location"
     # )
 
     # shape of nu_2_jt = (nticks, npatches)
-    assert params.nu_2_jt.shape == (nticks, npatches), f"Shape of nu_2_jt {params.nu_2_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
+    assert params.nu_2_jt.shape == (nticks, npatches), (
+        f"Shape of nu_2_jt {params.nu_2_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
+    )
     # # nu_2_jt - no daily value can be larger than the country population (N_j_initial) / 7
     # assert np.all(params.nu_2_jt <= params.N_j_initial[np.newaxis, :] / 7), (
     #     "nu_2_jt values must not exceed N_j_initial / 7 for any location"
@@ -434,7 +458,9 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert params.mu_j_slope.shape == (npatches,), f"Shape of params.mu_j_slope ({params.mu_j_slope.shape}) does not match ({npatches},)"
     # no range constraints on mu_j_slope
 
-    assert params.mu_j_epidemic_factor.shape == (npatches,), f"Shape of params.mu_j_epidemic_factor ({params.mu_j_epidemic_factor.shape}) does not match ({npatches},)"
+    assert params.mu_j_epidemic_factor.shape == (npatches,), (
+        f"Shape of params.mu_j_epidemic_factor ({params.mu_j_epidemic_factor.shape}) does not match ({npatches},)"
+    )
     assert np.all(params.mu_j_epidemic_factor >= 0), f"mu_j_epidemic_factor values must be >= 0 ({params.mu_j_epidemic_factor.min()=})"
 
     assert params.delta_reporting_cases >= 0, f"delta_reporting_cases {params.delta_reporting_cases} must be >= 0"
@@ -461,7 +487,9 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert "p" in params, "Parameters: 'p' (seasonality phase) not found in parameters"
 
     # length of beta_j0_hum must be equal to number of locations
-    assert len(params.beta_j0_hum) == npatches, f"Number of beta_j0_hum values ({len(params.beta_j0_hum)}) does not match number of locations ({npatches})"
+    assert len(params.beta_j0_hum) == npatches, (
+        f"Number of beta_j0_hum values ({len(params.beta_j0_hum)}) does not match number of locations ({npatches})"
+    )
     # beta_j0_hum must be >= 0
     assert np.all(params.beta_j0_hum >= 0.0), "beta_j0_hum values must be >= 0"
 
@@ -480,7 +508,9 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert (params.alpha_2 >= 0.0) & (params.alpha_2 <= 1.0), "alpha_1 value must be in the range [0, 1]"
 
     # length of beta_j0_env must be equal to number of locations
-    assert len(params.beta_j0_env) == npatches, f"Number of beta_j0_env values ({len(params.beta_j0_env)}) does not match number of locations ({npatches})"
+    assert len(params.beta_j0_env) == npatches, (
+        f"Number of beta_j0_env values ({len(params.beta_j0_env)}) does not match number of locations ({npatches})"
+    )
     # beta_j0_env must be >= 0
     assert np.all(params.beta_j0_env >= 0.0), "beta_j0_env values must be >= 0"
 
@@ -490,7 +520,9 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert np.all((params.theta_j >= 0.0) & (params.theta_j <= 1.0)), "theta_j values must be in the range [0, 1]"
 
     # shape of psi_jt = (nticks, npatches)
-    assert params.psi_jt.shape == (nticks, npatches), f"Shape of psi_jt {params.psi_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
+    assert params.psi_jt.shape == (nticks, npatches), (
+        f"Shape of psi_jt {params.psi_jt.shape} does not match (nticks, npatches) = ({nticks}, {npatches})"
+    )
 
     # psi_jt
     # TODO - TBD
@@ -506,7 +538,9 @@ def validate_parameters(params: PropertySetEx) -> None:
     # decay_days_short > 0.0
     assert params.decay_days_short > 0.0, f"decay_days_short value must be > 0 {params.decay_days_short=}"
     # decay_days_short <= decay_days_long
-    assert params.decay_days_short <= params.decay_days_long, f"decay_days_short ({params.decay_days_short}) value must be <= decay_days_long ({params.decay_days_long})"
+    assert params.decay_days_short <= params.decay_days_long, (
+        f"decay_days_short ({params.decay_days_short}) value must be <= decay_days_long ({params.decay_days_long})"
+    )
 
     return
 

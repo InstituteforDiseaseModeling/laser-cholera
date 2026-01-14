@@ -29,10 +29,16 @@ class Infectious:
         assert hasattr(self.model.people, "R"), "Infectious: model.people needs to have a 'S' attribute."
         assert "d_jt" in self.model.params, "Infectious: model params needs to have a 'd_jt' (mortality rate) parameter."
 
-        assert "mu_j_baseline" in self.model.params, "Infectious: model params needs to have a 'mu_j_baseline' (baseline disease mortality rate) parameter."
+        assert "mu_j_baseline" in self.model.params, (
+            "Infectious: model params needs to have a 'mu_j_baseline' (baseline disease mortality rate) parameter."
+        )
         assert "mu_j_slope" in self.model.params, "Infectious: model params needs to have a 'mu_j_slope' (disease mortality rate slope) parameter."
-        assert "mu_j_epidemic_factor" in self.model.params, "Infectious: model params needs to have a 'mu_j_epidemic_factor' (disease mortality rate epidemic factor) parameter."
-        assert "epidemic_threshold" in self.model.params, "Infectious: model params needs to have a 'epidemic_threshold' (disease mortality rate epidemic threshold) parameter."
+        assert "mu_j_epidemic_factor" in self.model.params, (
+            "Infectious: model params needs to have a 'mu_j_epidemic_factor' (disease mortality rate epidemic factor) parameter."
+        )
+        assert "epidemic_threshold" in self.model.params, (
+            "Infectious: model params needs to have a 'epidemic_threshold' (disease mortality rate epidemic threshold) parameter."
+        )
 
         assert "gamma_1" in self.model.params, "Infectious: model params needs to have a 'gamma_1' (recovery rate) parameter."
         assert "gamma_2" in self.model.params, "Infectious: model params needs to have a 'gamma_2' (recovery rate) parameter."
@@ -126,7 +132,9 @@ class Infectious:
             # Use chi_endemic or chi_epidemic depending on local infected fraction.
             chi_eff = np.where(infected_fraction < model.params.epidemic_threshold, model.params.chi_endemic, model.params.chi_epidemic)
             # Note that sigma is already factored into the calculation of Isym (see above).
-            model.patches.reported_cases[tick+1] += np.round(model.people.Isym[idx_probe] * model.params.rho / chi_eff).astype(model.patches.reported_cases.dtype)
+            model.patches.reported_cases[tick + 1] += np.round(model.people.Isym[idx_probe] * model.params.rho / chi_eff).astype(
+                model.patches.reported_cases.dtype
+            )
 
         # human-to-human infection in humantohuman.py
         # environmental infection in envtohuman.py

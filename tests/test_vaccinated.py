@@ -360,18 +360,26 @@ class TestVaccinated(unittest.TestCase):
         nonzero_param_indices = np.nonzero(model.params.nu_1_jt[0 : model.params.nticks])
         if len(nonzero_param_indices[0]) > 0:
             # Check any non-zero days in nu_1_jt should have non-zero doses in dose_one_doses
-            assert np.all(model.patches.dose_one_doses[nonzero_param_indices] != 0), "All non-zero nu_1_jt should have non-zero doses in dose_one_doses."
+            assert np.all(model.patches.dose_one_doses[nonzero_param_indices] != 0), (
+                "All non-zero nu_1_jt should have non-zero doses in dose_one_doses."
+            )
             # Check that first doses given match the schedule
             nonzero_dose_indices = np.nonzero(model.patches.dose_one_doses)
-            assert np.all(model.params.nu_1_jt[nonzero_dose_indices] != 0), "All non-zero dose_one_doses should have non-zero doses in params.nu_1_jt."
+            assert np.all(model.params.nu_1_jt[nonzero_dose_indices] != 0), (
+                "All non-zero dose_one_doses should have non-zero doses in params.nu_1_jt."
+            )
 
         nonzero_param_indices = np.nonzero(model.params.nu_2_jt)
         if len(nonzero_param_indices[0]) > 0:
             # Check any non-zero days in nu_2_jt should have non-zero doses in dose_two_doses
-            assert np.all(model.patches.dose_two_doses[nonzero_param_indices] != 0), "All non-zero nu_2_jt should have non-zero doses in dose_two_doses."
+            assert np.all(model.patches.dose_two_doses[nonzero_param_indices] != 0), (
+                "All non-zero nu_2_jt should have non-zero doses in dose_two_doses."
+            )
             # Check that second doses given match the schedule
             nonzero_dose_indices = np.nonzero(model.patches.dose_two_doses)
-            assert np.all(model.params.nu_2_jt[nonzero_dose_indices] != 0), "All non-zero dose_two_doses should have non-zero doses in params.nu_2_jt."
+            assert np.all(model.params.nu_2_jt[nonzero_dose_indices] != 0), (
+                "All non-zero dose_two_doses should have non-zero doses in params.nu_2_jt."
+            )
 
         return
 

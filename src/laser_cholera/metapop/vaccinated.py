@@ -23,8 +23,12 @@ class Vaccinated:
         model.patches.add_vector_property("V2", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("dose_one_doses", length=model.params.nticks, dtype=np.int32, default=0)
         model.patches.add_vector_property("dose_two_doses", length=model.params.nticks, dtype=np.int32, default=0)
-        assert "V1_j_initial" in model.params, "Vaccinated: model params needs to have a 'V1_j_initial' (initial one dose vaccinated population) parameter."
-        assert "V2_j_initial" in model.params, "Vaccinated: model params needs to have a 'V2_j_initial' (initial two dose vaccinated population) parameter."
+        assert "V1_j_initial" in model.params, (
+            "Vaccinated: model params needs to have a 'V1_j_initial' (initial one dose vaccinated population) parameter."
+        )
+        assert "V2_j_initial" in model.params, (
+            "Vaccinated: model params needs to have a 'V2_j_initial' (initial two dose vaccinated population) parameter."
+        )
         assert "phi_1" in model.params, "Vaccinated: model params needs to have a 'phi_1' (efficacy of one dose) parameter."
         assert "phi_2" in model.params, "Vaccinated: model params needs to have a 'phi_2' (efficacy of two doses) parameter."
         model.people.V1imm[0] = np.round(model.params.phi_1 * model.params.V1_j_initial)
@@ -157,7 +161,9 @@ class Vaccinated:
         V1imm_next -= v1imm_contribution
         v1sus_contribution = np.minimum(np.round((V1sus_next / V1) * new_two_doses).astype(V1sus_next.dtype), V1sus_next)
         V1sus_next -= v1sus_contribution
-        v1inf_contribution = np.minimum(np.round((new_two_doses - v1imm_contribution - v1sus_contribution) * (V1inf_next / V1)).astype(V1inf_next.dtype), V1inf_next)
+        v1inf_contribution = np.minimum(
+            np.round((new_two_doses - v1imm_contribution - v1sus_contribution) * (V1inf_next / V1)).astype(V1inf_next.dtype), V1inf_next
+        )
         V1inf_next -= v1inf_contribution
 
         assert np.all(V1imm_next >= 0), f"V1imm' should not go negative ({tick=}\n\t{V1imm_next})"

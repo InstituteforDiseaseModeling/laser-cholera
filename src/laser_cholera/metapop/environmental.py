@@ -17,10 +17,18 @@ class Environmental:
         # TODO - use newer laser_core with add_array_property and psi.shape
         model.patches.add_vector_property("delta_jt", length=psi.shape[0], dtype=np.float32, default=0.0)
 
-        assert "decay_days_short" in model.params, "Environmental: model params needs to have a 'decay_days_short' (maximum environmental decay) parameter."
-        assert "decay_days_long" in model.params, "Environmental: model params needs to have a 'decay_days_long' (minimum environmental decay) parameter."
-        assert "decay_shape_1" in self.model.params, "Environmental: model params needs to have a 'decay_shape_1' (beta function parameter 1) parameter."
-        assert "decay_shape_2" in self.model.params, "Environmental: model params needs to have a 'decay_shape_2' (beta function parameter 2) parameter."
+        assert "decay_days_short" in model.params, (
+            "Environmental: model params needs to have a 'decay_days_short' (maximum environmental decay) parameter."
+        )
+        assert "decay_days_long" in model.params, (
+            "Environmental: model params needs to have a 'decay_days_long' (minimum environmental decay) parameter."
+        )
+        assert "decay_shape_1" in self.model.params, (
+            "Environmental: model params needs to have a 'decay_shape_1' (beta function parameter 1) parameter."
+        )
+        assert "decay_shape_2" in self.model.params, (
+            "Environmental: model params needs to have a 'decay_shape_2' (beta function parameter 2) parameter."
+        )
 
         model.patches.delta_jt[:, :] = map_suitability_to_decay(
             fast=model.params.decay_days_short,

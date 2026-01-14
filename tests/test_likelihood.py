@@ -434,7 +434,13 @@ class TestThatLikelihoodTests(unittest.TestCase):
         observed = np.array([0, 1, 2])
         simulated = np.array([1, 2, 3])
         k = 2
-        ll_vec = gammaln(observed + k) - gammaln(k) - gammaln(observed + 1) + k * np.log(k / (k + simulated)) + observed * np.log(simulated / (k + simulated))
+        ll_vec = (
+            gammaln(observed + k)
+            - gammaln(k)
+            - gammaln(observed + 1)
+            + k * np.log(k / (k + simulated))
+            + observed * np.log(simulated / (k + simulated))
+        )
         ll_manual = ll_vec.sum()
         ll_func = calc_log_likelihood_negbin(observed=observed, simulated=simulated, k=k, weights=None, verbose=False)
         assert np.isclose(ll_func, ll_manual, rtol=1e-8)
@@ -444,7 +450,13 @@ class TestThatLikelihoodTests(unittest.TestCase):
         simulated = np.array([1, 2, 3])
         k = 2
         weights = np.array([1, 2, 0.5])
-        ll_vec = gammaln(observed + k) - gammaln(k) - gammaln(observed + 1) + k * np.log(k / (k + simulated)) + observed * np.log(simulated / (k + simulated))
+        ll_vec = (
+            gammaln(observed + k)
+            - gammaln(k)
+            - gammaln(observed + 1)
+            + k * np.log(k / (k + simulated))
+            + observed * np.log(simulated / (k + simulated))
+        )
         ll_manual = (weights * ll_vec).sum()
         ll_func = calc_log_likelihood_negbin(observed=observed, simulated=simulated, k=k, weights=weights, verbose=False)
         assert np.isclose(ll_func, ll_manual, rtol=1e-8)

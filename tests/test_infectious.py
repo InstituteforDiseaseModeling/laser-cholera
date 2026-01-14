@@ -42,7 +42,9 @@ class TestInfectious(unittest.TestCase):
         model.components = [Susceptible, Exposed, Infectious, Recovered, Census]
         # model.run() # don't need to run, just check initial distribution
 
-        assert np.all(model.people.Isym[0] == np.round(model.params.sigma * model.params.I_j_initial)), "I symptomatic: initial distribution not correct."
+        assert np.all(model.people.Isym[0] == np.round(model.params.sigma * model.params.I_j_initial)), (
+            "I symptomatic: initial distribution not correct."
+        )
         assert np.all(model.people.Iasym[0] == (params.I_j_initial - model.people.Isym[0])), "I asymptomatic: initial distribution not correct."
 
     # Test initial distribution of infectious people - sigma = 0
