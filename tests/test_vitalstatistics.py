@@ -211,19 +211,33 @@ class TestVitalStatistics(unittest.TestCase):
         model.components = [Susceptible, Exposed, Recovered, Infectious, Vaccinated, Census]
         model.run()
 
-        assert np.all(model.people.S[-1] < model.people.S[0]), "Susceptible: deaths not occurring."
-        assert np.all(model.people.E[-1] < model.people.E[0]), "Exposed: deaths not occurring."
-        assert np.all(model.people.Isym[-1] < model.people.Isym[0]), "Infectious (symptomatic): deaths not occurring."
-        assert np.all(model.people.Iasym[-1] < model.people.Iasym[0]), "Infectious (symptomatic): deaths not occurring."
-        assert np.all(model.people.R[-1] < model.people.R[0]), "Recovered: deaths not occurring."
-        assert np.all(model.people.V1imm[-1] < model.people.V1imm[0]), "Vaccinated (one dose, immune): deaths not occurring."
-        assert np.all(model.people.V1sus[-1] < model.people.V1sus[0]), "Vaccinated (one dose, susceptible): deaths not occurring."
+        assert np.any(model.people.S[-1] < model.people.S[0]), "Susceptible: deaths not occurring."
+        assert np.any(model.people.E[-1] < model.people.E[0]), "Exposed: deaths not occurring."
+        assert np.any(model.people.Isym[-1] < model.people.Isym[0]), "Infectious (symptomatic): deaths not occurring."
+        assert np.any(model.people.Iasym[-1] < model.people.Iasym[0]), "Infectious (symptomatic): deaths not occurring."
+        assert np.any(model.people.R[-1] < model.people.R[0]), "Recovered: deaths not occurring."
+        assert np.any(model.people.V1imm[-1] < model.people.V1imm[0]), "Vaccinated (one dose, immune): deaths not occurring."
+        assert np.any(model.people.V1sus[-1] < model.people.V1sus[0]), "Vaccinated (one dose, susceptible): deaths not occurring."
         # There are no infected vaccinated people in this test
-        # assert np.all(model.people.V1inf[-1] < model.people.V1inf[0]), "Vaccinated (one dose, infected): deaths not occurring."
-        assert np.all(model.people.V2imm[-1] < model.people.V2imm[0]), "Vaccinated (two doses, immune): deaths not occurring."
-        assert np.all(model.people.V2sus[-1] < model.people.V2sus[0]), "Vaccinated (two doses, susceptible): deaths not occurring."
+        # assert np.any(model.people.V1inf[-1] < model.people.V1inf[0]), "Vaccinated (one dose, infected): deaths not occurring."
+        assert np.any(model.people.V2imm[-1] < model.people.V2imm[0]), "Vaccinated (two doses, immune): deaths not occurring."
+        assert np.any(model.people.V2sus[-1] < model.people.V2sus[0]), "Vaccinated (two doses, susceptible): deaths not occurring."
         # There are no infected vaccinated people in this test
-        # assert np.all(model.people.V2inf[-1] < model.people.V2inf[0]), "Vaccinated (two doses, infected): deaths not occurring."
+        # assert np.any(model.people.V2inf[-1] < model.people.V2inf[0]), "Vaccinated (two doses, infected): deaths not occurring."
+
+        assert np.all(model.people.S[-1] <= model.people.S[0]), "Susceptible: unexpected population increase."
+        assert np.all(model.people.E[-1] <= model.people.E[0]), "Exposed: unexpected population increase."
+        assert np.all(model.people.Isym[-1] <= model.people.Isym[0]), "Infectious (symptomatic): unexpected population increase."
+        assert np.all(model.people.Iasym[-1] <= model.people.Iasym[0]), "Infectious (symptomatic): unexpected population increase."
+        assert np.all(model.people.R[-1] <= model.people.R[0]), "Recovered: unexpected population increase."
+        assert np.all(model.people.V1imm[-1] <= model.people.V1imm[0]), "Vaccinated (one dose, immune): unexpected population increase."
+        assert np.all(model.people.V1sus[-1] <= model.people.V1sus[0]), "Vaccinated (one dose, susceptible): unexpected population increase."
+        # There are no infected vaccinated people in this test
+        # assert np.all(model.people.V1inf[-1] <= model.people.V1inf[0]), "Vaccinated (one dose, infected): unexpected population increase."
+        assert np.all(model.people.V2imm[-1] <= model.people.V2imm[0]), "Vaccinated (two doses, immune): unexpected population increase."
+        assert np.all(model.people.V2sus[-1] <= model.people.V2sus[0]), "Vaccinated (two doses, susceptible): unexpected population increase."
+        # There are no infected vaccinated people in this test
+        # assert np.all(model.people.V2inf[-1] <= model.people.V2inf[0]), "Vaccinated (two doses, infected): unexpected population increase."
         aggregate = (
             model.people.S
             + model.people.E

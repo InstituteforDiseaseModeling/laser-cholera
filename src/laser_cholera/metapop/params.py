@@ -26,6 +26,10 @@ class PseEncoder(json.JSONEncoder):
             return o.tolist()
         elif isinstance(o, datetime):
             return f"{o:%Y-%m-%d}"
+        elif isinstance(o, np.integer):
+            return int(o)
+        elif isinstance(o, np.floating):
+            return float(o)
         else:
             return super().default(o)
 

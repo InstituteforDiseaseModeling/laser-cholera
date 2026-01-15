@@ -65,13 +65,12 @@ class Infectious:
 
         ## disease deaths (mu)
 
-        t_factor = tick / model.params.nticks
+        t_factor = tick / model.params.nticks  # 0 <= t_factor <= 1.0
         N = model.people.S[tick] + model.people.E[tick] + model.people.Isym[tick] + model.people.Iasym[tick] + model.people.R[tick]
         if hasattr(model.people, "V1imm"):
             N += model.people.V1imm[tick] + model.people.V1sus[tick] + model.people.V2imm[tick] + model.people.V2sus[tick]
-        # Don't include V1inf or V2inf above, they're not "real" but just bookkeeping
-        if tick >= (delta := model.params.delta_reporting_cases):
-            treport = int(tick - delta)
+        # Don't include V1inf or V2inf above, they're not "real" - just bookkeeping
+        if (treport := int(tick - model.params.delta_reporting_cases)) >= 0:
             Ireported = model.people.Isym[treport]
             epidemic_flag = (Ireported > (model.params.epidemic_threshold * N)).astype(np.int32)
         else:
