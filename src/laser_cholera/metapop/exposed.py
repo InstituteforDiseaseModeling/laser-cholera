@@ -1,3 +1,5 @@
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
@@ -37,7 +39,7 @@ class Exposed:
 
         return
 
-    def plot(self, fig: Figure = None):  # pragma: no cover
+    def plot(self, fig: Optional[Figure] = None):  # pragma: no cover
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Exposed") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:
