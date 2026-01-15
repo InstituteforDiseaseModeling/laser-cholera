@@ -74,7 +74,7 @@ class Infectious:
             Ireported = model.people.Isym[treport]
             epidemic_flag = (Ireported > (model.params.epidemic_threshold * N)).astype(np.int32)
         else:
-            epidemic_flag = np.zeros_like(N).astype(np.float32)
+            epidemic_flag = np.zeros_like(N, dtype=np.int32)
         mu_jt = model.params.mu_j_baseline * (1 + model.params.mu_j_slope * t_factor) * (1 + model.params.mu_j_epidemic_factor * epidemic_flag)
 
         disease_deaths = model.prng.binomial(Is_next, -np.expm1(-mu_jt)).astype(Is_next.dtype)
