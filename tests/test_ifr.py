@@ -57,7 +57,7 @@ class TestIFRImplementation(unittest.TestCase):
         baseline.components = [Susceptible, Exposed, Infectious, Recovered, Census, Environmental]
         baseline.run()
 
-        ps.epidemic_threshold /= 100  # 100x lower, more often in endemic mode, more deaths
+        ps.epidemic_threshold /= 100  # 100x lower, more often in epidemic mode, more deaths
 
         model = Model(ps)
         model.components = [Susceptible, Exposed, Infectious, Recovered, Census, Environmental]
