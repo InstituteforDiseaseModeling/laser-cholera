@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 
-from laser_cholera.metapop.params import get_parameters
-from laser_cholera.metapop.utils import get_daily_seasonality
-from laser_cholera.metapop.utils import get_pi_from_lat_long
+from laser.cholera.metapop.params import get_parameters
+from laser.cholera.metapop.utils import get_daily_seasonality
+from laser.cholera.metapop.utils import get_pi_from_lat_long
 
 
 class TestMetapopUtils(unittest.TestCase):

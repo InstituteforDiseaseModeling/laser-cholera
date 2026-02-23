@@ -13,24 +13,24 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from tqdm import tqdm
 
-from laser_cholera.metapop import Analyzer
-from laser_cholera.metapop import Census
-from laser_cholera.metapop import DerivedValues
-from laser_cholera.metapop import Environmental
-from laser_cholera.metapop import EnvToHuman
-from laser_cholera.metapop import EnvToHumanVax
-from laser_cholera.metapop import Exposed
-from laser_cholera.metapop import HumanToHuman
-from laser_cholera.metapop import HumanToHumanVax
-from laser_cholera.metapop import Infectious
-from laser_cholera.metapop import Parameters
-from laser_cholera.metapop import Recorder
-from laser_cholera.metapop import Recovered
-from laser_cholera.metapop import Susceptible
-from laser_cholera.metapop import Vaccinated
-from laser_cholera.metapop import get_parameters
-from laser_cholera.metapop import scenario
-from laser_cholera.metapop.utils import override_helper
+from laser.cholera.metapop import Analyzer
+from laser.cholera.metapop import Census
+from laser.cholera.metapop import DerivedValues
+from laser.cholera.metapop import Environmental
+from laser.cholera.metapop import EnvToHuman
+from laser.cholera.metapop import EnvToHumanVax
+from laser.cholera.metapop import Exposed
+from laser.cholera.metapop import HumanToHuman
+from laser.cholera.metapop import HumanToHumanVax
+from laser.cholera.metapop import Infectious
+from laser.cholera.metapop import Parameters
+from laser.cholera.metapop import Recorder
+from laser.cholera.metapop import Recovered
+from laser.cholera.metapop import Susceptible
+from laser.cholera.metapop import Vaccinated
+from laser.cholera.metapop import get_parameters
+from laser.cholera.metapop import scenario
+from laser.cholera.metapop.utils import override_helper
 
 logger = logging.getLogger(__name__)
 

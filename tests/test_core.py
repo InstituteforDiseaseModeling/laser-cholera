@@ -1,4 +1,4 @@
-from laser_cholera import compute
+from laser.cholera import compute
 
 
 def test_compute():

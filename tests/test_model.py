@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from laser_cholera.metapop.model import run_model
-from laser_cholera.metapop.params import get_parameters
-from laser_cholera.utils import sim_duration
+from laser.cholera.metapop.model import run_model
+from laser.cholera.metapop.params import get_parameters
+from laser.cholera.utils import sim_duration
 
 
 class TestModel(unittest.TestCase):

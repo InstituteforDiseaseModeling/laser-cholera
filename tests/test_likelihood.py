@@ -6,14 +6,14 @@ import numpy as np
 import pytest
 from scipy.special import gammaln
 
-from laser_cholera.likelihood import calc_log_likelihood_beta
-from laser_cholera.likelihood import calc_log_likelihood_binomial
-from laser_cholera.likelihood import calc_log_likelihood_gamma
-from laser_cholera.likelihood import calc_log_likelihood_negbin
-from laser_cholera.likelihood import calc_log_likelihood_normal
-from laser_cholera.likelihood import calc_log_likelihood_poisson
-from laser_cholera.likelihood import get_model_likelihood
-from laser_cholera.metapop.model import run_model
+from laser.cholera.likelihood import calc_log_likelihood_beta
+from laser.cholera.likelihood import calc_log_likelihood_binomial
+from laser.cholera.likelihood import calc_log_likelihood_gamma
+from laser.cholera.likelihood import calc_log_likelihood_negbin
+from laser.cholera.likelihood import calc_log_likelihood_normal
+from laser.cholera.likelihood import calc_log_likelihood_poisson
+from laser.cholera.likelihood import get_model_likelihood
+from laser.cholera.metapop.model import run_model
 
 
 class LikelihoodTests(unittest.TestCase):

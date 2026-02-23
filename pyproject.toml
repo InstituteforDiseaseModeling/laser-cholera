@@ -1,9 +1,9 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["uv-build"]
+build-backend = "uv_build"
 
 [project]
-name = "laser-cholera"
+name = "laser.cholera"
 version = "0.10.1"
 authors = [
   { name="Christopher Lorton", email="christopher.lorton@gatesfoundation.org" },
@@ -13,7 +13,7 @@ maintainers = [
   { name="Christopher Lorton", email="christopher.lorton@gatesfoundation.org" },
 ]
 description = "LASIK - LASER based SImulation of Kolera"
-readme = "README.MD"
+readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.9"
@@ -52,8 +52,12 @@ Issues = "https://github.com/InstituteforDiseaseModeling/laser-cholera/issues"
 Changelog = "https://github.com/InstituteforDiseaseModeling/laser-cholera/blob/master/CHANGELOG.md"
 
 [project.scripts]
-cli = "laser_cholera.cli:run"
-metapop = "laser_cholera.metapop.model:cli_run"
+cli = "laser.cholera.cli:run"
+metapop = "laser.cholera.metapop.model:cli_run"
+
+[tool.uv.build-backend]
+module-name = [ "laser.cholera" ]
+source-include = ["AUTHORS.rst", "CHANGELOG.rst", "CONTRIBUTING.rst"]
 
 [tool.ruff]
 extend-exclude = ["static", "ci/templates"]
@@ -125,12 +129,12 @@ message = "Bump version: {current_version} → {new_version}"
 commit_args = ""
 
 [[tool.bumpversion.files]]
-filename = "README.MD"
+filename = "README.md"
 search = "since v{current_version}"
 replace = "since v{new_version}"
 
 [[tool.bumpversion.files]]
-filename = "README.MD"
+filename = "README.md"
 search = "/v{current_version}.svg"
 replace = "/v{new_version}.svg"
 
@@ -150,7 +154,7 @@ search = 'version = release = "{current_version}"'
 replace = 'version = release = "{new_version}"'
 
 [[tool.bumpversion.files]]
-filename = "src/laser_cholera/__init__.py"
+filename = "src/laser/cholera/__init__.py"
 search = '__version__ = "{current_version}"'
 replace = '__version__ = "{new_version}"'
 

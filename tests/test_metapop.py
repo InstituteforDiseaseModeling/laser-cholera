@@ -2,7 +2,7 @@ import unittest
 
 import click
 
-from laser_cholera.metapop.model import cli_run
+from laser.cholera.metapop.model import cli_run
 
 
 class TestCholeraMPM(unittest.TestCase):

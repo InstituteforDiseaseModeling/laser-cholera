@@ -6,7 +6,7 @@ with warnings.catch_warnings():
     import geopandas as gpd
 import pandas as pd
 
-from laser_cholera import iso_codes
+from laser.cholera import iso_codes
 
 __all__ = ["scenario"]
 

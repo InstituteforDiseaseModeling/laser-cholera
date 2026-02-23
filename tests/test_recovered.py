@@ -2,12 +2,12 @@ import unittest
 
 import numpy as np
 
-from laser_cholera.metapop.census import Census
-from laser_cholera.metapop.model import Model
-from laser_cholera.metapop.params import get_parameters
-from laser_cholera.metapop.recovered import Recovered
-from laser_cholera.metapop.susceptible import Susceptible  # we need this to put waning recovereds back into susceptibles
-from laser_cholera.utils import sim_duration
+from laser.cholera.metapop.census import Census
+from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.params import get_parameters
+from laser.cholera.metapop.recovered import Recovered
+from laser.cholera.metapop.susceptible import Susceptible  # we need this to put waning recovereds back into susceptibles
+from laser.cholera.utils import sim_duration
 
 
 class TestRecovered(unittest.TestCase):

@@ -2,15 +2,15 @@ import unittest
 
 import numpy as np
 
-from laser_cholera.metapop import Census
-from laser_cholera.metapop import Environmental
-from laser_cholera.metapop import Exposed
-from laser_cholera.metapop import Infectious
-from laser_cholera.metapop import Recovered
-from laser_cholera.metapop import Susceptible
-from laser_cholera.metapop.model import Model
-from laser_cholera.metapop.params import get_parameters
-from laser_cholera.utils import sim_duration
+from laser.cholera.metapop import Census
+from laser.cholera.metapop import Environmental
+from laser.cholera.metapop import Exposed
+from laser.cholera.metapop import Infectious
+from laser.cholera.metapop import Recovered
+from laser.cholera.metapop import Susceptible
+from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.params import get_parameters
+from laser.cholera.utils import sim_duration
 
 
 class TestIFRImplementation(unittest.TestCase):
