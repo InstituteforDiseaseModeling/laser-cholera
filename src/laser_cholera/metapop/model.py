@@ -5,9 +5,9 @@ from typing import Optional
 
 import click
 import pandas as pd
-from laser_core.laserframe import LaserFrame
-from laser_core.propertyset import PropertySet
-from laser_core.random import seed as seed_prng
+from laser.core.laserframe import LaserFrame
+from laser.core.propertyset import PropertySet
+from laser.core.random import seed as seed_prng
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
@@ -392,7 +392,7 @@ def cli_run(params, **kwargs):
 
 
 def run_model(paramfile, **kwargs):
-    parameters = get_parameters(paramfile, overrides=kwargs)
+    parameters = get_parameters(paramfile, mods=kwargs)
 
     model = Model(parameters)
 

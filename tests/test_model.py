@@ -12,7 +12,7 @@ from laser_cholera.utils import sim_duration
 class TestModel(unittest.TestCase):
     @staticmethod
     def get_test_parameters(overrides=None, trim=True):
-        params = get_parameters(overrides=overrides if overrides else sim_duration(), do_validation=False)
+        params = get_parameters(mods=overrides if overrides else sim_duration(), do_validation=False)
 
         if trim:
             # Trim the parameters to test duration for testing

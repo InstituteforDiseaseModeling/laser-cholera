@@ -1445,7 +1445,7 @@ requires-dist = [
     { name = "h5py" },
     { name = "ipykernel", marker = "extra == 'nb'" },
     { name = "jupyter", marker = "extra == 'nb'" },
-    { name = "laser-core", specifier = "==0.4.0" },
+    { name = "laser-core", specifier = "~=1.0" },
     { name = "nbconvert", marker = "extra == 'nb'" },
     { name = "nbformat", marker = "extra == 'nb'" },
     { name = "pytest", marker = "extra == 'dev'" },
@@ -1456,19 +1456,45 @@ provides-extras = ["dev", "nb"]
 
 [[package]]
 name = "laser-core"
-version = "0.4.0"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
+    { name = "geopandas" },
+    { name = "h5py" },
     { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "matplotlib", version = "3.10.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "numba" },
     { name = "numpy" },
     { name = "pandas" },
+    { name = "shapely" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/04/82/8c63e2856ef215f6d219fdc977dd5692f92352be011f702952011461b72c/laser_core-0.4.0.tar.gz", hash = "sha256:66ab030863f5cc253f85bbe14b363c4b551f43a27b063790270971a5b225456a", size = 453190, upload-time = "2025-01-31T22:58:51.496Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/ab/37c7068274df5475e98f729f29d4736c76b00d65ccce02e477760fe14d64/laser_core-0.4.0-py3-none-any.whl", hash = "sha256:d38e53cc557c241768b31c0e28fc20d7c1ab7ab7d7aeea400269c4a4a54e6589", size = 28416, upload-time = "2025-01-31T22:58:48.373Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/4d/51661cb5b711b0d26c3149b0e269fc052b45c484956a9b191af49b63800e/laser_core-1.0.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d4a63e7f38ad2e8317bd1bdc69fac5cad3fd1bbd64ff6dcf94802465c4fac66f", size = 40690, upload-time = "2025-12-16T22:58:03Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/4e/18a4b5e4f96de9ca088baf74c042559d8395329a037e0cadc24cb0b84202/laser_core-1.0.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:35c1a67be63f598711698b0aa03f3dd86e2325dcb3635a200d7cf8163ed14156", size = 41066, upload-time = "2025-12-16T22:58:04.4Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/3b/94a07c5dbe76e104126b4e475ab488376a36b0d633d8fde9c444849ca6b5/laser_core-1.0.0-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:b28190de3e11ec7d4efa1c1284db7378d85a7b6183a23a16f13bfa4b9de5825a", size = 47309, upload-time = "2025-12-16T22:58:05.217Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/38/db497a8ae7457da486e0f76d517b34f4a5a4165a1ac30e8e8c28a126eb8d/laser_core-1.0.0-cp310-cp310-win32.whl", hash = "sha256:3af04e45576de1e23ef9f8b490f3db32acb0eb26b1408a36d1e0e9dd23ffd6df", size = 43464, upload-time = "2025-12-16T22:58:06.377Z" },
+    { url = "https://files.pythonhosted.org/packages/29/51/d5b0fed86cef7a1abbba6232a20d27e05469735ba1128f59d85cd2d54504/laser_core-1.0.0-cp310-cp310-win_amd64.whl", hash = "sha256:4ab488d33c734b3afcb8d17c5767f9d35e7d96c739fea6e9e26d7da5efaed3d2", size = 43818, upload-time = "2025-12-16T22:58:07.531Z" },
+    { url = "https://files.pythonhosted.org/packages/45/f5/1763aa3bcd3818c9c036773a8abad1511b6be787e9cdfad147b9b2cb8c71/laser_core-1.0.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:fa1431d10cd8851aa17fb38caa20d3c198b088916f890dcea906e02cfb2095a9", size = 40690, upload-time = "2025-12-16T22:58:08.433Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/ee/c5b1f62da8ebf7d907fc92906df4b8bafec0482b0dc3f67e62f8694c9885/laser_core-1.0.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:0a4000ee1c8a7a2aeb272de2e9d2ebffb866be57672ce30e83a818864ccd8f7d", size = 41064, upload-time = "2025-12-16T22:58:09.527Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/d4/696b415ac4993e83ff6bfcd44be7e0ec92dac0564af41fc3dae0c8556e49/laser_core-1.0.0-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:1aca5167daedd589b120c25d5bd872449955aabb27f270d29625320e3a5ed09b", size = 47305, upload-time = "2025-12-16T22:58:10.324Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/8b/c0d7ad1fa099d39c789b4dda9d189fa3a468b8d81108846d565f5d7e4461/laser_core-1.0.0-cp311-cp311-win32.whl", hash = "sha256:c80428fbfe5e3b24e403a1a6af7bd9392a7d42f0de648ca9a0be1a4677b6949d", size = 43462, upload-time = "2025-12-16T22:58:11.121Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/e3/48d0696fbcd03f51b9caedd856411c05df8178df7563c27287e0a80ba5b7/laser_core-1.0.0-cp311-cp311-win_amd64.whl", hash = "sha256:f342d794a08522e5a18989bdac4e15386319a3d3da103872e2720e5988bc668d", size = 43816, upload-time = "2025-12-16T22:58:12.004Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/87/dd4e64e5c1e9e95bbdaa29a4ea6da9ad15694d0e7b2cc62d2d5d8b25af86/laser_core-1.0.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:d3cf3c4b2fd21d6e3ae22b0d59872a5c5bf3882ff8a4e7b0d80b690230727adc", size = 40681, upload-time = "2025-12-16T22:58:13.927Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/62/8017c069e02fdb4a995ca3d046030ad272e4395cb377cc02362ff505a75e/laser_core-1.0.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ca3d3c5e485c61f68822b79979cc9f4e21be010359b7a08f6be6bd219455e93b", size = 41076, upload-time = "2025-12-16T22:58:15.054Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/3b/15205b1b88e47d30d24db8a20692ab364e91caba2d75a6d3fd677cf44f4f/laser_core-1.0.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:77112feaefffea689ab79b333c4ac9820eef0ae42dfad5b5f55f3d3b46f67f3d", size = 47791, upload-time = "2025-12-16T22:58:16.17Z" },
+    { url = "https://files.pythonhosted.org/packages/00/2f/f556e3b1000356511e92edd7b1a105eac8fc375a6c46988453a48195ce51/laser_core-1.0.0-cp312-cp312-win32.whl", hash = "sha256:68420d14d4889e0a4ffd313bc6ea0a595bfbc68c0ec4ce5d4e7a44cf665c605d", size = 43495, upload-time = "2025-12-16T22:58:17.336Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/51/798c54032dca23465daf2f21d2c0d3555bc69494fcf825cc3b63f2b6809c/laser_core-1.0.0-cp312-cp312-win_amd64.whl", hash = "sha256:101a856d65088b259ba80825c1a08bb6bb9a4432548d7cf0c4a05bd0f4c28fe0", size = 43843, upload-time = "2025-12-16T22:58:18.191Z" },
+    { url = "https://files.pythonhosted.org/packages/38/96/a2709bc175f0c6b5f0aa5ba63f64526bdd30b2dc37ace346e58864310ec6/laser_core-1.0.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:887eacc68166a6b2692b80013104ed8f3af677f56877bd23cd95d052648c869a", size = 40682, upload-time = "2025-12-16T22:58:19.427Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/7e/aa9dbaf30b19d71683528a4e00f38e436a11737282a9a877d24d77dc8f10/laser_core-1.0.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:15c1aa6255cb1500cf8ad31ae64ffa743af01e0a1a62c69a7dfb98b822eeb6bd", size = 41076, upload-time = "2025-12-16T22:58:20.517Z" },
+    { url = "https://files.pythonhosted.org/packages/69/23/1339b1d946a894bd6da5fec2a9db283cc67f511b9ca3223e796d348e7f61/laser_core-1.0.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:15d4c3406c185ef6649e7efdbb05bdb4fcd584e25ea81a194036c4d6dbe0b83e", size = 47846, upload-time = "2025-12-16T22:58:21.326Z" },
+    { url = "https://files.pythonhosted.org/packages/55/32/48634041bc831e7c02bf7eaff5e7b56fee21344fa2d0aef3ad9eca17590c/laser_core-1.0.0-cp313-cp313-win32.whl", hash = "sha256:fdb5d0a7c87002ec0cc14f3abac7f739cfc4f48716da38d7655487b3d98a619a", size = 43496, upload-time = "2025-12-16T22:58:22.568Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/56/eb8c133a836883d9c70fbbc174ac8dc677096b4077d113f92bc4156e49b0/laser_core-1.0.0-cp313-cp313-win_amd64.whl", hash = "sha256:83059de21ffa7ef11e47b4e89e96ae49ada1b9539109df189afb970486db9de4", size = 43840, upload-time = "2025-12-16T22:58:23.724Z" },
+    { url = "https://files.pythonhosted.org/packages/47/c4/eb16eb1330b9754fa80c9698409efca29492d2c963c7c53e9489d65face8/laser_core-1.0.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:ff38a9ae8f33845fa6136859be86ad150945abaef71468748a142fbdd0c03bb6", size = 40686, upload-time = "2025-12-16T22:58:25.153Z" },
+    { url = "https://files.pythonhosted.org/packages/b1/98/052e6f3c2f3abfcf1d3d7c4421b26be143be0d72c2967cfaf652cdcb7f4f/laser_core-1.0.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:41d99a4080eeb56988bc3d394cb1eeaaa874714ebf79ec00302826f217888f21", size = 41060, upload-time = "2025-12-16T22:58:26.056Z" },
+    { url = "https://files.pythonhosted.org/packages/94/09/8ec8b8705f2ba224be565b679627bf5dd026cdaae4add7837b1c27c66429/laser_core-1.0.0-cp39-cp39-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:23ca7e91b9e08d5f690245b104407ab3d4b8a9682d3148177e0527157288e07f", size = 47174, upload-time = "2025-12-16T22:58:26.932Z" },
+    { url = "https://files.pythonhosted.org/packages/63/c4/3d8ac442fdbf2f094a38b65c6dbafd96ec98de99bcc9e9fbe3366b365a04/laser_core-1.0.0-cp39-cp39-win32.whl", hash = "sha256:36f4328be9446c8be13c8ed7e01883dca05ae80d1d7becb7aff9c957aff95ddd", size = 43459, upload-time = "2025-12-16T22:58:28.552Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/34/1788cc2383e91891dc66df4eae11f2f81bb97260f98f043fb94a1a7d9322/laser_core-1.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:2c0f131d6b533c03c02be4b5bf7173f9fccaf3cb0a0b8cfc616cd5bab9898083", size = 43806, upload-time = "2025-12-16T22:58:29.424Z" },
 ]
 
 [[package]]

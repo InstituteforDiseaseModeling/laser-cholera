@@ -2,7 +2,7 @@ from datetime import datetime
 from functools import partial
 
 import numpy as np
-from laser_core.migration import distance
+from laser.core.migration import distance
 
 
 def get_daily_seasonality(params):

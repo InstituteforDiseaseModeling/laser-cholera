@@ -10,7 +10,7 @@ from laser_cholera.utils import sim_duration
 
 class TestExposed(unittest.TestCase):
     def test_exposed_steadystate(self):
-        ps = get_parameters(overrides=sim_duration(), do_validation=False)
+        ps = get_parameters(mods=sim_duration(), do_validation=False)
         ps.d_jt *= 0  # turn off deaths
         model = Model(parameters=ps)
         model.components = [Exposed]
@@ -20,7 +20,7 @@ class TestExposed(unittest.TestCase):
         return
 
     def test_exposed_deaths(self):
-        ps = get_parameters(overrides=sim_duration(), do_validation=False)
+        ps = get_parameters(mods=sim_duration(), do_validation=False)
         # Move some people to the exposed state so we have enough to see deaths
         ps.E_j_initial += 10_000
         ps.S_j_initial -= ps.E_j_initial

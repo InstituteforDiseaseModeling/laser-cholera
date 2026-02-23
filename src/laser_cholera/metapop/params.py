@@ -12,7 +12,7 @@ from typing import Union
 import h5py as h5
 import matplotlib.pyplot as plt
 import numpy as np
-from laser_core.propertyset import PropertySet
+from laser.core.propertyset import PropertySet
 from matplotlib.figure import Figure
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,9 @@ class PropertySetEx(PropertySet):
 
 
 def get_parameters(
-    paramsource: Optional[Union[str, Path, dict]] = None, do_validation: bool = True, overrides: Optional[dict] = None
+    paramsource: Optional[Union[str, Path, dict]] = None,
+    do_validation: bool = True,
+    mods: Optional[dict] = None,
 ) -> PropertySetEx:
     fn_map = {
         (".json",): load_json_parameters,
@@ -76,13 +78,25 @@ def get_parameters(
     else:
         raise ValueError(f"Invalid parameter source type: {type(paramsource)}")
 
-    if overrides is not None:
-        # Update the parameters with the overrides
-        params += overrides
+    if mods is not None:
+        overrides = {k: v for k, v in mods.items() if k in params}
+        additions = {k: v for k, v in mods.items() if k not in params}
 
-        logger.info("Updated/overrode file parameters with overrides:")
-        for k, v in overrides.items():
-            logger.info(f"  '{k}': {v}")
+        if overrides:
+            # Update the parameters with the overrides
+            params <<= overrides
+
+            logger.info("Updated/overrode file parameters with overrides:")
+            for k, v in overrides.items():
+                logger.info(f"  '{k}': {v}")
+
+        if additions:
+            # Add the additional parameters
+            params += additions
+
+            logger.info("Parameters added to file parameters:")
+            for k, v in additions.items():
+                logger.info(f"  '{k}': {v}")
 
     if do_validation:
         validate_parameters(params)

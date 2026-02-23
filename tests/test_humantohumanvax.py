@@ -19,7 +19,7 @@ from laser_cholera.utils import sim_duration
 class TestHumanToHumanVax(unittest.TestCase):
     @staticmethod
     def get_test_parameters():
-        params = get_parameters(overrides=sim_duration(datetime(2024, 1, 1), datetime(2024, 12, 31)), do_validation=False)
+        params = get_parameters(mods=sim_duration(datetime(2024, 1, 1), datetime(2024, 12, 31)), do_validation=False)
         iNigeria = params.location_name.index("NGA")
 
         # S - use given values

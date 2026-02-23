@@ -13,7 +13,7 @@ from laser_cholera.utils import sim_duration
 class TestRecovered(unittest.TestCase):
     @staticmethod
     def get_test_parameters():
-        params = get_parameters(overrides=sim_duration(), do_validation=False)
+        params = get_parameters(mods=sim_duration(), do_validation=False)
         # S - use given susceptible populations
         # E - move any exposed people back to susceptible
         params.S_j_initial += params.E_j_initial
