@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
-from laser_cholera.metapop.utils import get_daily_seasonality
-from laser_cholera.metapop.utils import get_pi_from_lat_long
+from laser.cholera.metapop.utils import get_daily_seasonality
+from laser.cholera.metapop.utils import get_pi_from_lat_long
 
 logger = logging.getLogger(__name__)
 

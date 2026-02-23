@@ -2,10 +2,10 @@ import unittest
 
 import numpy as np
 
-from laser_cholera.metapop.exposed import Exposed
-from laser_cholera.metapop.model import Model
-from laser_cholera.metapop.params import get_parameters
-from laser_cholera.utils import sim_duration
+from laser.cholera.metapop.exposed import Exposed
+from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.params import get_parameters
+from laser.cholera.utils import sim_duration
 
 
 class TestExposed(unittest.TestCase):

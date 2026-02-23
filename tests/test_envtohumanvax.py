@@ -3,19 +3,19 @@ import unittest
 import numpy as np
 from laser.core.propertyset import PropertySet
 
-from laser_cholera.metapop.census import Census
-from laser_cholera.metapop.environmental import Environmental
-from laser_cholera.metapop.envtohuman import EnvToHuman
-from laser_cholera.metapop.envtohumanvax import EnvToHumanVax
-from laser_cholera.metapop.exposed import Exposed
-from laser_cholera.metapop.infectious import Infectious
-from laser_cholera.metapop.model import Model
-from laser_cholera.metapop.params import get_parameters
-from laser_cholera.metapop.recovered import Recovered
-from laser_cholera.metapop.susceptible import Susceptible
-from laser_cholera.metapop.vaccinated import Vaccinated
-from laser_cholera.test import Eradication
-from laser_cholera.utils import sim_duration
+from laser.cholera.metapop.census import Census
+from laser.cholera.metapop.environmental import Environmental
+from laser.cholera.metapop.envtohuman import EnvToHuman
+from laser.cholera.metapop.envtohumanvax import EnvToHumanVax
+from laser.cholera.metapop.exposed import Exposed
+from laser.cholera.metapop.infectious import Infectious
+from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.params import get_parameters
+from laser.cholera.metapop.recovered import Recovered
+from laser.cholera.metapop.susceptible import Susceptible
+from laser.cholera.metapop.vaccinated import Vaccinated
+from laser.cholera.test import Eradication
+from laser.cholera.utils import sim_duration
 
 
 class TestEnvToHumanVax(unittest.TestCase):

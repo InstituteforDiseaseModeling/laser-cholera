@@ -9,7 +9,7 @@ Why does this file exist, and why __main__? For more info, read:
 - https://docs.python.org/3/using/cmdline.html#cmdoption-m
 """
 
-from laser_cholera.cli import run
+from laser.cholera.cli import run
 
 if __name__ == "__main__":
     run()

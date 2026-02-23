@@ -18,7 +18,7 @@ include CHANGELOG.rst
 include CONTRIBUTING.rst
 include LICENSE
 include README.rst
-include README.MD
+include README.md
 
 include src/laser_cholera/metapop/data/default_parameters.*
 recursive-include src *.csv

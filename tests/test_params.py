@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest import TestCase
 
-from laser_cholera.metapop.params import get_parameters
+from laser.cholera.metapop.params import get_parameters
 
 SCRIPT_DIR = Path(__file__).parent.absolute()
 PARAMS_DIR = SCRIPT_DIR / "../src/laser_cholera/metapop/data"

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
-from laser_cholera.likelihood import get_model_likelihood
+from laser.cholera.likelihood import get_model_likelihood
 
 
 class Analyzer:
