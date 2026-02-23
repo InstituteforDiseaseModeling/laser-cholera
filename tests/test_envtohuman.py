@@ -27,7 +27,7 @@ class TestEnvToHuman(unittest.TestCase):
 
     @staticmethod
     def get_test_parameters():
-        params = get_parameters(overrides=sim_duration(), do_validation=False)
+        params = get_parameters(mods=sim_duration(), do_validation=False)
         params.S_j_initial += params.I_j_initial  # return initial I to S  # ty:ignore[unresolved-attribute]
         params.I_j_initial = 50_000  # fix I at 50,000 # ty:ignore[unresolved-attribute]
         params.S_j_initial -= params.I_j_initial  # remove I from S # ty:ignore[unresolved-attribute]

@@ -17,7 +17,7 @@ class TestVaccinated(unittest.TestCase):
     def get_test_parameters(V1=20_000, V2=10_000, overrides=None):
         if overrides is None:
             overrides = sim_duration()
-        params = get_parameters(overrides=overrides, do_validation=False)
+        params = get_parameters(mods=overrides, do_validation=False)
         # S - use given susceptible populations
         # E - move any exposed people back to susceptible
         params.S_j_initial += params.E_j_initial

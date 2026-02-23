@@ -13,7 +13,7 @@ from laser_cholera.utils import sim_duration
 class TestCensus(unittest.TestCase):
     # Test with only susceptible people
     def test_census_susceptible(self):
-        ps = get_parameters(overrides=sim_duration(), do_validation=False)
+        ps = get_parameters(mods=sim_duration(), do_validation=False)
         model = Model(parameters=ps)
         model.components = [Susceptible, Census]
         model.run()
@@ -23,7 +23,7 @@ class TestCensus(unittest.TestCase):
 
     # Test with only exposed people
     def test_census_exposed(self):
-        ps = get_parameters(overrides=sim_duration(), do_validation=False)
+        ps = get_parameters(mods=sim_duration(), do_validation=False)
         model = Model(parameters=ps)
         ps.E_j_initial += 10_000
         ps.S_j_initial -= 10_000
@@ -35,7 +35,7 @@ class TestCensus(unittest.TestCase):
 
     # Test with susceptible and exposed people
     def test_census_susceptible_exposed(self):
-        ps = get_parameters(overrides=sim_duration(), do_validation=False)
+        ps = get_parameters(mods=sim_duration(), do_validation=False)
         model = Model(parameters=ps)
         ps.E_j_initial += 10_000
         ps.S_j_initial -= 10_000

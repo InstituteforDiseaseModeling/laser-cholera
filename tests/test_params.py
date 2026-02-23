@@ -9,13 +9,13 @@ PARAMS_DIR = SCRIPT_DIR / "../src/laser_cholera/metapop/data"
 
 class TestGetParameters(TestCase):
     def test_load_uncompressed_json(self):
-        _params = get_parameters(PARAMS_DIR / "default_parameters.json", overrides={"loglevel": "DEBUG"})
+        _params = get_parameters(PARAMS_DIR / "default_parameters.json", mods={"loglevel": "DEBUG"})
         # assert True
 
         return
 
     def test_load_compressed_json(self):
-        _params = get_parameters(PARAMS_DIR / "default_parameters.json.gz", overrides={"loglevel": "DEBUG"})
+        _params = get_parameters(PARAMS_DIR / "default_parameters.json.gz", mods={"loglevel": "DEBUG"})
         # assert True
 
         return

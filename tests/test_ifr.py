@@ -16,7 +16,7 @@ from laser_cholera.utils import sim_duration
 class TestIFRImplementation(unittest.TestCase):
     @staticmethod
     def get_test_parameters():
-        params = get_parameters(overrides=sim_duration(), do_validation=False)
+        params = get_parameters(mods=sim_duration(), do_validation=False)
         params.S_j_initial += params.I_j_initial  # return initial I to S
         params.I_j_initial = 10_000  # fix I at 10,000
         params.S_j_initial -= params.I_j_initial  # remove fixed, test I from S

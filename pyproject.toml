@@ -27,16 +27,14 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    # "Programming Language :: Python :: 3.13",   # Not until Numba supports it
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",   # Not until Numba supports it
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 dependencies = [
-    "laser-core==0.4.0",
+    "laser-core~=1.0",
     "geopandas",
     "h5py",
-    # "numpy==2.0.2", # depend on laser-core
-    # "llvmlite==0.43.0", # depend on laser-core
-    # "numba==0.60.0", # depend on laser-core
     "scipy",
     "tqdm",
 ]

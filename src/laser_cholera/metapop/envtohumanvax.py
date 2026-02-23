@@ -12,7 +12,7 @@ class EnvToHumanVax:
         model.patches.add_vector_property("V1_incidence_env", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("V2_incidence_env", length=model.params.nticks + 1, dtype=np.int32, default=0)
 
-        if not hasattr(model.people, "incidence"):
+        if not hasattr(model.patches, "incidence"):
             model.patches.add_vector_property("incidence", length=model.params.nticks + 1, dtype=np.int32, default=0)
 
         return

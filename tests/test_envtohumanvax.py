@@ -1,7 +1,7 @@
 import unittest
 
 import numpy as np
-from laser_core.propertyset import PropertySet
+from laser.core.propertyset import PropertySet
 
 from laser_cholera.metapop.census import Census
 from laser_cholera.metapop.environmental import Environmental
@@ -57,7 +57,7 @@ class TestEnvToHumanVax(unittest.TestCase):
 
     @staticmethod
     def get_test_parameters() -> PropertySet:
-        params = get_parameters(overrides=sim_duration(), do_validation=False)
+        params = get_parameters(mods=sim_duration(), do_validation=False)
 
         # Configure population
         # Move some people to the infectious state so we have shedding to the environment
