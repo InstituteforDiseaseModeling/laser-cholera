@@ -1,7 +1,7 @@
-laser_cholera
-=============
+laser
+=====
 
 .. toctree::
    :maxdepth: 4
 
-   laser_cholera
+   laser
