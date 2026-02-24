@@ -118,7 +118,9 @@ def map_suitability_to_decay(fast, slow, suitability, beta_a, beta_b):
     """
     Map suitability to decay using a beta distribution.
 
-    $ \\delta_{jt} = \\frac { 1 } { \\text {days}_short + f( \\psi_{jt}) ( \\text {days}_long  - \\text {days}_short ) } $
+    .. math::
+
+        \\delta_{jt} = \\frac { 1 } { \\text {days}_{short} + f( \\psi_{jt}) ( \\text {days}_{long}  - \\text {days}_{short} ) }
 
     We use a parameterized beta distribution to map suitability values [0, 1] to [0, 1] in a, potentially, non-linear way.
 
