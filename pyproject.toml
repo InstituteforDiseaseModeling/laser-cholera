@@ -57,7 +57,13 @@ metapop = "laser.cholera.metapop.model:cli_run"
 
 [tool.uv.build-backend]
 module-name = [ "laser.cholera" ]
-source-include = ["AUTHORS.rst", "CHANGELOG.rst", "CONTRIBUTING.rst"]
+source-include = [
+    "AUTHORS.rst", "CHANGELOG.rst", "CONTRIBUTING.rst", "README.rst",
+    "src/laser/cholera/metapop/data/default_parameters.*",
+    "src/laser/cholera/metapop/data/demographics_africa_2000_2023.csv",
+    "src/laser/cholera/metapop/data/mosaic_countries*",
+    "tests/test*py"
+    ]
 
 [tool.ruff]
 extend-exclude = ["static", "ci/templates"]
