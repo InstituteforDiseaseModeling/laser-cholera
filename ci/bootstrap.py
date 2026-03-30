@@ -56,9 +56,6 @@ def main():
         line.strip()
         # 'tox' need not be installed globally, but must be importable
         # by the Python that is running this script.
-        # This uses sys.executable the same way that the call in
-        # cookiecutter-pylibrary/hooks/post_gen_project.py
-        # invokes this bootstrap.py itself.
         for line in subprocess.check_output([sys.executable, "-m", "tox", "--listenvs"], universal_newlines=True).splitlines()
     ]
     tox_environments = [line for line in tox_environments if line.startswith("py")]
