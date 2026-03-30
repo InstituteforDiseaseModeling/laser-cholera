@@ -128,10 +128,7 @@ class Vaccinated:
         V2sus_next += waned
 
         # +newly vaccinated (successful take)
-        fraction = np.zeros_like(S).astype(np.float32)
-        non_zero = S + E > 0
-        fraction[non_zero] = S[non_zero] / (S[non_zero] + E[non_zero])
-        new_one_doses = model.prng.poisson(model.params.nu_1_jt[tick] * fraction).astype(V1imm.dtype)
+        new_one_doses = np.round(model.params.nu_1_jt[tick]).astype(V1imm.dtype)
         # poisson can return more than current susceptible population, so we will clip
         if np.any(new_one_doses > S_next):
             logger.debug(f"WARNING: new_one_doses > S_next ({tick=})")
@@ -151,7 +148,7 @@ class Vaccinated:
         # -second dose recipients
         # set minimum V1 to 1 to avoid division by zero
         V1 = np.maximum(V1imm_next + V1sus_next + V1inf_next, 1).astype(V1imm.dtype)
-        new_two_doses = model.prng.poisson(model.params.nu_2_jt[tick]).astype(V1imm.dtype)
+        new_two_doses = np.round(model.params.nu_2_jt[tick]).astype(V2imm.dtype)
         # poisson can return more than current susceptible population, so we will clip
         if np.any(new_two_doses > V1):
             logger.debug(f"WARNING: new_two_doses > V1 ({tick=}\n\t{new_two_doses=}\n\t{V1=})")
