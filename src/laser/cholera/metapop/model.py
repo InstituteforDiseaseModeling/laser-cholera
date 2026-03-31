@@ -18,10 +18,8 @@ from laser.cholera.metapop import Census
 from laser.cholera.metapop import DerivedValues
 from laser.cholera.metapop import Environmental
 from laser.cholera.metapop import EnvToHuman
-from laser.cholera.metapop import EnvToHumanVax
 from laser.cholera.metapop import Exposed
 from laser.cholera.metapop import HumanToHuman
-from laser.cholera.metapop import HumanToHumanVax
 from laser.cholera.metapop import Infectious
 from laser.cholera.metapop import Parameters
 from laser.cholera.metapop import Recorder
@@ -44,15 +42,11 @@ class RInterface:
         # self.Isym = model.people.Isym[1:, :].T
         # self.Iasym = model.people.Iasym[1:, :].T
         # self.R = model.people.R[1:, :].T
-        # self.V1imm = model.people.V1imm[1:, :].T
-        # self.V1sus = model.people.V1sus[1:, :].T
-        # self.V1inf = model.people.V1inf[1:, :].T
-        # self.V2imm = model.people.V2imm[1:, :].T
-        # self.V2sus = model.people.V2sus[1:, :].T
-        # self.V2inf = model.people.V2inf[1:, :].T
+        # self.V1 = model.people.V1[1:, :].T
+        # self.V2 = model.people.V2[1:, :].T
 
         # Trim the first column (t=0) and transpose for R compatibility
-        for compartment in ["S", "E", "Isym", "Iasym", "R", "V1imm", "V1sus", "V1inf", "V2imm", "V2sus", "V2inf"]:
+        for compartment in ["S", "E", "Isym", "Iasym", "R", "V1", "V2"]:
             if hasattr(model.people, compartment):
                 attr = getattr(model.people, compartment)
                 setattr(self, compartment, attr[1:, :].T)
@@ -70,12 +64,6 @@ class RInterface:
         # self.Psi = model.patches.Psi[1:, :].T
         # self.reported_cases = model.patches.reported_cases[1:, :].T
         # self.spatial_hazard = model.patches.spatial_hazard[1:, :].T
-        # self.V1 = model.patches.V1[1:, :].T
-        # self.V1_incidence_env = model.patches.V1_incidence_env[1:, :].T
-        # self.V1_incidence_hum = model.patches.V1_incidence_hum[1:, :].T
-        # self.V2 = model.patches.V2[1:, :].T
-        # self.V2_incidence_env = model.patches.V2_incidence_env[1:, :].T
-        # self.V2_incidence_hum = model.patches.V2_incidence_hum[1:, :].T
         # self.W = model.patches.W[1:, :].T
 
         # Trim the first column (t=0) and transpose for R compatibility
@@ -93,12 +81,6 @@ class RInterface:
             "Psi",
             "reported_cases",
             "spatial_hazard",
-            "V1",
-            "V1_incidence_env",
-            "V1_incidence_hum",
-            "V2",
-            "V2_incidence_env",
-            "V2_incidence_hum",
             "W",
         ]:
             if hasattr(model.patches, prop):
@@ -404,9 +386,7 @@ def run_model(paramfile, **kwargs):
         Vaccinated,
         Census,
         HumanToHuman,
-        HumanToHumanVax,
         EnvToHuman,
-        EnvToHumanVax,
         Environmental,
         DerivedValues,
         Analyzer,
