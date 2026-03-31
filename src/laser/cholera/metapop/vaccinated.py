@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,15 +13,9 @@ class Vaccinated:
         self.model = model
 
         assert hasattr(model, "people"), "Vaccinated: model needs to have a 'people' attribute."
-        model.people.add_vector_property("V1imm", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        model.people.add_vector_property("V1sus", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        model.people.add_vector_property("V1inf", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        model.people.add_vector_property("V2imm", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        model.people.add_vector_property("V2sus", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        model.people.add_vector_property("V2inf", length=model.params.nticks + 1, dtype=np.int32, default=0)
+        model.people.add_vector_property("V1", length=model.params.nticks + 1, dtype=np.int32, default=0)
+        model.people.add_vector_property("V2", length=model.params.nticks + 1, dtype=np.int32, default=0)
         # We will track doses on the date (tick) given to more easily match nu_1_jt and nu_2_jt.
-        model.patches.add_vector_property("V1", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        model.patches.add_vector_property("V2", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("dose_one_doses", length=model.params.nticks, dtype=np.int32, default=0)
         model.patches.add_vector_property("dose_two_doses", length=model.params.nticks, dtype=np.int32, default=0)
         assert "V1_j_initial" in model.params, (
@@ -29,16 +24,8 @@ class Vaccinated:
         assert "V2_j_initial" in model.params, (
             "Vaccinated: model params needs to have a 'V2_j_initial' (initial two dose vaccinated population) parameter."
         )
-        assert "phi_1" in model.params, "Vaccinated: model params needs to have a 'phi_1' (efficacy of one dose) parameter."
-        assert "phi_2" in model.params, "Vaccinated: model params needs to have a 'phi_2' (efficacy of two doses) parameter."
-        model.people.V1imm[0] = np.round(model.params.phi_1 * model.params.V1_j_initial)
-        model.people.V1sus[0] = model.params.V1_j_initial - model.people.V1imm[0]
-        model.people.V1inf[0] = 0
-        model.patches.V1[0] = model.people.V1imm[0] + model.people.V1sus[0] + model.people.V1inf[0]
-        model.people.V2imm[0] = np.round(model.params.phi_2 * model.params.V2_j_initial)
-        model.people.V2sus[0] = model.params.V2_j_initial - model.people.V2imm[0]
-        model.people.V2inf[0] = 0
-        model.patches.V2[0] = model.people.V2imm[0] + model.people.V2sus[0] + model.people.V2inf[0]
+        model.people.V1[0] = model.params.V1_j_initial
+        model.people.V2[0] = model.params.V2_j_initial
 
         return
 
@@ -61,139 +48,70 @@ class Vaccinated:
         return
 
     def __call__(self, model, tick: int) -> None:
-        V1_next = model.patches.V1[tick + 1]
-        V2_next = model.patches.V2[tick + 1]
-        V1imm = model.people.V1imm[tick]
-        V1sus = model.people.V1sus[tick]
-        V1inf = model.people.V1inf[tick]
-        V1imm_next = model.people.V1imm[tick + 1]
-        V1sus_next = model.people.V1sus[tick + 1]
-        V1inf_next = model.people.V1inf[tick + 1]
-        V2imm = model.people.V2imm[tick]
-        V2sus = model.people.V2sus[tick]
-        V2inf = model.people.V2inf[tick]
-        V2imm_next = model.people.V2imm[tick + 1]
-        V2sus_next = model.people.V2sus[tick + 1]
-        V2inf_next = model.people.V2inf[tick + 1]
-        S = model.people.S[tick]
-        E = model.people.E[tick]
+        V1 = model.people.V1[tick]
+        V1_next = model.people.V1[tick + 1]
+        V2 = model.people.V2[tick]
+        V2_next = model.people.V2[tick + 1]
         S_next = model.people.S[tick + 1]
 
-        V1imm_next[:] = V1imm
-        V1sus_next[:] = V1sus
-        V1inf_next[:] = V1inf
-        V2imm_next[:] = V2imm
-        V2sus_next[:] = V2sus
-        V2inf_next[:] = V2inf
+        # propagate the current values forward (V(t+1) = V(t) + ∆V)
+        V1_next[:] = V1
+        V2_next[:] = V2
 
         # -natural mortality
-        non_disease_deaths = model.prng.binomial(V1imm_next, -np.expm1(-model.params.d_jt[tick])).astype(V1imm_next.dtype)
-        # binomial can't return more than current population, so we won't do a check here
-        V1imm_next -= non_disease_deaths
+        non_disease_deaths = model.prng.binomial(V1_next, -np.expm1(-model.params.d_jt[tick])).astype(V1_next.dtype)
+        V1_next -= non_disease_deaths
         ndd_next = model.patches.non_disease_deaths[tick]
         ndd_next += non_disease_deaths
-        non_disease_deaths = model.prng.binomial(V1sus_next, -np.expm1(-model.params.d_jt[tick])).astype(V1sus_next.dtype)
-        # binomial can't return more than current population, so we won't do a check here
-        V1sus_next -= non_disease_deaths
-        ndd_next += non_disease_deaths
-        # this won't exactly match reality as the _actual_ people merged back into the E compartment upon infection
-        non_disease_deaths = model.prng.binomial(V1inf_next, -np.expm1(-model.params.d_jt[tick])).astype(V1inf_next.dtype)
-        # binomial can't return more than current population, so we won't do a check here
-        V1inf_next -= non_disease_deaths
-        # ndd_next += non_disease_deaths  # don't include here as V1inf is just a counter
 
-        non_disease_deaths = model.prng.binomial(V2imm_next, -np.expm1(-model.params.d_jt[tick])).astype(V2imm_next.dtype)
-        # binomial can't return more than current population, so we won't do a check here
-        V2imm_next -= non_disease_deaths
+        non_disease_deaths = model.prng.binomial(V2_next, -np.expm1(-model.params.d_jt[tick])).astype(V2_next.dtype)
+        V2_next -= non_disease_deaths
         ndd_next += non_disease_deaths
-        non_disease_deaths = model.prng.binomial(V2sus_next, -np.expm1(-model.params.d_jt[tick])).astype(V2sus_next.dtype)
-        # binomial can't return more than current population, so we won't do a check here
-        V2sus_next -= non_disease_deaths
-        ndd_next += non_disease_deaths
-        # this won't exactly match reality as the _actual_ people merged back into the E compartment upon infection
-        non_disease_deaths = model.prng.binomial(V2inf_next, -np.expm1(-model.params.d_jt[tick])).astype(V2inf_next.dtype)
-        # binomial can't return more than current population, so we won't do a check here
-        V2inf_next -= non_disease_deaths
-        # ndd_next += non_disease_deaths # don't include here as V2inf is just a counter
 
         # -waning immunity
-        waned = model.prng.binomial(V1imm_next, -np.expm1(-model.params.omega_1)).astype(V1imm_next.dtype)
-        # binomial can't return more than current population, so we won't do a check here
-        V1imm_next -= waned
-        V1sus_next += waned
+        waned = model.prng.binomial(V1_next, -np.expm1(-model.params.omega_1)).astype(V1_next.dtype)
+        V1_next -= waned
+        S_next += waned  # waned return to Susceptible
 
-        waned = model.prng.binomial(V2imm_next, -np.expm1(-model.params.omega_2)).astype(V2imm_next.dtype)
-        # binomial can't return more than current population, so we won't do a check here
-        V2imm_next -= waned
-        V2sus_next += waned
+        waned = model.prng.binomial(V2_next, -np.expm1(-model.params.omega_2)).astype(V2_next.dtype)
+        V2_next -= waned
+        S_next += waned  # waned return to Susceptible
 
         # +newly vaccinated (successful take)
-        new_one_doses = np.round(model.params.nu_1_jt[tick]).astype(V1imm.dtype)
-        # poisson can return more than current susceptible population, so we will clip
-        if np.any(new_one_doses > S_next):
-            logger.debug(f"WARNING: new_one_doses > S_next ({tick=})")
-            for index in np.nonzero(new_one_doses > S_next)[0]:
-                logger.debug(f"\t{model.params.location_name[index]}: doses {new_one_doses[index]} > {S_next[index]} susceptible")
-            new_one_doses = np.minimum(new_one_doses, S_next)
-        model.patches.dose_one_doses[tick] = new_one_doses
-        S_next -= new_one_doses
-        assert np.all(S_next >= 0), f"S' should not go negative ({tick=}\n\t{S_next})"
+        new_first_doses_delivered = np.round(model.params.nu_1_jt[tick]).astype(V1.dtype)
+        if np.any(new_first_doses_delivered > S_next):
+            logger.debug(f"WARNING: new_first_doses_delivered > S_next ({tick=})")
+            for index in np.nonzero(new_first_doses_delivered > S_next)[0]:
+                logger.debug(f"\t{model.params.location_name[index]}: doses {new_first_doses_delivered[index]} > {S_next[index]} susceptible")
+            new_first_doses_delivered = np.minimum(new_first_doses_delivered, S_next)
+        model.patches.dose_one_doses[tick] = new_first_doses_delivered
+        assert np.all(S_next >= 0), f"'S' should not go negative ({tick=}\n\t{S_next})"
         # effective doses
-        new_immunized = np.round(model.params.phi_1 * new_one_doses).astype(V1imm.dtype)
-        V1imm_next += new_immunized
-        # infective doses
-        new_ineffective = new_one_doses - new_immunized
-        V1sus_next += new_ineffective
+        newly_immunized = np.round(model.params.phi_1 * new_first_doses_delivered).astype(V1_next.dtype)
+        # just move the effective doses, leave ineffective doses in S
+        S_next -= newly_immunized
+        V1_next += newly_immunized
 
         # -second dose recipients
-        # set minimum V1 to 1 to avoid division by zero
-        V1 = np.maximum(V1imm_next + V1sus_next + V1inf_next, 1).astype(V1imm.dtype)
-        new_two_doses = np.round(model.params.nu_2_jt[tick]).astype(V2imm.dtype)
-        # poisson can return more than current susceptible population, so we will clip
-        if np.any(new_two_doses > V1):
-            logger.debug(f"WARNING: new_two_doses > V1 ({tick=}\n\t{new_two_doses=}\n\t{V1=})")
-            new_two_doses = np.minimum(new_two_doses, V1)
-        model.patches.dose_two_doses[tick] = new_two_doses
-        v1imm_contribution = np.minimum(np.round((V1imm_next / V1) * new_two_doses).astype(V1imm_next.dtype), V1imm_next)
-        V1imm_next -= v1imm_contribution
-        v1sus_contribution = np.minimum(np.round((V1sus_next / V1) * new_two_doses).astype(V1sus_next.dtype), V1sus_next)
-        V1sus_next -= v1sus_contribution
-        v1inf_contribution = np.minimum(
-            np.round((new_two_doses - v1imm_contribution - v1sus_contribution) * (V1inf_next / V1)).astype(V1inf_next.dtype), V1inf_next
-        )
-        V1inf_next -= v1inf_contribution
-
-        assert np.all(V1imm_next >= 0), f"V1imm' should not go negative ({tick=}\n\t{V1imm_next})"
-        assert np.all(V1sus_next >= 0), f"V1sus' should not go negative ({tick=}\n\t{V1sus_next})"
-        assert np.all(V1inf_next >= 0), f"V1inf' should not go negative ({tick=}\n\t{V1inf_next})"
+        new_second_doses_delivered = np.round(model.params.nu_2_jt[tick]).astype(V2_next.dtype)
+        if np.any(new_second_doses_delivered > V1):
+            logger.debug(f"WARNING: new_second_doses_delivered > V1 ({tick=}\n\t{new_second_doses_delivered=}\n\t{V1=})")
+            new_second_doses_delivered = np.minimum(new_second_doses_delivered, V1)
+        model.patches.dose_two_doses[tick] = new_second_doses_delivered
 
         # effective doses
-        # TODO - use new_two_doses here or (v1imm_contribution + v1sus_contribution)?
-        new_immunized = np.round(model.params.phi_2 * ((V1imm + V1sus) / V1) * new_two_doses).astype(V2imm_next.dtype)
-        V2imm_next += new_immunized
-        # ineffective doses
-        new_ineffective = np.round((1 - model.params.phi_2) * ((V1imm + V1sus) / V1) * new_two_doses).astype(V2sus.dtype)
-        V2sus_next += new_ineffective
-        # doses applied to previously infected one dose recipients
-        v2inf_delta = new_two_doses - new_immunized - new_ineffective
-        if np.any(v2inf_delta < 0):
-            logger.debug(f"WARNING: v2inf_delta < 0 ({tick=}\n\t{v2inf_delta=})")
-            v2inf_delta = np.maximum(v2inf_delta, 0)
-        V2inf_next += v2inf_delta
-
-        # V1 total
-        V1_next[:] = V1imm_next + V1sus_next + V1inf_next
-
-        # V2 total
-        V2_next[:] = V2imm_next + V2sus_next + V2inf_next
+        newly_immunized = np.round(model.params.phi_2 * new_second_doses_delivered).astype(V2_next.dtype)
+        # just move the effective doses, leave ineffective doses in V1
+        V1_next -= newly_immunized
+        V2_next += newly_immunized
 
         return
 
-    def plot(self, fig: Figure = None):  # pragma: no cover
+    def plot(self, fig: Optional[Figure] = None):  # pragma: no cover
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Vaccinated (One Dose)") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:
-            plt.plot(self.model.patches.V1[:, ipatch], label=f"{self.model.params.location_name[ipatch]}")
+            plt.plot(self.model.people.V1[:, ipatch], label=f"{self.model.params.location_name[ipatch]}")
         plt.xlabel("Tick")
         plt.ylabel("Vaccinated (One Dose)")
         plt.legend()
@@ -203,7 +121,7 @@ class Vaccinated:
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Vaccinated (Two Doses)") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:
-            plt.plot(self.model.patches.V2[:, ipatch], label=f"{self.model.params.location_name[ipatch]}")
+            plt.plot(self.model.people.V2[:, ipatch], label=f"{self.model.params.location_name[ipatch]}")
         plt.xlabel("Tick")
         plt.ylabel("Vaccinated (Two Doses)")
         plt.legend()

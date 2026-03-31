@@ -61,8 +61,8 @@ class TestVitalStatistics(unittest.TestCase):
         params.gamma_1 *= 0  # turn off recovery of symptomatic (Isym to R)
         params.gamma_2 *= 0  # turn off recovery of asymptomatic (Iasym to R)
         params.epsilon *= 0  # turn off waning natural immunity (R to S)
-        params.omega_1 *= 0  # turn off waning vaccine immunity (V1imm to V1sus)
-        params.omega_2 *= 0  # turn off waning vaccine immunity (V2imm to V2sus)
+        params.omega_1 *= 0  # turn off waning vaccine immunity (V1 to S)
+        params.omega_2 *= 0  # turn off waning vaccine immunity (V2 to S)
         params.nu_1_jt *= 0  # turn off first dose vaccination
         params.nu_2_jt *= 0  # turn off second dose vaccination
 
@@ -75,12 +75,10 @@ class TestVitalStatistics(unittest.TestCase):
         assert np.all(model.people.Isym[-1] == model.people.Isym[0]), "Infectious (symptomatic): steady state not held."
         assert np.all(model.people.Iasym[-1] == model.people.Iasym[0]), "Infectious (asymptomatic): steady state not held."
         assert np.all(model.people.R[-1] == model.people.R[0]), "Recovered: steady state not held."
-        assert np.all(model.people.V1imm[-1] == model.people.V1imm[0]), "Vaccinated (one dose, immune): steady state not held."
-        assert np.all(model.people.V1sus[-1] == model.people.V1sus[0]), "Vaccinated (one dose, susceptible): steady state not held."
-        assert np.all(model.people.V1inf[-1] == model.people.V1inf[0]), "Vaccinated (one dose, infected): steady state not held."
-        assert np.all(model.people.V2imm[-1] == model.people.V2imm[0]), "Vaccinated (two doses, immune): steady state not held."
-        assert np.all(model.people.V2sus[-1] == model.people.V2sus[0]), "Vaccinated (two doses, susceptible): steady state not held."
-        assert np.all(model.people.V2inf[-1] == model.people.V2inf[0]), "Vaccinated (two doses, infected): steady state not held."
+        assert np.all(model.people.V1[-1] == model.people.V1[0]), "Vaccinated (one dose, immune): steady state not held."
+
+        assert np.all(model.people.V2[-1] == model.people.V2[0]), "Vaccinated (two doses, immune): steady state not held."
+
         assert np.all(model.patches.births == 0), "Susceptible: non-zero births with b_jt = 0."
         assert np.all(model.patches.non_disease_deaths == 0), "Susceptible: non-zero non-disease deaths with d_jt = 0."
 
@@ -97,8 +95,8 @@ class TestVitalStatistics(unittest.TestCase):
         params.gamma_1 *= 0  # turn off recovery of symptomatic (Isym to R)
         params.gamma_2 *= 0  # turn off recovery of asymptomatic (Iasym to R)
         params.epsilon *= 0  # turn off waning natural immunity (R to S)
-        params.omega_1 *= 0  # turn off waning vaccine immunity (V1imm to V1sus)
-        params.omega_2 *= 0  # turn off waning vaccine immunity (V2imm to V2sus)
+        params.omega_1 *= 0  # turn off waning vaccine immunity (V1 to S)
+        params.omega_2 *= 0  # turn off waning vaccine immunity (V2 to S)
         params.nu_1_jt *= 0  # turn off first dose vaccination
         params.nu_2_jt *= 0  # turn off second dose vaccination
 
@@ -108,19 +106,7 @@ class TestVitalStatistics(unittest.TestCase):
 
         assert np.all(model.patches.births >= 0), "Susceptible: missing births with b_jt > 0."
         assert np.all(model.patches.non_disease_deaths >= 0), "Susceptible: missing non-zero non-disease deaths with d_jt > 0."
-        aggregate = (
-            model.people.S
-            + model.people.E
-            + model.people.Isym
-            + model.people.Iasym
-            + model.people.R
-            + model.people.V1imm
-            + model.people.V1sus
-            + model.people.V1inf
-            + model.people.V2imm
-            + model.people.V2sus
-            + model.people.V2inf
-        )
+        aggregate = model.people.S + model.people.E + model.people.Isym + model.people.Iasym + model.people.R + model.people.V1 + model.people.V2
         delta = model.patches.births[:-1] - model.patches.non_disease_deaths[:-1]
         assert np.all(delta == (aggregate[1:] - aggregate[:-1])), "Susceptible: births - deaths != change in susceptible population."
 
@@ -137,8 +123,8 @@ class TestVitalStatistics(unittest.TestCase):
         params.gamma_1 *= 0  # turn off recovery of symptomatic (Isym to R)
         params.gamma_2 *= 0  # turn off recovery of asymptomatic (Iasym to R)
         params.epsilon *= 0  # turn off waning natural immunity (R to S)
-        params.omega_1 *= 0  # turn off waning vaccine immunity (V1imm to V1sus)
-        params.omega_2 *= 0  # turn off waning vaccine immunity (V2imm to V2sus)
+        params.omega_1 *= 0  # turn off waning vaccine immunity (V1 to S)
+        params.omega_2 *= 0  # turn off waning vaccine immunity (V2 to S)
         params.nu_1_jt *= 0  # turn off first dose vaccination
         params.nu_2_jt *= 0  # turn off second dose vaccination
 
@@ -148,19 +134,7 @@ class TestVitalStatistics(unittest.TestCase):
 
         assert np.all(model.patches.births >= 0), "Susceptible: missing births with b_jt > 0."
         assert np.all(model.patches.non_disease_deaths >= 0), "Susceptible: missing non-zero non-disease deaths with d_jt > 0."
-        aggregate = (
-            model.people.S
-            + model.people.E
-            + model.people.Isym
-            + model.people.Iasym
-            + model.people.R
-            + model.people.V1imm
-            + model.people.V1sus
-            + model.people.V1inf
-            + model.people.V2imm
-            + model.people.V2sus
-            + model.people.V2inf
-        )
+        aggregate = model.people.S + model.people.E + model.people.Isym + model.people.Iasym + model.people.R + model.people.V1 + model.people.V2
         delta = model.patches.births - model.patches.non_disease_deaths - model.patches.disease_deaths
         assert np.all(delta[:-1] == (aggregate[1:] - aggregate[:-1])), "Susceptible: births - deaths != change in susceptible population."
 
@@ -176,19 +150,7 @@ class TestVitalStatistics(unittest.TestCase):
         model.components = [Susceptible, Exposed, Recovered, Infectious, Vaccinated, Census]
         model.run()
 
-        aggregate = (
-            model.people.S
-            + model.people.E
-            + model.people.Isym
-            + model.people.Iasym
-            + model.people.R
-            + model.people.V1imm
-            + model.people.V1sus
-            + model.people.V1inf
-            + model.people.V2imm
-            + model.people.V2sus
-            + model.people.V2inf
-        )
+        aggregate = model.people.S + model.people.E + model.people.Isym + model.people.Iasym + model.people.R + model.people.V1 + model.people.V2
         assert np.all(model.patches.births[:-1] == (aggregate[1:] - aggregate[:-1])), "total population: births not recorded correctly."
 
         return
@@ -202,8 +164,8 @@ class TestVitalStatistics(unittest.TestCase):
         params.gamma_1 *= 0  # turn off recovery of symptomatic (Isym to R)
         params.gamma_2 *= 0  # turn off recovery of asymptomatic (Iasym to R)
         params.epsilon *= 0  # turn off waning natural immunity (R to S)
-        params.omega_1 *= 0  # turn off waning vaccine immunity (V1imm to V1sus)
-        params.omega_2 *= 0  # turn off waning vaccine immunity (V2imm to V2sus)
+        params.omega_1 *= 0  # turn off waning vaccine immunity (V1 to S)
+        params.omega_2 *= 0  # turn off waning vaccine immunity (V2 to S)
         params.nu_1_jt *= 0  # turn off first dose vaccination
         params.nu_2_jt *= 0  # turn off second dose vaccination
 
@@ -216,13 +178,9 @@ class TestVitalStatistics(unittest.TestCase):
         assert np.any(model.people.Isym[-1] < model.people.Isym[0]), "Infectious (symptomatic): deaths not occurring."
         assert np.any(model.people.Iasym[-1] < model.people.Iasym[0]), "Infectious (symptomatic): deaths not occurring."
         assert np.any(model.people.R[-1] < model.people.R[0]), "Recovered: deaths not occurring."
-        assert np.any(model.people.V1imm[-1] < model.people.V1imm[0]), "Vaccinated (one dose, immune): deaths not occurring."
-        assert np.any(model.people.V1sus[-1] < model.people.V1sus[0]), "Vaccinated (one dose, susceptible): deaths not occurring."
-        # There are no infected vaccinated people in this test
-        # assert np.any(model.people.V1inf[-1] < model.people.V1inf[0]), "Vaccinated (one dose, infected): deaths not occurring."
-        assert np.any(model.people.V2imm[-1] < model.people.V2imm[0]), "Vaccinated (two doses, immune): deaths not occurring."
-        assert np.any(model.people.V2sus[-1] < model.people.V2sus[0]), "Vaccinated (two doses, susceptible): deaths not occurring."
-        # There are no infected vaccinated people in this test
+        assert np.any(model.people.V1[-1] < model.people.V1[0]), "Vaccinated (one dose, immune): deaths not occurring."
+        assert np.any(model.people.V2[-1] < model.people.V2[0]), "Vaccinated (two doses, immune): deaths not occurring."
+
         # assert np.any(model.people.V2inf[-1] < model.people.V2inf[0]), "Vaccinated (two doses, infected): deaths not occurring."
 
         assert np.all(model.people.S[-1] <= model.people.S[0]), "Susceptible: unexpected population increase."
@@ -230,27 +188,11 @@ class TestVitalStatistics(unittest.TestCase):
         assert np.all(model.people.Isym[-1] <= model.people.Isym[0]), "Infectious (symptomatic): unexpected population increase."
         assert np.all(model.people.Iasym[-1] <= model.people.Iasym[0]), "Infectious (symptomatic): unexpected population increase."
         assert np.all(model.people.R[-1] <= model.people.R[0]), "Recovered: unexpected population increase."
-        assert np.all(model.people.V1imm[-1] <= model.people.V1imm[0]), "Vaccinated (one dose, immune): unexpected population increase."
-        assert np.all(model.people.V1sus[-1] <= model.people.V1sus[0]), "Vaccinated (one dose, susceptible): unexpected population increase."
-        # There are no infected vaccinated people in this test
-        # assert np.all(model.people.V1inf[-1] <= model.people.V1inf[0]), "Vaccinated (one dose, infected): unexpected population increase."
-        assert np.all(model.people.V2imm[-1] <= model.people.V2imm[0]), "Vaccinated (two doses, immune): unexpected population increase."
-        assert np.all(model.people.V2sus[-1] <= model.people.V2sus[0]), "Vaccinated (two doses, susceptible): unexpected population increase."
-        # There are no infected vaccinated people in this test
+        assert np.all(model.people.V1[-1] <= model.people.V1[0]), "Vaccinated (one dose, immune): unexpected population increase."
+        assert np.all(model.people.V2[-1] <= model.people.V2[0]), "Vaccinated (two doses, immune): unexpected population increase."
+
         # assert np.all(model.people.V2inf[-1] <= model.people.V2inf[0]), "Vaccinated (two doses, infected): unexpected population increase."
-        aggregate = (
-            model.people.S
-            + model.people.E
-            + model.people.Isym
-            + model.people.Iasym
-            + model.people.R
-            + model.people.V1imm
-            + model.people.V1sus
-            + model.people.V1inf
-            + model.people.V2imm
-            + model.people.V2sus
-            + model.people.V2inf
-        )
+        aggregate = model.people.S + model.people.E + model.people.Isym + model.people.Iasym + model.people.R + model.people.V1 + model.people.V2
         assert np.all(model.patches.non_disease_deaths[:-1] == (aggregate[:-1] - aggregate[1:])), "total population: deaths not recorded correctly."
 
         return

@@ -6,10 +6,8 @@ from .census import Census
 from .derivedvalues import DerivedValues
 from .environmental import Environmental
 from .envtohuman import EnvToHuman
-from .envtohumanvax import EnvToHumanVax
 from .exposed import Exposed
 from .humantohuman import HumanToHuman
-from .humantohumanvax import HumanToHumanVax
 from .infectious import Infectious
 from .params import Parameters
 from .params import get_parameters
@@ -24,11 +22,9 @@ __all__ = [
     "Census",
     "DerivedValues",
     "EnvToHuman",
-    "EnvToHumanVax",
     "Environmental",
     "Exposed",
     "HumanToHuman",
-    "HumanToHumanVax",
     "Infectious",
     "Parameters",
     "Recorder",

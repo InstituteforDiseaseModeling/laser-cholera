@@ -49,14 +49,6 @@ laser.cholera.metapop.envtohuman module
    :show-inheritance:
    :undoc-members:
 
-laser.cholera.metapop.envtohumanvax module
-------------------------------------------
-
-.. automodule:: laser.cholera.metapop.envtohumanvax
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 laser.cholera.metapop.exposed module
 ------------------------------------
 
@@ -69,14 +61,6 @@ laser.cholera.metapop.humantohuman module
 -----------------------------------------
 
 .. automodule:: laser.cholera.metapop.humantohuman
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-laser.cholera.metapop.humantohumanvax module
---------------------------------------------
-
-.. automodule:: laser.cholera.metapop.humantohumanvax
    :members:
    :show-inheritance:
    :undoc-members:

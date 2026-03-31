@@ -20,8 +20,6 @@ class DerivedValues:
         assert hasattr(self.model.people, "S"), "DerivedValues: model.people needs to have 'S' attribute."
         assert hasattr(self.model.people, "Isym"), "DerivedValues: model.people needs to have 'Isym' attribute."
         assert hasattr(self.model.people, "Iasym"), "DerivedValues: model.people needs to have 'Iasym' attribute."
-        assert hasattr(self.model.people, "V1sus"), "DerivedValues: model.people needs to have 'V1sus' attribute."
-        assert hasattr(self.model.people, "V2sus"), "DerivedValues: model.people needs to have 'V2sus' attribute."
 
         assert hasattr(self.model, "patches"), "DerivedValues: model needs to have a 'patches' attribute."
         assert hasattr(self.model.patches, "N"), "DerivedValues: model.patches needs to have 'N' attribute."
@@ -41,7 +39,7 @@ class DerivedValues:
 
         .. math::
 
-            h(j,t) = \\frac {\\beta^{hum}_{jt} (1 - e^{-((1 - \\tau_j) (S_{jt} + V^{sus}_{1,jt} + V^{sus}_{2,jt}) / N_{jt}) \\sum_{\\forall i \\ne j} \\pi_{ij} \\tau_i ((I^{sym}_{it} + I^{asym}_{it}) / N_{it})})} {1/(1 + \\beta^{hum}_{jt}(1 - \\tau_j) (S_{jt} + V^{sus}_{1,jt} + V^{sus}_{2,jt}))}
+            h(j,t) = \\frac {\\beta^{hum}_{jt} (1 - e^{-((1 - \\tau_j) (S_{jt} / N_{jt})) \\sum_{\\forall i \\ne j} \\pi_{ij} \\tau_i ((I^{sym}_{it} + I^{asym}_{it}) / N_{it})})} {1/(1 + \\beta^{hum}_{jt}(1 - \\tau_j) S_{jt})}
 
         .. math::
 
@@ -67,8 +65,6 @@ class DerivedValues:
                 model.patches.beta_jt_human.T,
                 model.params.tau_i,
                 model.people.S[1:, :].T,
-                model.people.V1sus[1:, :].T,
-                model.people.V2sus[1:, :].T,
                 model.patches.N[1:, :].T,
                 model.patches.pi_ij,
                 model.people.Iasym[1:, :].T,
@@ -104,8 +100,6 @@ def calculate_spatial_hazard_for_model(model):
         model.patches.beta_jt_human.T,
         model.params.tau_i,
         model.people.S[1:, :].T,
-        model.people.V1sus[1:, :].T,
-        model.people.V2sus[1:, :].T,
         model.patches.N[1:, :].T,
         model.patches.pi_ij,
         model.people.Iasym[1:, :].T,
@@ -116,7 +110,7 @@ def calculate_spatial_hazard_for_model(model):
     return
 
 
-def calculate_spatial_hazard(nticks, beta_jt_human, tau_i, S, V1sus, V2sus, Njt, pi_ij, Iasym, Isym, spatial_hazard):
+def calculate_spatial_hazard(nticks, beta_jt_human, tau_i, S, Njt, pi_ij, Iasym, Isym, spatial_hazard):
     """Calculate the spatial hazard for each location at each time step.
     The spatial hazard is calculated using the formula:
 
@@ -124,7 +118,7 @@ def calculate_spatial_hazard(nticks, beta_jt_human, tau_i, S, V1sus, V2sus, Njt,
 
     .. math::
 
-        h(j,t) = \\frac {\\beta^{hum}_{jt} (1 - e^{-((1 - \\tau_j) (S_{jt} + V^{sus}_{1,jt} + V^{sus}_{2,jt}) / N_{jt}) \\sum_{\\forall i \\ne j} \\pi_{ij} \\tau_i ((I^{sym}_{it} + I^{asym}_{it}) / N_{it})})} {1/(1 + \\beta^{hum}_{jt}(1 - \\tau_j) (S_{jt} + V^{sus}_{1,jt} + V^{sus}_{2,jt}))}
+        h(j,t) = \\frac {\\beta^{hum}_{jt} (1 - e^{-((1 - \\tau_j) (S_{jt} / N_{jt})) \\sum_{\\forall i \\ne j} \\pi_{ij} \\tau_i ((I^{sym}_{it} + I^{asym}_{it}) / N_{it})})} {1/(1 + \\beta^{hum}_{jt}(1 - \\tau_j) S_{jt})}
 
     Note: To simplify coding and debugging, all arrays are passed in R order: [j, t]
 
@@ -143,7 +137,7 @@ def calculate_spatial_hazard(nticks, beta_jt_human, tau_i, S, V1sus, V2sus, Njt,
     # for t in range(nticks):
     #     Nkt = Njt[:, t].sum()
     #     for j in range(nlocs):
-    #         S_star_jt = (1.0 - tau_i[j]) * (S[j, t] + V1sus[j, t] + V2sus[j, t])
+    #         S_star_jt = (1.0 - tau_i[j]) * (S[j, t])
     #         # S_star[j, t] = S_star_jt
     #         x_jt = S_star_jt / Njt[j, t]
     #         # x[j, t] = x_jt
@@ -160,7 +154,7 @@ def calculate_spatial_hazard(nticks, beta_jt_human, tau_i, S, V1sus, V2sus, Njt,
 
     Nt = Njt.sum(axis=0)  # Total population at time t
     xfer_ij = (tau_i * pi_ij.T).T  # fraction emmigrating from i * fraction going to j = fraction of i going to j
-    S_star_jt = ((1.0 - tau_i) * (S + V1sus + V2sus).T).T
+    S_star_jt = ((1.0 - tau_i) * S.T).T
     x_jt = S_star_jt / Njt  # S_star / N for each location and time step
     beta_S_star_jt = beta * S_star_jt  # beta_jt_human * S_star for each location and time step
 

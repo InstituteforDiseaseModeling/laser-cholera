@@ -6,11 +6,11 @@ source =
 [run]
 branch = true
 source =
-    laser_cholera
+    laser.cholera
     tests
 parallel = true
 omit =
-    src/laser_cholera/__main__.py
+    src/laser/cholera/__main__.py
 
 [report]
 show_missing = true
