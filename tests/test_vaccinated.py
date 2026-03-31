@@ -7,6 +7,7 @@ from laser.cholera.metapop.census import Census
 from laser.cholera.metapop.exposed import Exposed
 from laser.cholera.metapop.model import Model
 from laser.cholera.metapop.params import get_parameters
+from laser.cholera.metapop.recovered import Recovered
 from laser.cholera.metapop.susceptible import Susceptible
 from laser.cholera.metapop.vaccinated import Vaccinated
 from laser.cholera.utils import sim_duration
@@ -272,6 +273,58 @@ class TestVaccinated(unittest.TestCase):
             assert np.all(model.params.nu_2_jt[nonzero_dose_indices] != 0), (
                 "All non-zero dose_two_doses should have non-zero doses in params.nu_2_jt."
             )
+
+        return
+
+    def test_handling_nonexistent_source_compartment(self):
+
+        params = self.get_test_parameters(V1=0, V2=0, overrides=sim_duration(start=datetime(2023, 1, 1), stop=datetime(2024, 12, 17)))
+        params += {"nu_jt_sources": ["S", "E", "Isym", "Iasym", "R", "J", "Q", "Z"]}
+
+        model = Model(parameters=params)
+        model.components = [Susceptible, Exposed, Vaccinated, Census]
+        model.run()
+
+        # Test runs shorter duration than vaccination schedule, just check relevant entries
+        nonzero_param_indices = np.nonzero(model.params.nu_1_jt[0 : model.params.nticks])
+        if len(nonzero_param_indices[0]) > 0:
+            # Check any non-zero days in nu_1_jt should have non-zero doses in dose_one_doses
+            assert np.all(model.patches.dose_one_doses[nonzero_param_indices] != 0), (
+                "All non-zero nu_1_jt should have non-zero doses in dose_one_doses."
+            )
+            # Check that first doses given match the schedule
+            nonzero_dose_indices = np.nonzero(model.patches.dose_one_doses)
+            assert np.all(model.params.nu_1_jt[nonzero_dose_indices] != 0), (
+                "All non-zero dose_one_doses should have non-zero doses in params.nu_1_jt."
+            )
+
+        return
+
+    def test_excluded_source_compartment(self):
+
+        params = self.get_test_parameters(V1=0, V2=0, overrides=sim_duration(start=datetime(2023, 1, 1), stop=datetime(2024, 12, 17)))
+        params.R_j_initial[:] = params.S_j_initial // 2
+        params.S_j_initial -= params.R_j_initial
+        params += {"nu_jt_sources": ["S", "E", "Isym", "Iasym", "R"]}
+        # Turn off natural mortality and waning immunity so Recovered population
+        # is static except for vaccine delivery.
+        params.d_jt[:] = 0.0  # no non-disease deaths
+        params.epsilon = 0.0  # no waning immunity for Recovered population
+
+        baseline = Model(parameters=params)
+        baseline.components = [Susceptible, Exposed, Recovered, Vaccinated, Census]
+        baseline.run()
+
+        # "R" not included in vaccine candidate sources
+        # comparison Recovered population should be static with these settings
+        params <<= {"nu_jt_sources": ["S", "E", "Isym", "Iasym"]}
+        comparison = Model(parameters=params)
+        comparison.components = [Susceptible, Exposed, Recovered, Vaccinated, Census]
+        comparison.run()
+
+        assert np.all(comparison.people.R == comparison.people.R[[0], :]), "Comparison Recovered should be unchanging over time."
+        assert np.any(comparison.people.R > baseline.people.R), "Recovered population should not be used for vaccination."
+        assert np.all(comparison.people.R >= baseline.people.R), "Comparison Recovered should be >= baseline Recovered."
 
         return
 
