@@ -37,16 +37,16 @@ class TestVaccinated(unittest.TestCase):
 
         return params
 
-    # Test initial distribution of vaccinated people
-    def test_initial_distribution(self):
+    # Test initial values of vaccinated people
+    def test_initial_values(self):
         params = self.get_test_parameters()
 
         model = Model(parameters=params)
         model.components = [Susceptible, Exposed, Vaccinated, Census]  # , Infectious, Recovered]
-        # model.run() # don't need to run, just check initial distribution
+        # model.run() # don't need to run, just check initial values
 
-        assert np.all(model.people.V1[0] == model.params.V1_j_initial), "V1_imm: initial distribution not correct."
-        assert np.all(model.people.V2[0] == model.params.V2_j_initial), "V2_imm: initial distribution not correct."
+        assert np.all(model.people.V1[0] == model.params.V1_j_initial), "V1: initial value not correct."
+        assert np.all(model.people.V2[0] == model.params.V2_j_initial), "V2: initial value not correct."
 
     # Steady state
     def test_vaccinated_steadystate(self):

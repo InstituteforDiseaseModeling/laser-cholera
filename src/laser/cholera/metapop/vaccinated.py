@@ -79,9 +79,25 @@ class Vaccinated:
         V2_next -= waned
         S_next += waned  # waned return to Susceptible
 
+        # We will do _second_ dose distribution first so we don't vaccine people
+        # "twice on the same day", i.e. move from S -> V1 -> V2 in a single tick
+        # -second dose recipients
+        if any(model.params.nu_2_jt[tick]):
+            new_second_doses_delivered = np.round(model.params.nu_2_jt[tick]).astype(V2_next.dtype)
+            if np.any(new_second_doses_delivered > V1_next):
+                logger.debug(f"WARNING: new_second_doses_delivered > V1 ({tick=}\n\t{new_second_doses_delivered=}\n\t{V1=})")
+                new_second_doses_delivered = np.minimum(new_second_doses_delivered, V1_next)
+            model.patches.dose_two_doses[tick] = new_second_doses_delivered
+
+            # effective doses
+            newly_immunized = np.round(model.params.phi_2 * new_second_doses_delivered).astype(V2_next.dtype)
+            # just move the effective doses, leave ineffective doses in V1
+            V1_next -= newly_immunized
+            V2_next += newly_immunized
+
         # +newly vaccinated (successful take)
         if any(model.params.nu_1_jt[tick]):
-            new_first_doses_delivered = model.params.nu_1_jt[tick].astype(V1_next.dtype)
+            new_first_doses_delivered = np.round(model.params.nu_1_jt[tick]).astype(V1_next.dtype)
 
             # Create a "matrix" of columns from model.people S, E, Isym, Iasym, and R with a row for each node
             compartments_next = [getattr(model.people, compartment)[tick + 1] for compartment in self.sources if hasattr(model.people, compartment)]
@@ -100,33 +116,21 @@ class Vaccinated:
                 new_first_doses_delivered = np.minimum(new_first_doses_delivered, available_pop)
             model.patches.dose_one_doses[tick] = new_first_doses_delivered
 
+            # make sure available_pop is at least 1 to prevent divide by zero below
+            np.maximum(available_pop, 1, out=available_pop)
+
             # Determine doses delivered to each sub-population by its fractional part of the total node population
             # Attenuate actual doses delivered by model.params.phi_1
             # Decrement each source sub-population by the effectively delivered doses
             # Increment V1_next by the total number of effectively delivered doses for each node
             total_newly_immunized = np.zeros_like(V1_next)
             for col_idx, compartment_next in enumerate(compartments_next):
-                with np.errstate(invalid="ignore", divide="ignore"):
-                    fraction = np.where(available_pop > 0, pop_matrix[:, col_idx] / available_pop, 0.0)
+                fraction = pop_matrix[:, col_idx] / available_pop
                 compartment_doses = np.round(new_first_doses_delivered * fraction).astype(V1_next.dtype)
                 effective_doses = np.round(model.params.phi_1 * compartment_doses).astype(V1_next.dtype)
                 compartment_next -= effective_doses
                 total_newly_immunized += effective_doses
             V1_next += total_newly_immunized
-
-        # -second dose recipients
-        if any(model.params.nu_2_jt[tick]):
-            new_second_doses_delivered = model.params.nu_2_jt[tick].astype(V2_next.dtype)
-            if np.any(new_second_doses_delivered > V1):
-                logger.debug(f"WARNING: new_second_doses_delivered > V1 ({tick=}\n\t{new_second_doses_delivered=}\n\t{V1=})")
-                new_second_doses_delivered = np.minimum(new_second_doses_delivered, V1)
-            model.patches.dose_two_doses[tick] = new_second_doses_delivered
-
-            # effective doses
-            newly_immunized = np.round(model.params.phi_2 * new_second_doses_delivered).astype(V2_next.dtype)
-            # just move the effective doses, leave ineffective doses in V1
-            V1_next -= newly_immunized
-            V2_next += newly_immunized
 
         return
 
