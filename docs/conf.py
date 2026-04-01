@@ -16,7 +16,7 @@ project = "LASER Cholera (LASIK)"
 year = "2024-2025"
 author = "Institute for Disease Modeling"
 copyright = f"{year}, Bill & Melinda Gates Foundation"
-version = release = "0.12.0"
+version = release = "0.12.1"
 
 pygments_style = "trac"
 templates_path = ["."]
