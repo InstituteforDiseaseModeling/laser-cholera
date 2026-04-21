@@ -50,11 +50,10 @@ jobs:
       - name: Install Package and Dependencies
         run: |
           uv venv --python 3.12 .venv
-          source .venv/bin/activate
-          uv pip install -e ".[dev]"
+          uv pip install -e ".[dev]" # default to .venv
 
       - name: Run Tests
-        run: pytest
+        run: uv run pytest -v tests # default to .venv
 
   bump-and-build:
     name: Bump Version and Build Package
