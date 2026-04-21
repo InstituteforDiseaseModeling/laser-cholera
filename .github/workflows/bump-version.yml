@@ -1,37 +1,37 @@
 name: Bump Version
 
 on:
-    workflow_dispatch:
-      inputs:
-        version_type:
-          description: 'Bump type (major, minor, patch):'
-          required: true
-          default: 'patch'
-          type: choice
-          options:
-            - patch
-            - minor
-            - major
-        dry_run:
-          description: 'Dry run (true/false):'
-          required: false
-          default: 'false'
-          type: choice
-          options:
-            - false
-            - true
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Bump type (major, minor, patch):"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: "Dry run (true/false):"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - false
+          - true
 
 jobs:
   approve:
-    name: Approve version bump
+    name: Approve Bump
     environment: restricted
     runs-on: ubuntu-latest
     steps:
-      - name: Request approval
+      - name: Request Approval
         run: echo "Requesting approval for ${{ github.event.inputs.version_type }} version bump"
 
   test:
-    name: Run tests on ${{ matrix.os }}
+    name: Run Tests on ${{ matrix.os }}
     needs: approve
     runs-on: ${{ matrix.os }}
     strategy:
@@ -39,22 +39,22 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.02
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 1
 
       - name: Install UV
         uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
 
-      - name: Install dependencies
+      - name: Install Package and Dependencies
         run: uv pip install -e ".[dev]"
 
-      - name: Run tests
+      - name: Run Tests
         run: pytest
 
   bump-and-build:
-    name: Bump version and build package
+    name: Bump Version and Build Package
     permissions:
       contents: write
     needs: test
@@ -62,37 +62,37 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Print inputs
+      - name: Print Inputs
         run: |
           echo "Version type: ${{ github.event.inputs.version_type }}"
           echo "Dry run: ${{ github.event.inputs.dry_run }}"
 
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.02
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 1
 
       - name: Install UV
         uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
 
-      - name: Bump patch version
+      - name: Bump Version
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
           DRY_FLAG="${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}"  # convert true/false to --dry-run or empty string
           uvx --python 3.12 bump-my-version bump ${{ github.event.inputs.version_type }} $DRY_FLAG
 
-      - name: Push changes and tag
+      - name: Push Changes and Tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git push origin HEAD:main
           git push origin v$(bump-my-version show current_version)
 
-      - name: Build package
+      - name: Build Package
         run: uv build
 
-      - name: Upload artifacts to release
+      - name: Upload Artifacts to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
