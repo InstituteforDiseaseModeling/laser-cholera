@@ -33,16 +33,16 @@ classifiers = [
 ]
 dependencies = [
     "laser-core~=1.0",
-    "geopandas",
+    "geopandas>=1.1.2",
     "h5py",
     "scipy",
     "tqdm",
 ]
 
 [project.optional-dependencies]
-"dev" = ["pytest", "build", "uv"]
+"dev" = ["pytest>=9.0.3", "build", "uv"]
 # "docs" = ["sphinx", "sphinx-rtd-theme"]
-"nb" = ["jupyter", "nbconvert", "nbformat", "ipykernel"]
+"nb" = ["jupyter", "nbconvert>=7.17.1", "nbformat", "ipykernel"]
 
 [project.urls]
 Homepage = "https://example.com"
