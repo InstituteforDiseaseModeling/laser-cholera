@@ -47,13 +47,8 @@ jobs:
       - name: Install UV
         uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
 
-      - name: Install Package and Dependencies
-        run: |
-          uv venv --python 3.12 .venv
-          uv pip install -e ".[dev]" # default to .venv
-
       - name: Run Tests
-        run: uv run pytest -v tests # default to .venv
+        run: uvx --python 3.12 --with tox-uv tox -e py312
 
   bump-and-build:
     name: Bump Version and Build Package

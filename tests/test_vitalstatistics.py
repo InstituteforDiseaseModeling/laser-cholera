@@ -43,7 +43,7 @@ class TestVitalStatistics(unittest.TestCase):
         params.R_j_initial[:] = np.random.binomial(params.S_j_initial, 0.5).astype(params.R_j_initial.dtype)  # 50% of remaining S become R
         params.S_j_initial -= params.R_j_initial
 
-        params.V1_j_initial[:] = np.random.binomial(params.S_j_initial, 0.1).astype(params.V1_j_inital.dtype)  # 10% of remaining S become V1
+        params.V1_j_initial[:] = np.random.binomial(params.S_j_initial, 0.1).astype(params.V1_j_initial.dtype)  # 10% of remaining S become V1
         params.S_j_initial -= params.V1_j_initial
 
         params.V2_j_initial[:] = np.random.binomial(params.S_j_initial, 0.1).astype(params.V2_j_initial.dtype)  # 10% of remaining S become V2
