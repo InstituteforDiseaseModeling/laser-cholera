@@ -1,4 +1,4 @@
-__version__ = "0.12.4"
+__version__ = "0.12.5"
 
 from .core import compute
 from .iso_codes import iso_codes
