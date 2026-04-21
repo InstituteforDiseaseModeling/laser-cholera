@@ -93,6 +93,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag_name=v$(bump-my-version show current_version)
+          tag_name=v$(uvx --python 3.12 bump-my-version show current_version)
           gh release create "$tag_name" dist/* --title "$tag_name" --notes "Automated release for $tag_name" || \
           gh release upload "$tag_name" dist/*
