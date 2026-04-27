@@ -14,8 +14,6 @@ conservatively. The extreme over-prediction test uses `delta=1` matching R's
 `tolerance=1` verbatim.
 """
 
-import unittest
-
 import numpy as np
 
 from laser.cholera.calc_model_likelihood import _calc_log_likelihood_nb
@@ -47,7 +45,7 @@ REF_OBS_D = np.round(REF_OBS_C * 0.05)
 REF_EST_D = np.round(REF_EST_C * 0.05)
 
 
-class TestCalcModelLikelihoodReference(unittest.TestCase):
+class TestCalcModelLikelihoodReference:
     """Numerical regression tests that pin known outputs for known inputs.
 
     Each test corresponds directly to a `test_that` block in
@@ -66,7 +64,7 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
         Failure means the core NB log-likelihood or k-estimation logic has changed.
         """
         ll = calc_model_likelihood(REF_OBS_C, REF_EST_C, REF_OBS_D, REF_EST_D)
-        self.assertAlmostEqual(ll, -100.90235311, delta=0.02)
+        assert abs(ll - -100.90235311) <= 0.02
 
     def test_reference_core_nb_plus_cumulative_produces_known_value(self):
         """Core NB + cumulative progression shape term returns the pinned reference value.
@@ -85,7 +83,7 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
             REF_EST_D,
             weight_cumulative_total=0.25,
         )
-        self.assertAlmostEqual(ll, -102.4291, delta=0.02)
+        assert abs(ll - -102.4291) <= 0.02
 
     def test_reference_core_nb_plus_wis_produces_known_value(self):
         """Core NB + WIS shape term returns the pinned reference value.
@@ -104,7 +102,7 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
             REF_EST_D,
             weight_wis=0.10,
         )
-        self.assertAlmostEqual(ll, -102.8312, delta=0.02)
+        assert abs(ll - -102.8312) <= 0.02
 
     def test_reference_perfect_match_produces_known_value(self):
         """Perfect match (obs == est) returns the pinned reference value.
@@ -116,7 +114,7 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
         Failure means the MoM k-estimation or NB log-PMF evaluation has changed.
         """
         ll = calc_model_likelihood(REF_OBS_C, REF_OBS_C, REF_OBS_D, REF_OBS_D)
-        self.assertAlmostEqual(ll, -99.29492711, delta=0.02)
+        assert abs(ll - -99.29492711) <= 0.02
 
     def test_reference_extreme_1000x_over_prediction_produces_known_value(self):
         """Extreme 1000x over-prediction returns the pinned reference value.
@@ -136,7 +134,7 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
             np.full((1, 10), 1.0),
             np.full((1, 10), 1000.0),
         )
-        self.assertAlmostEqual(ll, -109160.93253574, delta=1)
+        assert abs(ll - -109160.93253574) <= 1
 
     def test_reference_nb_element_level_ll_for_known_inputs(self):
         """NB element-level log-likelihood for known inputs returns the pinned reference value.
@@ -156,7 +154,7 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
         estimated = np.array([12, 18, 35, 38, 55], dtype=float)
         weights = np.ones(5)
         ll = _calc_log_likelihood_nb(observed, estimated, weights, k=3, k_min=3)
-        self.assertAlmostEqual(ll, -18.70319184, delta=0.002)
+        assert abs(ll - -18.70319184) <= 0.002
 
     def test_reference_poisson_ll_for_perfect_match(self):
         """Poisson log-likelihood for a perfect match returns the pinned reference value.
@@ -176,7 +174,7 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
         estimated = np.array([10, 20, 30], dtype=float)
         weights = np.ones(3)
         ll = _calc_log_likelihood_nb(observed, estimated, weights, k=np.inf)
-        self.assertAlmostEqual(ll, -7.12184753, delta=0.002)
+        assert abs(ll - -7.12184753) <= 0.002
 
     def test_reference_1x3_matrix_minimum_viable_input_produces_known_value(self):
         """Minimum viable 1x3 input returns the pinned reference value.
@@ -195,7 +193,7 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
             np.array([[5, 6, 7]], dtype=float),
             np.array([[4, 6, 8]], dtype=float),
         )
-        self.assertAlmostEqual(ll, -15.49095, delta=0.02)
+        assert abs(ll - -15.49095) <= 0.02
 
     def test_reference_1x1_matrix_returns_0_below_min_obs_threshold(self):
         """A 1x1 matrix (below the min_obs_for_likelihood threshold of 3) returns 0.
@@ -215,7 +213,7 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
             np.array([[5.0]]),
             np.array([[4.0]]),
         )
-        self.assertAlmostEqual(ll, 0, delta=1e-8)
+        assert abs(ll - 0) <= 1e-8
 
     def test_reference_perfect_match_always_better_than_imperfect(self):
         """Perfect match likelihood is strictly greater than imperfect match likelihood.
@@ -230,8 +228,4 @@ class TestCalcModelLikelihoodReference(unittest.TestCase):
         """
         ll_perfect = calc_model_likelihood(REF_OBS_C, REF_OBS_C, REF_OBS_D, REF_OBS_D)
         ll_close = calc_model_likelihood(REF_OBS_C, REF_EST_C, REF_OBS_D, REF_EST_D)
-        self.assertGreater(ll_perfect, ll_close)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert ll_perfect > ll_close

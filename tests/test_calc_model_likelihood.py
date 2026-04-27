@@ -24,9 +24,8 @@ Tests check structural properties (finite, ordering, inequality) rather than
 exact values so the RNG difference does not affect correctness.
 """
 
-import unittest
-
 import numpy as np
+import pytest
 import scipy.stats
 
 from laser.cholera.calc_model_likelihood import calc_model_likelihood
@@ -36,7 +35,7 @@ obs_zero = np.zeros((2, 3))
 est_zero = np.zeros((2, 3))
 
 
-class TestCalcModelLikelihood(unittest.TestCase):
+class TestCalcModelLikelihood:
     """Tests for calc_model_likelihood, the full multi-term likelihood function."""
 
     def test_zero_data_returns_finite_ll(self):
@@ -56,8 +55,8 @@ class TestCalcModelLikelihood(unittest.TestCase):
             obs_deaths=obs_zero,
             est_deaths=est_zero,
         )
-        self.assertTrue(np.isfinite(ll))
-        self.assertAlmostEqual(ll, 0, delta=1e-8)
+        assert np.isfinite(ll)
+        assert abs(ll - 0) <= 1e-8
 
     def test_weights_do_not_affect_zero_data_result(self):
         """Non-default weight_cases and weight_deaths still yield finite ll=0 for zero data.
@@ -77,8 +76,8 @@ class TestCalcModelLikelihood(unittest.TestCase):
             weight_cases=2,
             weight_deaths=3,
         )
-        self.assertTrue(np.isfinite(ll))
-        self.assertAlmostEqual(ll, 0, delta=1e-8)
+        assert np.isfinite(ll)
+        assert abs(ll - 0) <= 1e-8
 
     def test_errors_on_non_matrix_inputs(self):
         """Non-array inputs raise an error matching 'inputs must be matrices'.
@@ -90,7 +89,7 @@ class TestCalcModelLikelihood(unittest.TestCase):
         Failure implies the function silently accepts non-array inputs, producing
         incorrect or undefined results without signalling the caller.
         """
-        with self.assertRaisesRegex(Exception, "2-D arrays"):
+        with pytest.raises(Exception, match="2-D arrays"):
             calc_model_likelihood(
                 obs_cases=obs_zero.tolist(),
                 est_cases=est_zero,
@@ -109,7 +108,7 @@ class TestCalcModelLikelihood(unittest.TestCase):
         for the wrong number of locations without signalling the caller.
         """
         est_bad = np.zeros((1, 3))
-        with self.assertRaisesRegex(Exception, "same shape"):
+        with pytest.raises(Exception, match="same shape"):
             calc_model_likelihood(
                 obs_cases=obs_zero,
                 est_cases=est_bad,
@@ -127,7 +126,7 @@ class TestCalcModelLikelihood(unittest.TestCase):
         Failure implies the function silently pads or truncates the weight vector,
         producing results for the wrong number of locations.
         """
-        with self.assertRaisesRegex(Exception, "weights_location must match n_locations"):
+        with pytest.raises(Exception, match="weights_location must match n_locations"):
             calc_model_likelihood(
                 obs_cases=obs_zero,
                 est_cases=est_zero,
@@ -156,7 +155,7 @@ class TestCalcModelLikelihood(unittest.TestCase):
             est_deaths=est_na,
             verbose=True,
         )
-        self.assertTrue(np.isfinite(ll) or np.isnan(ll))
+        assert np.isfinite(ll) or np.isnan(ll)
 
     def test_all_na_observed_with_real_estimates_returns_finite_or_na(self):
         """All-NaN observed with real estimates is handled gracefully.
@@ -177,7 +176,7 @@ class TestCalcModelLikelihood(unittest.TestCase):
             est_deaths=est_real,
             verbose=True,
         )
-        self.assertTrue(np.isfinite(ll) or np.isnan(ll))
+        assert np.isfinite(ll) or np.isnan(ll)
 
     def test_correct_ll_for_simple_nonzero_data_core_terms_only(self):
         """Core NB terms produce a finite negative LL for perfect-match count data.
@@ -198,8 +197,8 @@ class TestCalcModelLikelihood(unittest.TestCase):
             obs_deaths=obs,
             est_deaths=est,
         )
-        self.assertTrue(np.isfinite(ll))
-        self.assertLess(ll, 0)
+        assert np.isfinite(ll)
+        assert ll < 0
 
     def test_peak_timing_term_works_correctly(self):
         """The peak timing term penalizes a shifted estimated peak vs a matched peak.
@@ -239,7 +238,7 @@ class TestCalcModelLikelihood(unittest.TestCase):
             est_deaths=est_deaths,
             weight_peak_timing=0.25,
         )
-        self.assertGreater(ll_same_peak, ll_shifted_peak)
+        assert ll_same_peak > ll_shifted_peak
 
     def test_peak_magnitude_term_works_correctly(self):
         """The peak magnitude term penalizes a mismatched estimated peak magnitude.
@@ -278,7 +277,7 @@ class TestCalcModelLikelihood(unittest.TestCase):
             est_deaths=est_deaths,
             weight_peak_magnitude=0.25,
         )
-        self.assertGreater(ll_same_mag, ll_diff_mag)
+        assert ll_same_mag > ll_diff_mag
 
     def test_progressive_cumulative_total_term_works_correctly(self):
         """Cumulative total term is finite for default/custom timepoints and penalizes mismatch.
@@ -315,8 +314,8 @@ class TestCalcModelLikelihood(unittest.TestCase):
             weight_cumulative_total=0.25,
             cumulative_timepoints=np.array([0.33, 0.67, 1.0]),
         )
-        self.assertTrue(np.isfinite(ll_default))
-        self.assertTrue(np.isfinite(ll_custom))
+        assert np.isfinite(ll_default)
+        assert np.isfinite(ll_custom)
         est_cases_bad = np.full((n_loc, n_time), 20, dtype=float)
         ll_bad_cumulative = calc_model_likelihood(
             obs_cases=obs_cases,
@@ -325,7 +324,7 @@ class TestCalcModelLikelihood(unittest.TestCase):
             est_deaths=est_deaths,
             weight_cumulative_total=0.25,
         )
-        self.assertGreater(ll_default, ll_bad_cumulative)
+        assert ll_default > ll_bad_cumulative
 
     def test_wis_term_penalizes_uncertainty_correctly(self):
         """The WIS term reduces the likelihood relative to the no-WIS baseline.
@@ -354,14 +353,14 @@ class TestCalcModelLikelihood(unittest.TestCase):
             weight_wis=0.10,
             wis_quantiles=np.array([0.025, 0.25, 0.5, 0.75, 0.975]),
         )
-        self.assertTrue(np.isfinite(ll_wis))
+        assert np.isfinite(ll_wis)
         ll_no_wis = calc_model_likelihood(
             obs_cases=obs_cases,
             est_cases=est_cases,
             obs_deaths=obs_deaths,
             est_deaths=est_deaths,
         )
-        self.assertLessEqual(ll_wis, ll_no_wis)
+        assert ll_wis <= ll_no_wis
 
     def test_all_terms_work_together_without_conflict(self):
         """All likelihood terms together produce a finite result different from core-only.
@@ -399,15 +398,15 @@ class TestCalcModelLikelihood(unittest.TestCase):
             weight_wis=0.10,
             verbose=False,
         )
-        self.assertTrue(np.isfinite(ll_all))
+        assert np.isfinite(ll_all)
         ll_core_only = calc_model_likelihood(
             obs_cases=obs_cases,
             est_cases=est_cases,
             obs_deaths=obs_deaths,
             est_deaths=est_deaths,
         )
-        self.assertTrue(np.isfinite(ll_core_only))
-        self.assertNotEqual(ll_all, ll_core_only)
+        assert np.isfinite(ll_core_only)
+        assert ll_all != ll_core_only
 
     def test_automatic_distribution_selection_works(self):
         """Automatic distribution selection (Poisson vs NB) produces a finite result.
@@ -444,8 +443,4 @@ class TestCalcModelLikelihood(unittest.TestCase):
             obs_deaths=obs_deaths,
             est_deaths=est_deaths,
         )
-        self.assertTrue(np.isfinite(ll))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert np.isfinite(ll)

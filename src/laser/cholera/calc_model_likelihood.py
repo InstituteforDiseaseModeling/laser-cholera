@@ -335,7 +335,7 @@ def calc_multi_peak_magnitude_ll(
 def ll_cumulative_progressive_nb(
     obs_vec: np.ndarray,
     est_vec: np.ndarray,
-    timepoints: np.ndarray = np.array([0.25, 0.5, 0.75, 1.0]),
+    timepoints: np.ndarray = np.array([0.25, 0.5, 0.75, 1.0]),  # noqa: B008
     k_data: Optional[float] = None,
     weights_time: Optional[np.ndarray] = None,
     k_fallback: float = 10.0,
@@ -494,8 +494,8 @@ def calc_model_likelihood(
     weight_wis: float = 0,
     sigma_peak_time: float = 1,
     sigma_peak_log: float = 0.5,
-    wis_quantiles: np.ndarray = np.array([0.025, 0.25, 0.5, 0.75, 0.975]),
-    cumulative_timepoints: np.ndarray = np.array([0.25, 0.5, 0.75, 1.0]),
+    wis_quantiles: np.ndarray = np.array([0.025, 0.25, 0.5, 0.75, 0.975]),  # noqa: B008
+    cumulative_timepoints: np.ndarray = np.array([0.25, 0.5, 0.75, 1.0]),  # noqa: B008
 ) -> float:
     """Compute total model log-likelihood against observed cases and deaths.
 

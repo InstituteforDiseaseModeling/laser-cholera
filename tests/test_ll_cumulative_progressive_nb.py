@@ -11,14 +11,12 @@ The `k_data=Inf` test uses `np.inf` to trigger the Poisson fallback path, matchi
 R's `k_data = Inf` which causes `dnbinom(..., size=Inf)` to converge to Poisson.
 """
 
-import unittest
-
 import numpy as np
 
 from laser.cholera.calc_model_likelihood import ll_cumulative_progressive_nb
 
 
-class TestLlCumulativeProgressiveNb(unittest.TestCase):
+class TestLlCumulativeProgressiveNb:
     """Tests for ll_cumulative_progressive_nb, the cumulative NB progression helper."""
 
     def test_returns_finite_for_basic_input(self):
@@ -37,8 +35,8 @@ class TestLlCumulativeProgressiveNb(unittest.TestCase):
         obs = np.array([10, 20, 30, 40, 50, 60, 70, 80], dtype=float)
         est = np.array([12, 18, 35, 38, 55, 58, 72, 78], dtype=float)
         ll = ll_cumulative_progressive_nb(obs, est, k_data=3)
-        self.assertTrue(np.isfinite(ll))
-        self.assertLess(ll, 0)
+        assert np.isfinite(ll)
+        assert ll < 0
 
     def test_perfect_match_produces_best_ll(self):
         """A perfect match (obs == est) produces a less negative LL than a bad match.
@@ -54,7 +52,7 @@ class TestLlCumulativeProgressiveNb(unittest.TestCase):
         obs = np.array([10, 20, 30, 40], dtype=float)
         ll_perfect = ll_cumulative_progressive_nb(obs, obs, k_data=3)
         ll_bad = ll_cumulative_progressive_nb(obs, obs * 10, k_data=3)
-        self.assertGreater(ll_perfect, ll_bad)
+        assert ll_perfect > ll_bad
 
     def test_works_with_k_inf_poisson(self):
         """k_data=np.inf (Poisson limit) produces a finite result.
@@ -69,7 +67,7 @@ class TestLlCumulativeProgressiveNb(unittest.TestCase):
         obs = np.array([10, 20, 30, 40], dtype=float)
         est = np.array([12, 18, 32, 38], dtype=float)
         ll = ll_cumulative_progressive_nb(obs, est, k_data=np.inf)
-        self.assertTrue(np.isfinite(ll))
+        assert np.isfinite(ll)
 
     def test_returns_floor_for_all_na_data(self):
         """All-NaN observed data is handled gracefully without raising.
@@ -86,7 +84,7 @@ class TestLlCumulativeProgressiveNb(unittest.TestCase):
         est = np.full(10, 10.0)
         ll = ll_cumulative_progressive_nb(obs, est, k_data=3)
         # All cumulative sums will be 0 (nansum on all-NaN), or the function handles gracefully
-        self.assertTrue(np.isfinite(ll) or ll == -1e9)
+        assert np.isfinite(ll) or ll == -1e9
 
     def test_returns_mean_not_sum_across_timepoints(self):
         """The function returns the mean (not sum) of per-timepoint contributions.
@@ -120,10 +118,6 @@ class TestLlCumulativeProgressiveNb(unittest.TestCase):
         )
         # Both should be finite, and if it were sum instead of mean,
         # ll_4 would be ~2x ll_2. With mean, they should be similar magnitude.
-        self.assertTrue(np.isfinite(ll_4))
-        self.assertTrue(np.isfinite(ll_2))
-        self.assertLess(abs(ll_4 / ll_2), 3)  # Rough check: not 2x different
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert np.isfinite(ll_4)
+        assert np.isfinite(ll_2)
+        assert abs(ll_4 / ll_2) < 3  # Rough check: not 2x different

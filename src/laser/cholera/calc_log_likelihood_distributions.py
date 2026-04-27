@@ -1,18 +1,14 @@
 """Log-likelihood functions for Beta, Binomial, Gamma, NegBin, Normal, and Poisson.
 
 Translated from calc_log_likelihood_distributions.R. Each function:
-- Removes NaN/non-finite entries across observed, estimated, and weights before
-  computing.
+- Removes NaN/non-finite entries across observed, estimated, and weights before computing.
 - Defaults all weights to 1 when not supplied.
 - Logs diagnostics at INFO level when verbose=True.
 
 R mapping notes:
-    R `var(x)` / `sd(x)` use ddof=1; mapped to `np.var(x, ddof=1)` /
-    `np.std(x, ddof=1)`.
-    R `dbeta/dbinom/dgamma/dnorm/dpois(x, ..., log=TRUE)` map to
-    `scipy.stats.*.(log)pmf/pdf`.
-    R `dnbinom(x, size=k, mu=mu, log=TRUE)` maps to
-    `scipy.stats.nbinom.logpmf(x, n=k, p=k/(k+mu))`.
+    R `var(x)` / `sd(x)` use ddof=1; mapped to `np.var(x, ddof=1)` / `np.std(x, ddof=1)`.
+    R `dbeta/dbinom/dgamma/dnorm/dpois(x, ..., log=TRUE)` map to `scipy.stats.*.(log)pmf/pdf`.
+    R `dnbinom(x, size=k, mu=mu, log=TRUE)` maps to `scipy.stats.nbinom.logpmf(x, n=k, p=k/(k+mu))`.
     R `shapiro.test(x)` maps to `scipy.stats.shapiro(x)`.
     R `NA_real_` maps to `float("nan")`.
     R `message(...)` maps to `logger.info(...)`;
@@ -63,10 +59,13 @@ def calc_log_likelihood_beta(
             or estimated shape parameters are non-positive.
 
     Examples:
+        >>> import numpy as np
+        >>> from laser.cholera.calc_log_likelihood_distributions import calc_log_likelihood_beta
         >>> calc_log_likelihood_beta(
         ...     np.array([0.2, 0.6, 0.4]), np.array([0.25, 0.55, 0.35]),
         ...     verbose=False,
         ... )
+        4.770704709814893
     """
     observed = np.asarray(observed, dtype=float)
     estimated = np.asarray(estimated, dtype=float)
@@ -171,10 +170,13 @@ def calc_log_likelihood_binomial(
             probabilities are not in (0, 1).
 
     Examples:
+        >>> import numpy as np
+        >>> from laser.cholera.calc_log_likelihood_distributions import calc_log_likelihood_binomial
         >>> calc_log_likelihood_binomial(
         ...     np.array([3, 4, 2]), np.array([0.3, 0.5, 0.25]), np.array([10, 10, 8]),
         ...     verbose=False,
         ... )
+        -4.071992199424135
     """
     observed = np.asarray(observed, dtype=float)
     estimated = np.asarray(estimated, dtype=float)
@@ -251,10 +253,13 @@ def calc_log_likelihood_gamma(
             are non-positive.
 
     Examples:
+        >>> import numpy as np
+        >>> from laser.cholera.calc_log_likelihood_distributions import calc_log_likelihood_gamma
         >>> calc_log_likelihood_gamma(
         ...     np.array([2.5, 3.2, 1.8]), np.array([2.4, 3.0, 2.0]),
         ...     verbose=False,
         ... )
+        -1.731035287031648
     """
     observed = np.asarray(observed, dtype=float)
     estimated = np.asarray(estimated, dtype=float)
@@ -340,10 +345,14 @@ def calc_log_likelihood_negbin(
             after rounding.
 
     Examples:
+        >>> import numpy as np
+        >>> from laser.cholera.calc_log_likelihood_distributions import calc_log_likelihood_negbin
         >>> calc_log_likelihood_negbin(np.array([0, 5, 9]), np.array([3, 4, 5]),
         ...                            verbose=False)
+        -7.540078861809464
         >>> calc_log_likelihood_negbin(np.array([0, 5, 9]), np.array([3, 4, 5]),
         ...                            k=1.2, verbose=False)
+        -7.540078861809464
     """
     observed = np.asarray(observed, dtype=float)
     estimated = np.asarray(estimated, dtype=float)
@@ -466,6 +475,8 @@ def calc_log_likelihood_normal(
             are zero, or the residual standard deviation is non-positive.
 
     Examples:
+        >>> import numpy as np
+        >>> from laser.cholera.calc_log_likelihood_distributions import calc_log_likelihood_normal
         >>> ll = calc_log_likelihood_normal(
         ...     np.array([1.2, 2.8, 3.1]), np.array([1.0, 3.0, 3.2]),
         ...     verbose=False,
@@ -566,10 +577,13 @@ def calc_log_likelihood_poisson(
             contains non-integer or negative values.
 
     Examples:
+        >>> import numpy as np
+        >>> from laser.cholera.calc_log_likelihood_distributions import calc_log_likelihood_poisson
         >>> calc_log_likelihood_poisson(
         ...     np.array([2, 3, 4]), np.array([2.2, 2.9, 4.1]),
         ...     verbose=False,
         ... )
+        -4.447965653589073
     """
     observed = np.asarray(observed, dtype=float)
     estimated = np.asarray(estimated, dtype=float)
