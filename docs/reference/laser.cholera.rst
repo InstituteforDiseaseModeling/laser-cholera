@@ -17,6 +17,22 @@ Subpackages
 Submodules
 ----------
 
+laser.cholera.calc\_log\_likelihood\_distributions module
+---------------------------------------------------------
+
+.. automodule:: laser.cholera.calc_log_likelihood_distributions
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+laser.cholera.calc\_model\_likelihood module
+--------------------------------------------
+
+.. automodule:: laser.cholera.calc_model_likelihood
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 laser.cholera.cli module
 ------------------------
 

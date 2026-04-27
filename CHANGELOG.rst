@@ -2,15 +2,18 @@
 Changelog
 =========
 
-0.11.0 (unreleased)
+0.12.5 (unreleased)
 -------------------
 
-* Update to laser-core~=1.0 (namespace package laser.core)
-* Switch to uv_build build system
-* Migrate namespace package laser_cholera to laser.cholera
-* Update pyproject.toml for additional package data files
-* Remove MANIFEST.in (uv build does not use it)
-* Dependency updates: setuptools, h11, requests, tornado, jupyterlab, urllib3, fonttools
+* Add src/laser/cholera/calc_log_likelihood_distributions.py: Python translation of calc_log_likelihood_distributions.R (Beta, Binomial, Gamma, NegBin, Normal, Poisson)
+* Rename src/laser/cholera/spring_likelihood.py → calc_model_likelihood.py
+* Add tests/test_calc_log_likelihood_negbin.py: Python translation of test_calc_log_likelihood_negbin.R; update import to calc_log_likelihood_distributions
+* Add tests/test_calc_model_likelihood.py: Python translation of test_calc_model_likelihood.R
+* Add tests/test_calc_model_likelihood_extreme.py: Python translation of test_calc_model_likelihood_extreme.R
+* Add tests/test_calc_model_likelihood_reference.py: Python translation of test_calc_model_likelihood_reference.R
+* Add tests/test_compute_wis_parametric_row.py: Python translation of test_compute_wis_parametric_row.R
+* Add tests/test_ll_cumulative_progressive_nb.py: Python translation of test_ll_cumulative_progressive_nb.R
+* Add tests/test_nb_size_from_obs_weighted.py: Python translation of test_nb_size_from_obs_weighted.R
 
 0.10.1 (2026-01-16)
 -------------------
