@@ -69,7 +69,7 @@ def nb_size_from_obs_weighted(
     x_ok = x[ok]
     w_ok = w[ok]
     sw = float(np.sum(w_ok))
-    sw2 = float(np.sum(w_ok ** 2))
+    sw2 = float(np.sum(w_ok**2))
     m = float(np.sum(w_ok * x_ok) / sw)
     denom = sw - sw2 / sw
     if denom > 0:
@@ -212,14 +212,15 @@ def _calc_peak_magnitude_from_indices(
         if (w_end - w_start) > 2:
             obs_peak_val = float(np.nanmax(obs_vec[w_start:w_end]))
             est_peak_val = float(np.nanmax(est_vec[w_start:w_end]))
-            if (np.isfinite(obs_peak_val) and np.isfinite(est_peak_val)
-                    and obs_peak_val > 0 and est_peak_val > 0):
+            if np.isfinite(obs_peak_val) and np.isfinite(est_peak_val) and obs_peak_val > 0 and est_peak_val > 0:
                 adaptive_sigma = sigma_peak_log * np.sqrt(100.0 / max(obs_peak_val, 100.0))
-                ll_total += float(scipy.stats.norm.logpdf(
-                    np.log(est_peak_val) - np.log(obs_peak_val),
-                    loc=0,
-                    scale=adaptive_sigma,
-                ))
+                ll_total += float(
+                    scipy.stats.norm.logpdf(
+                        np.log(est_peak_val) - np.log(obs_peak_val),
+                        loc=0,
+                        scale=adaptive_sigma,
+                    )
+                )
     return ll_total
 
 
@@ -369,9 +370,7 @@ def ll_cumulative_progressive_nb(
     for tp in timepoints:
         end_idx = int(np.clip(round(n * tp), 1, n))
 
-        cum_k = (k_data * end_idx
-                 if (k_data is not None and np.isfinite(k_data))
-                 else k_fallback)
+        cum_k = k_data * end_idx if (k_data is not None and np.isfinite(k_data)) else k_fallback
 
         o_cum = float(np.nansum(obs_vec[:end_idx]))
         e_cum = float(np.nansum(est_vec[:end_idx]))
@@ -560,10 +559,12 @@ def calc_model_likelihood(
             estimated values are negative, weights are negative, or weight vectors
             sum to zero.
     """
-    if (not (isinstance(obs_cases, np.ndarray) and obs_cases.ndim == 2)
-            or not (isinstance(est_cases, np.ndarray) and est_cases.ndim == 2)
-            or not (isinstance(obs_deaths, np.ndarray) and obs_deaths.ndim == 2)
-            or not (isinstance(est_deaths, np.ndarray) and est_deaths.ndim == 2)):
+    if (
+        not (isinstance(obs_cases, np.ndarray) and obs_cases.ndim == 2)
+        or not (isinstance(est_cases, np.ndarray) and est_cases.ndim == 2)
+        or not (isinstance(obs_deaths, np.ndarray) and obs_deaths.ndim == 2)
+        or not (isinstance(est_deaths, np.ndarray) and est_deaths.ndim == 2)
+    ):
         raise ValueError("All inputs must be 2-D arrays (n_locations x n_time_steps).")
 
     if np.any(est_cases < 0) or np.any(est_deaths < 0):
@@ -571,9 +572,11 @@ def calc_model_likelihood(
 
     n_locations, n_time_steps = obs_cases.shape
 
-    if (est_cases.shape != (n_locations, n_time_steps)
-            or obs_deaths.shape != (n_locations, n_time_steps)
-            or est_deaths.shape != (n_locations, n_time_steps)):
+    if (
+        est_cases.shape != (n_locations, n_time_steps)
+        or obs_deaths.shape != (n_locations, n_time_steps)
+        or est_deaths.shape != (n_locations, n_time_steps)
+    ):
         raise ValueError("All arrays must have the same shape (n_locations x n_time_steps).")
 
     if weights_location is None:
@@ -599,8 +602,7 @@ def calc_model_likelihood(
         date_stop_cfg = config.get("date_stop")
         epidemic_peaks = config.get("epidemic_peaks")
 
-        if (location_names is not None and date_start_cfg is not None
-                and date_stop_cfg is not None and epidemic_peaks is not None):
+        if location_names is not None and date_start_cfg is not None and date_stop_cfg is not None and epidemic_peaks is not None:
             date_seq = pd.date_range(start=date_start_cfg, end=date_stop_cfg, freq="D")
             if len(date_seq) != n_time_steps:
                 date_seq = pd.date_range(start=date_start_cfg, end=date_stop_cfg, freq="W")
@@ -613,8 +615,7 @@ def calc_model_likelihood(
                 logger.info("Precomputing peak indices for %d locations.", n_locations)
                 peak_indices_by_loc = [[] for _ in range(n_locations)]
                 for j_pk in range(n_locations):
-                    iso_code = (location_names[j_pk]
-                                if j_pk < len(location_names) else None)
+                    iso_code = location_names[j_pk] if j_pk < len(location_names) else None
                     if iso_code is None:
                         continue
                     loc_peaks = epidemic_peaks[epidemic_peaks["iso_code"] == iso_code]
@@ -651,7 +652,8 @@ def calc_model_likelihood(
                 k=k_c,
                 k_min=nb_k_min_cases,
             )
-            if have_cases else 0.0
+            if have_cases
+            else 0.0
         )
         ll_deaths = (
             _calc_log_likelihood_nb(
@@ -661,7 +663,8 @@ def calc_model_likelihood(
                 k=k_d,
                 k_min=nb_k_min_deaths,
             )
-            if have_deaths else 0.0
+            if have_deaths
+            else 0.0
         )
 
         ll_peak_time_c = ll_peak_time_d = 0.0
@@ -672,22 +675,14 @@ def calc_model_likelihood(
             if loc_peak_idx:
                 if weight_peak_timing > 0:
                     if have_cases:
-                        ll_peak_time_c = _calc_peak_timing_from_indices(
-                            est_c, loc_peak_idx, sigma_peak_time, timestep_to_weeks
-                        )
+                        ll_peak_time_c = _calc_peak_timing_from_indices(est_c, loc_peak_idx, sigma_peak_time, timestep_to_weeks)
                     if have_deaths:
-                        ll_peak_time_d = _calc_peak_timing_from_indices(
-                            est_d, loc_peak_idx, sigma_peak_time, timestep_to_weeks
-                        )
+                        ll_peak_time_d = _calc_peak_timing_from_indices(est_d, loc_peak_idx, sigma_peak_time, timestep_to_weeks)
                 if weight_peak_magnitude > 0:
                     if have_cases:
-                        ll_peak_mag_c = _calc_peak_magnitude_from_indices(
-                            obs_c, est_c, loc_peak_idx, sigma_peak_log
-                        )
+                        ll_peak_mag_c = _calc_peak_magnitude_from_indices(obs_c, est_c, loc_peak_idx, sigma_peak_log)
                     if have_deaths:
-                        ll_peak_mag_d = _calc_peak_magnitude_from_indices(
-                            obs_d, est_d, loc_peak_idx, sigma_peak_log
-                        )
+                        ll_peak_mag_d = _calc_peak_magnitude_from_indices(obs_d, est_d, loc_peak_idx, sigma_peak_log)
 
         ll_cum_tot_c = ll_cum_tot_d = 0.0
         if weight_cumulative_total > 0:
@@ -719,20 +714,12 @@ def calc_model_likelihood(
         wis_scale = (n_obs / n_wis_quant) if n_wis_quant > 0 else 0.0
         cum_scale = (n_obs / n_cum_points) if n_cum_points > 0 else 0.0
 
-        ll_loc_core = (
-            weight_cases * ll_cases
-            + weight_deaths * ll_deaths
-        )
-        ll_loc_peaks = (
-            peak_scale * weight_peak_timing * (weight_cases * ll_peak_time_c + weight_deaths * ll_peak_time_d)
-            + peak_scale * weight_peak_magnitude * (weight_cases * ll_peak_mag_c + weight_deaths * ll_peak_mag_d)
-        )
-        ll_loc_cum = cum_scale * weight_cumulative_total * (
-            weight_cases * ll_cum_tot_c + weight_deaths * ll_cum_tot_d
-        )
-        ll_loc_wis = wis_scale * weight_wis * (
-            weight_cases * ll_wis_cases + weight_deaths * ll_wis_deaths
-        )
+        ll_loc_core = weight_cases * ll_cases + weight_deaths * ll_deaths
+        ll_loc_peaks = peak_scale * weight_peak_timing * (
+            weight_cases * ll_peak_time_c + weight_deaths * ll_peak_time_d
+        ) + peak_scale * weight_peak_magnitude * (weight_cases * ll_peak_mag_c + weight_deaths * ll_peak_mag_d)
+        ll_loc_cum = cum_scale * weight_cumulative_total * (weight_cases * ll_cum_tot_c + weight_deaths * ll_cum_tot_d)
+        ll_loc_wis = wis_scale * weight_wis * (weight_cases * ll_wis_cases + weight_deaths * ll_wis_deaths)
 
         ll_loc_total = ll_loc_core + ll_loc_peaks + ll_loc_cum + ll_loc_wis
 

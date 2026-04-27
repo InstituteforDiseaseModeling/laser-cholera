@@ -1136,7 +1136,7 @@ wheels = [
 
 [[package]]
 name = "laser-cholera"
-version = "0.12.1"
+version = "0.12.5"
 source = { editable = "." }
 dependencies = [
     { name = "geopandas" },
@@ -1168,16 +1168,10 @@ requires-dist = [
     { name = "ipykernel", marker = "extra == 'nb'" },
     { name = "jupyter", marker = "extra == 'nb'" },
     { name = "laser-core", specifier = "~=1.0" },
-    { name = "nbconvert", specifier = ">=7.17.1" },
-    { name = "nbconvert", marker = "extra == 'nb'" },
+    { name = "nbconvert", marker = "extra == 'nb'", specifier = ">=7.17.1" },
     { name = "nbformat", marker = "extra == 'nb'" },
-    { name = "pillow", specifier = ">=12.1.1" },
-    { name = "pygments", specifier = ">=2.20.0" },
-    { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "requests", specifier = ">=2.33.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
     { name = "scipy" },
-    { name = "tornado", specifier = ">=6.5.5" },
     { name = "tqdm" },
     { name = "uv", marker = "extra == 'dev'" },
 ]
