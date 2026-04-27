@@ -15,16 +15,38 @@ formula and compare against the function output with `k_min=0` to bypass the
 dispersion floor.
 """
 
-import unittest
+import contextlib
+import logging
 
 import numpy as np
+import pytest
 from scipy.special import gammaln
 
 from laser.cholera.calc_log_likelihood_distributions import calc_log_likelihood_negbin
 from laser.cholera.calc_log_likelihood_distributions import calc_log_likelihood_poisson
 
 
-class TestCalcLogLikelihoodNegbin(unittest.TestCase):
+@contextlib.contextmanager
+def _capture_logs(level=logging.INFO):
+    root = logging.getLogger()
+    prev_level = root.level
+    root.setLevel(level)
+    records = []
+
+    class _Handler(logging.Handler):
+        def emit(self, record):
+            records.append(f"{record.levelname}:{record.name}:{record.getMessage()}")
+
+    handler = _Handler()
+    root.addHandler(handler)
+    try:
+        yield records
+    finally:
+        root.removeHandler(handler)
+        root.setLevel(prev_level)
+
+
+class TestCalcLogLikelihoodNegbin:
     """Tests for calc_log_likelihood_negbin, the public NB log-likelihood function."""
 
     def test_errors_when_observed_and_estimated_lengths_differ(self):
@@ -38,7 +60,7 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
         Failure implies the function silently proceeds on mismatched arrays, which
         would produce incorrect results without any signal to the caller.
         """
-        with self.assertRaisesRegex(Exception, "Lengths of observed and estimated must match"):
+        with pytest.raises(Exception, match="Lengths of observed and estimated must match"):
             calc_log_likelihood_negbin(
                 observed=np.array([1, 2], dtype=float),
                 estimated=np.array([1], dtype=float),
@@ -58,7 +80,7 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
         entirely missing data. Failure of the message check implies the verbose path
         is silent, making it hard to diagnose bad inputs.
         """
-        with self.assertLogs(level="INFO") as log_ctx:
+        with _capture_logs() as log_ctx:
             ll = calc_log_likelihood_negbin(
                 observed=np.array([np.nan, np.nan]),
                 estimated=np.array([np.nan, np.nan]),
@@ -66,8 +88,8 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
                 weights=None,
                 verbose=True,
             )
-        self.assertTrue(np.isnan(ll))
-        self.assertTrue(any("No usable data" in m for m in log_ctx.output))
+        assert np.isnan(ll)
+        assert any("No usable data" in m for m in log_ctx)
 
     def test_errors_on_negative_weights(self):
         """Negative weights raise an error.
@@ -79,7 +101,7 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
         Failure implies negative weights are silently accepted, which would produce
         a log-likelihood that is not interpretable as a weighted sum.
         """
-        with self.assertRaisesRegex(Exception, "All weights must be >= 0"):
+        with pytest.raises(Exception, match="All weights must be >= 0"):
             calc_log_likelihood_negbin(
                 observed=np.array([1, 2], dtype=float),
                 estimated=np.array([1, 2], dtype=float),
@@ -98,7 +120,7 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
         Failure implies the function divides by a zero weight sum, producing NaN
         or Inf without an informative error.
         """
-        with self.assertRaisesRegex(Exception, "All weights are zero"):
+        with pytest.raises(Exception, match="All weights are zero"):
             calc_log_likelihood_negbin(
                 observed=np.array([1, 2], dtype=float),
                 estimated=np.array([1, 2], dtype=float),
@@ -128,7 +150,7 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
             weights=None,
             verbose=False,
         )
-        self.assertTrue(np.isfinite(ll))
+        assert np.isfinite(ll)
 
         # Float near-integers from parquet transport should not error
         ll2 = calc_log_likelihood_negbin(
@@ -138,10 +160,10 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
             weights=None,
             verbose=False,
         )
-        self.assertTrue(np.isfinite(ll2))
+        assert np.isfinite(ll2)
 
         # Negative values still error (round doesn't help)
-        with self.assertRaisesRegex(Exception, "observed must contain non-negative integer counts"):
+        with pytest.raises(Exception, match="observed must contain non-negative integer counts"):
             calc_log_likelihood_negbin(
                 observed=np.array([-1, 2], dtype=float),
                 estimated=np.array([1, 2], dtype=float),
@@ -163,7 +185,7 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
         obs = np.array([1, 2], dtype=float)
         est = np.array([0, -5], dtype=float)
         ll = calc_log_likelihood_negbin(obs, est, k=1, verbose=False)
-        self.assertTrue(np.isfinite(ll))
+        assert np.isfinite(ll)
 
     def test_defaults_to_poisson_when_variance_lte_mean(self):
         """k=None with var <= mean logs a 'using Poisson' message and matches Poisson LL.
@@ -179,11 +201,11 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
         """
         obs = np.ones(5)
         est = obs.copy()
-        with self.assertLogs(level="INFO") as log_ctx:
+        with _capture_logs() as log_ctx:
             ll_nb = calc_log_likelihood_negbin(obs, est, k=None, verbose=True)
-        self.assertTrue(any("using Poisson" in m for m in log_ctx.output))
+        assert any("using Poisson" in m for m in log_ctx)
         ll_pois = calc_log_likelihood_poisson(obs, est, verbose=False)
-        self.assertAlmostEqual(ll_nb, ll_pois, delta=1e-8)
+        assert abs(ll_nb - ll_pois) <= 1e-8
 
     def test_uses_k_min_floor_when_provided_k_is_too_small(self):
         """k below k_min is silently floored to k_min with a log message.
@@ -199,10 +221,10 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
         obs = np.array([0, 1, 2], dtype=float)
         est = np.array([1, 1, 1], dtype=float)
         # k=1 < k_min=3 (default), so function floors to k_min and messages about it
-        with self.assertLogs(level="INFO") as log_ctx:
+        with _capture_logs() as log_ctx:
             ll = calc_log_likelihood_negbin(obs, est, k=1, verbose=True)
-        self.assertTrue(any("k_min" in m for m in log_ctx.output))
-        self.assertTrue(np.isfinite(ll))
+        assert any("k_min" in m for m in log_ctx)
+        assert np.isfinite(ll)
 
     def test_matches_manual_negbin_log_likelihood_formula(self):
         """Unweighted output matches the manual NB log-likelihood formula.
@@ -240,7 +262,7 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
             weights=None,
             verbose=False,
         )
-        self.assertAlmostEqual(ll_func, ll_manual, delta=1e-8)
+        assert abs(ll_func - ll_manual) <= 1e-8
 
     def test_matches_manual_calculation_with_weights(self):
         """Weighted output matches the manual weighted NB log-likelihood formula.
@@ -275,8 +297,4 @@ class TestCalcLogLikelihoodNegbin(unittest.TestCase):
             weights=weights,
             verbose=False,
         )
-        self.assertAlmostEqual(ll_func, ll_manual, delta=1e-8)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert abs(ll_func - ll_manual) <= 1e-8

@@ -15,14 +15,12 @@ R's `identical(ll, -Inf)` maps to `ll == -np.inf`.
 `np.isfinite(ll) or ll == -np.inf or np.isnan(ll)`.
 """
 
-import unittest
-
 import numpy as np
 
 from laser.cholera.calc_model_likelihood import calc_model_likelihood
 
 
-class TestCalcModelLikelihoodExtreme(unittest.TestCase):
+class TestCalcModelLikelihoodExtreme:
     """Tests for calc_model_likelihood under extreme input conditions."""
 
     def test_extreme_over_prediction_produces_very_negative_finite_ll(self):
@@ -47,8 +45,8 @@ class TestCalcModelLikelihoodExtreme(unittest.TestCase):
             obs_deaths=obs,
             est_deaths=est,
         )
-        self.assertTrue(np.isfinite(ll))
-        self.assertLess(ll, -1000)
+        assert np.isfinite(ll)
+        assert ll < -1000
 
     def test_extreme_under_prediction_produces_very_negative_finite_ll(self):
         """Near-zero prediction against obs=100 yields a finite LL less than -10000.
@@ -72,8 +70,8 @@ class TestCalcModelLikelihoodExtreme(unittest.TestCase):
             obs_deaths=obs,
             est_deaths=est,
         )
-        self.assertTrue(np.isfinite(ll))
-        self.assertLess(ll, -10000)
+        assert np.isfinite(ll)
+        assert ll < -10000
 
     def test_zero_prediction_with_nonzero_observed_uses_proportional_penalty(self):
         """Zero estimates against mixed observed (including 100 and 50) yield ll < -1000.
@@ -97,8 +95,8 @@ class TestCalcModelLikelihoodExtreme(unittest.TestCase):
             obs_deaths=obs,
             est_deaths=est,
         )
-        self.assertTrue(np.isfinite(ll))
-        self.assertLess(ll, -1000)
+        assert np.isfinite(ll)
+        assert ll < -1000
 
     def test_non_finite_estimate_returns_finite_or_neg_inf_or_nan(self):
         """NaN in estimated propagates gracefully to a finite, -Inf, or NaN result.
@@ -119,7 +117,7 @@ class TestCalcModelLikelihoodExtreme(unittest.TestCase):
             obs_deaths=obs,
             est_deaths=est,
         )
-        self.assertTrue(np.isfinite(ll) or ll == -np.inf or np.isnan(ll))
+        assert np.isfinite(ll) or ll == -np.inf or np.isnan(ll)
 
     def test_anti_correlated_inputs_produce_bad_but_finite_ll(self):
         """Anti-correlated obs and est produce a finite LL less than -500.
@@ -145,8 +143,8 @@ class TestCalcModelLikelihoodExtreme(unittest.TestCase):
             obs_deaths=np.zeros((1, n_time)),
             est_deaths=np.zeros((1, n_time)),
         )
-        self.assertTrue(np.isfinite(ll))
-        self.assertLess(ll, -500)
+        assert np.isfinite(ll)
+        assert ll < -500
 
     def test_all_zero_obs_and_est_produces_zero_ll(self):
         """All-zero observed and estimated yields a finite LL of exactly 0.
@@ -168,14 +166,10 @@ class TestCalcModelLikelihoodExtreme(unittest.TestCase):
             obs_deaths=obs,
             est_deaths=est,
         )
-        self.assertTrue(np.isfinite(ll))
+        assert np.isfinite(ll)
         # Note: R returns exactly 0 because its NB loop has an explicit 0-obs/0-est
         # branch that short-circuits to ll=0.  Python's _calc_log_likelihood_nb
         # floors est to 1e-10 unconditionally, producing Poisson(0|1e-10) = -1e-10
         # per timestep.  With 3 locations, 20 steps, 2 outcomes the sum is ~-1.2e-8.
         # Using delta=1e-7 to accommodate this implementation difference.
-        self.assertAlmostEqual(ll, 0, delta=1e-7)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert abs(ll - 0) <= 1e-7

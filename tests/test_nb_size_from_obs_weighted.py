@@ -13,15 +13,13 @@ Note: scipy requires integer n for nbinom; the k=0.5 case uses scipy directly si
 numpy's `negative_binomial` requires a positive integer for its n parameter.
 """
 
-import unittest
-
 import numpy as np
 import scipy.stats
 
 from laser.cholera.calc_model_likelihood import nb_size_from_obs_weighted
 
 
-class TestNbSizeFromObsWeighted(unittest.TestCase):
+class TestNbSizeFromObsWeighted:
     """Tests for nb_size_from_obs_weighted, the weighted MoM NB dispersion estimator."""
 
     def test_poisson_data_var_lte_mean_returns_inf(self):
@@ -38,7 +36,7 @@ class TestNbSizeFromObsWeighted(unittest.TestCase):
         x = np.full(20, 10.0)
         w = np.ones(20)
         k = nb_size_from_obs_weighted(x, w)
-        self.assertTrue(np.isinf(k))
+        assert np.isinf(k)
 
     def test_overdispersed_data_returns_finite_k(self):
         """Overdispersed NB data returns a finite k that respects the k_min floor.
@@ -54,8 +52,8 @@ class TestNbSizeFromObsWeighted(unittest.TestCase):
         x = scipy.stats.nbinom.rvs(n=2, p=2 / (2 + 10), size=100, random_state=42)
         w = np.ones(100)
         k = nb_size_from_obs_weighted(x, w)
-        self.assertTrue(np.isfinite(k))
-        self.assertGreaterEqual(k, 3)  # k_min floor
+        assert np.isfinite(k)
+        assert k >= 3  # k_min floor
 
     def test_k_min_floor_is_applied(self):
         """When the MoM estimate falls below k_min, k_min is returned.
@@ -73,7 +71,7 @@ class TestNbSizeFromObsWeighted(unittest.TestCase):
         x = scipy.stats.nbinom.rvs(n=0.5, p=0.5 / (0.5 + 10), size=200, random_state=42)
         w = np.ones(200)
         k = nb_size_from_obs_weighted(x, w, k_min=3)
-        self.assertGreaterEqual(k, 3)
+        assert k >= 3
 
     def test_k_max_cap_is_applied(self):
         """When the MoM estimate exceeds k_max, the result is capped at k_max or is Inf.
@@ -90,7 +88,7 @@ class TestNbSizeFromObsWeighted(unittest.TestCase):
         x = scipy.stats.poisson.rvs(100, size=200, random_state=42)
         w = np.ones(200)
         k = nb_size_from_obs_weighted(x, w, k_min=1, k_max=100)
-        self.assertTrue(k <= 100 or np.isinf(k))  # Either capped or Inf (Poisson)
+        assert k <= 100 or np.isinf(k)  # Either capped or Inf (Poisson)
 
     def test_all_na_input_returns_inf(self):
         """All-NaN input returns np.inf.
@@ -105,7 +103,7 @@ class TestNbSizeFromObsWeighted(unittest.TestCase):
         x = np.full(10, np.nan)
         w = np.ones(10)
         k = nb_size_from_obs_weighted(x, w)
-        self.assertTrue(np.isinf(k))
+        assert np.isinf(k)
 
     def test_zero_weight_entries_are_excluded(self):
         """Entries with zero weight are excluded from the dispersion estimate.
@@ -123,8 +121,4 @@ class TestNbSizeFromObsWeighted(unittest.TestCase):
         w = np.array([1.0] * 10 + [0.0])  # Zero-weight the outlier
         k = nb_size_from_obs_weighted(x, w)
         # Without outlier, data is constant -> Inf
-        self.assertTrue(np.isinf(k))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert np.isinf(k)
