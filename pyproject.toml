@@ -97,7 +97,7 @@ select = [
 ]
 ignore = [
     "RUF001", # ruff-specific rules ambiguous-unicode-character-string
-    "RUF002", # ruff-specific rules ambiguous minus sign`
+    "RUF002", # ruff-specific rules ambiguous minus sign
     "S101", # flake8-bandit assert
     "S308", # flake8-bandit suspicious-mark-safe-usage
     "S603", # flake8-bandit subprocess-without-shell-equals-true
