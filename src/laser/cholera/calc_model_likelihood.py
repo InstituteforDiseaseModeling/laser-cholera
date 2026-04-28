@@ -14,9 +14,7 @@ scale: weight=0.25 means the term contributes roughly 25% as much as the NB core
 The `epidemic_peaks` dataset required by peak shape terms and legacy helpers must be
 supplied as a pandas DataFrame with columns ``iso_code`` and ``peak_date``, either
 via ``config["epidemic_peaks"]`` or as an explicit function argument.
-" " "
 
-" " "
 Translation complete. Here's a summary of the key design decisions:
 
 **Indexing**: R uses 1-based indices; Python uses 0-based. All `peak_indices` stored and passed as 0-based. Window slices use `[w_start:w_end]` with `w_end = peak_idx + 15` (exclusive) to match R's `(peak_idx-14):(peak_idx+14)` inclusive range.
@@ -581,8 +579,12 @@ def calc_model_likelihood(
 
     if weights_location is None:
         weights_location = np.ones(n_locations)
+    else:
+        weights_location = np.asarray(weights_location, dtype=float)
     if weights_time is None:
         weights_time = np.ones(n_time_steps)
+    else:
+        weights_time = np.asarray(weights_time, dtype=float)
 
     if len(weights_location) != n_locations:
         raise ValueError("weights_location must match n_locations.")

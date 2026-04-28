@@ -119,6 +119,8 @@ def calc_log_likelihood_beta(
     else:
         mu = float(np.mean(observed))
         sigma2 = float(np.var(observed, ddof=1))
+        if sigma2 <= 0:
+            raise ValueError("Observed variance is non-positive — cannot estimate Beta shape parameters.")
         shape_1_val = ((1 - mu) / sigma2 - 1 / mu) * mu**2
         shape_2_val = shape_1_val * (1 / mu - 1)
         if shape_1_val <= 0 or shape_2_val <= 0:
@@ -298,6 +300,8 @@ def calc_log_likelihood_gamma(
 
     mu = float(np.mean(observed))
     s2 = float(np.var(observed, ddof=1))
+    if s2 <= 0:
+        raise ValueError("Variance is non-positive — cannot estimate Gamma shape parameters.")
     shape = mu**2 / s2
     scale = estimated / shape  # per-element scale vector
 
