@@ -12,7 +12,7 @@ def setup_logging(loglevel, outdir: Path):
         return
 
     log_file_path = Path(outdir) / f"{datetime.now():%Y%m%d%H%M%S}.log"  # noqa: DTZ005
-    logger = logging.getLogger()
+    logger = logging.getLogger("laser.cholera")
     logger.setLevel(loglevel)
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 

@@ -22,7 +22,7 @@ from typing import Optional
 import numpy as np
 import scipy.stats
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("laser.cholera")
 
 
 def calc_log_likelihood_beta(

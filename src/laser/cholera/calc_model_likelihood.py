@@ -35,7 +35,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("laser.cholera")
 
 
 def nb_size_from_obs_weighted(
@@ -485,7 +485,6 @@ def calc_model_likelihood(
     config: Optional[dict] = None,
     nb_k_min_cases: float = 3,
     nb_k_min_deaths: float = 3,
-    verbose: bool = False,
     weight_peak_timing: float = 0,
     weight_peak_magnitude: float = 0,
     weight_cumulative_total: float = 0,
@@ -494,6 +493,7 @@ def calc_model_likelihood(
     sigma_peak_log: float = 0.5,
     wis_quantiles: np.ndarray = np.array([0.025, 0.25, 0.5, 0.75, 0.975]),  # noqa: B008
     cumulative_timepoints: np.ndarray = np.array([0.25, 0.5, 0.75, 1.0]),  # noqa: B008
+    verbose: bool = False,
 ) -> float:
     """Compute total model log-likelihood against observed cases and deaths.
 
@@ -741,8 +741,7 @@ def calc_model_likelihood(
         )
 
     if np.all(np.isnan(ll_locations)):
-        if verbose:
-            logger.info("All locations contributed NA — returning nan.")
+        logger.info("All locations contributed NA — returning nan.")
         return float("nan")
 
     ll_total = float(np.nansum(ll_locations))

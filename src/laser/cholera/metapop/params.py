@@ -15,7 +15,7 @@ import numpy as np
 from laser.core.propertyset import PropertySet
 from matplotlib.figure import Figure
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("laser.cholera")
 
 
 class PseEncoder(json.JSONEncoder):

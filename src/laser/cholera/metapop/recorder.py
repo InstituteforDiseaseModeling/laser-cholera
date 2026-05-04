@@ -8,7 +8,7 @@ from typing import Union
 
 import h5py as h5
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("laser.cholera")
 
 
 class Recorder:
