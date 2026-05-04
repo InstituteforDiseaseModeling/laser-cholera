@@ -1,4 +1,6 @@
-__version__ = "0.12.5"
+from importlib.metadata import version
+
+__version__ = version("laser.cholera")
 
 from .core import compute
 from .iso_codes import iso_codes

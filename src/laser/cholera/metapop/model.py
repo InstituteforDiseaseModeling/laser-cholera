@@ -30,7 +30,7 @@ from laser.cholera.metapop import get_parameters
 from laser.cholera.metapop import scenario
 from laser.cholera.metapop.utils import override_helper
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("laser.cholera")
 
 
 class RInterface:
@@ -356,8 +356,7 @@ def cli_run(params, **kwargs):
         None
     """
 
-    # logger.setLevel(kwargs.pop("loglevel", "INFO"))
-    logging.getLogger().setLevel(kwargs.pop("loglevel", "INFO"))  # Set the root logger level
+    logging.getLogger("laser.cholera").setLevel(kwargs.pop("loglevel", "INFO"))  # Set the root logger level
     logger.info("Starting the cholera model simulation...")
 
     if "over" in kwargs and (overrides := kwargs.pop("over")):

@@ -28,9 +28,9 @@ from laser.cholera.calc_log_likelihood_distributions import calc_log_likelihood_
 
 @contextlib.contextmanager
 def _capture_logs(level=logging.INFO):
-    root = logging.getLogger()
-    prev_level = root.level
-    root.setLevel(level)
+    logger = logging.getLogger("laser.cholera")
+    prev_level = logger.level
+    logger.setLevel(level)
     records = []
 
     class _Handler(logging.Handler):
@@ -38,12 +38,12 @@ def _capture_logs(level=logging.INFO):
             records.append(f"{record.levelname}:{record.name}:{record.getMessage()}")
 
     handler = _Handler()
-    root.addHandler(handler)
+    logger.addHandler(handler)
     try:
         yield records
     finally:
-        root.removeHandler(handler)
-        root.setLevel(prev_level)
+        logger.removeHandler(handler)
+        logger.setLevel(prev_level)
 
 
 class TestCalcLogLikelihoodNegbin:
