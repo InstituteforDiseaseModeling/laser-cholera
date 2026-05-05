@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
-from laser.cholera.likelihood import get_model_likelihood
+from laser.cholera.calc_model_likelihood import calc_model_likelihood
 
 
 class Analyzer:
@@ -22,12 +22,30 @@ class Analyzer:
                 # Use the smaller of reported cases or the number of timesteps (not including the initial state)
                 nreports = min(model.params.reported_cases.shape[1], model.patches.incidence.shape[0] - 1)
                 try:
-                    model.log_likelihood = get_model_likelihood(
+                    optional = {
+                        key: model.params.key
+                        for key in [
+                            "weight_cases",
+                            "weight_deaths",
+                            "weights_time",
+                            "weights_location",
+                            "nb_k_min_cases",
+                            "nb_k_min_deaths",
+                            "weight_peak_timing",
+                            "weight_peak_magnitude",
+                            "weight_cumulative_total",
+                            "weight_wis",
+                            "sigma_peak_time",
+                            "sigma_peak_log",
+                        ]
+                        if key in model.params
+                    }
+                    model.log_likelihood = calc_model_likelihood(
                         obs_cases=model.params.reported_cases[:, :nreports],
-                        sim_cases=model.patches.incidence[1 : nreports + 1, :].T,
+                        est_cases=model.results.reported_cases[:, :nreports],
                         obs_deaths=model.params.reported_deaths[:, :nreports],
-                        sim_deaths=model.patches.disease_deaths[1 : nreports + 1, :].T,
-                        verbose=model.params.verbose if "verbose" in model.params else False,
+                        est_deaths=model.patches.reported_deaths[:, :nreports],
+                        **optional,
                     )
                 except ValueError as e:
                     print(f"Error calculating log likelihood: {e}")
