@@ -474,25 +474,32 @@ def compute_wis_parametric_row(
 
 
 def calc_model_likelihood(
-    obs_cases: np.ndarray,
-    est_cases: np.ndarray,
-    obs_deaths: np.ndarray,
-    est_deaths: np.ndarray,
+    obs_cases: np.ndarray,  # [n_locs x n_steps]
+    est_cases: np.ndarray,  # [n_locs x n_steps]
+    obs_deaths: np.ndarray, # [n_locs x n_steps]
+    est_deaths: np.ndarray, # [n_locs x n_steps]
     weight_cases: float = 1.0,
     weight_deaths: float = 1.0,
-    weights_location: Optional[np.ndarray] = None,
-    weights_time: Optional[np.ndarray] = None,
-    config: Optional[dict] = None,
-    nb_k_min_cases: float = 3,
-    nb_k_min_deaths: float = 3,
+    weights_location: Optional[np.ndarray] = None, # [n_locs] | None
+    weights_time: Optional[np.ndarray] = None, # [n_steps] | None
+    # -- shape term weights (0 = OFF; 0.25 = 25% of NB core influence) ---
     weight_peak_timing: float = 0,
     weight_peak_magnitude: float = 0,
     weight_cumulative_total: float = 0,
     weight_wis: float = 0,
+    # --- peak controls ---
     sigma_peak_time: float = 1,
     sigma_peak_log: float = 0.5,
+    # peak_indices_by_loc=None, # list of int arrays, precomputed from MOSAIC::epidemic_peaks
+    # timestep_to_weeks=7,      # 7 for daily data, 1 for weekly
+    # --- WIS ---
     wis_quantiles: np.ndarray = np.array([0.025, 0.25, 0.5, 0.75, 0.975]),  # noqa: B008
+    # --- cumulative ---
     cumulative_timepoints: np.ndarray = np.array([0.25, 0.5, 0.75, 1.0]),  # noqa: B008
+    # --- NB controls ---
+    nb_k_min_cases: float = 3,
+    nb_k_min_deaths: float = 3,
+    config: Optional[dict] = None,
     verbose: bool = False,
 ) -> float:
     """Compute total model log-likelihood against observed cases and deaths.
