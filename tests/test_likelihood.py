@@ -22,9 +22,9 @@ class LikelihoodTests(unittest.TestCase):
         # Set up the model with default parameters
         cls.model = run_model(None)
         cls.obs_cases = cls.model.params.reported_cases
-        cls.sim_cases = cls.model.patches.incidence[1:].T  # ignore t=0 (initial conditions)
+        cls.sim_cases = cls.model.results.reported_cases
         cls.obs_deaths = cls.model.params.reported_deaths
-        cls.sim_deaths = cls.model.patches.disease_deaths[1:].T  # ignore t=0 (initial conditions)
+        cls.sim_deaths = cls.model.results.reported_deaths
         cls.n_locations, cls.n_steps = cls.obs_cases.shape
 
         cls.n_locations, cls.n_steps = cls.obs_cases.shape

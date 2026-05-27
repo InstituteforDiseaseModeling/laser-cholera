@@ -476,12 +476,12 @@ def compute_wis_parametric_row(
 def calc_model_likelihood(
     obs_cases: np.ndarray,  # [n_locs x n_steps]
     est_cases: np.ndarray,  # [n_locs x n_steps]
-    obs_deaths: np.ndarray, # [n_locs x n_steps]
-    est_deaths: np.ndarray, # [n_locs x n_steps]
+    obs_deaths: np.ndarray,  # [n_locs x n_steps]
+    est_deaths: np.ndarray,  # [n_locs x n_steps]
     weight_cases: float = 1.0,
     weight_deaths: float = 1.0,
-    weights_location: Optional[np.ndarray] = None, # [n_locs] | None
-    weights_time: Optional[np.ndarray] = None, # [n_steps] | None
+    weights_location: Optional[np.ndarray] = None,  # [n_locs] | None
+    weights_time: Optional[np.ndarray] = None,  # [n_steps] | None
     # -- shape term weights (0 = OFF; 0.25 = 25% of NB core influence) ---
     weight_peak_timing: float = 0,
     weight_peak_magnitude: float = 0,

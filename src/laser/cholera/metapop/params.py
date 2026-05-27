@@ -222,6 +222,7 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
         ("decay_shape_2", np.float32),
         ("delta_reporting_cases", np.int32),
         ("delta_reporting_deaths", np.int32),
+        ("rho_deaths", np.float32),
     ]
     for name, transform in scalars:
         setattr(params, name, transform(getattr(params, name)))
@@ -289,10 +290,10 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
     if isinstance(params.epidemic_threshold, Number):
         params.epidemic_threshold = np.float32(params.epidemic_threshold)
     else:
-        assert isinstance(params.epidemic_threshold, list), (
+        assert isinstance(params.epidemic_threshold, (list, np.ndarray)), (
             f"epidemic_threshold must be a scalar or list of values, got {type(params.epidemic_threshold)}"
         )
-        params.epidemic_threshold = np.array(params.epidemic_threshold, dtype=np.float32)
+        params.epidemic_threshold = np.asarray(params.epidemic_threshold, dtype=np.float32)
 
     assert np.all((params.tau_i >= 0.0) & (params.tau_i <= 1.0)), "tau_i values must be in the range [0, 1]"
 
@@ -486,6 +487,7 @@ def validate_parameters(params: PropertySetEx) -> None:
 
     # rho must be between 0 (all false positives) and 1 (no false positives)
     assert (params.rho >= 0.0) & (params.rho <= 1.0), "rho value must be in the range [0, 1]"
+    assert (params.rho_deaths >= 0.0) & (params.rho_deaths <= 1.0), "rho_deaths value must be in the range [0, 1]"
 
     # sigma must be between 0 (all asymptomatic) and 1 (all symptomatic)
     assert (params.sigma >= 0.0) & (params.sigma <= 1.0), "sigma value must be in the range [0, 1]"
