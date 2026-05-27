@@ -448,7 +448,7 @@ class TestVaccinated(unittest.TestCase):
         an error or silently suppresses dose delivery, rather than being gracefully ignored.
         """
         params = self.get_test_parameters(V1=0, V2=0, overrides=sim_duration(start=datetime(2023, 1, 1), stop=datetime(2024, 12, 17)))
-        params += {"nu_jt_sources": ["S", "E", "Isym", "Iasym", "R", "J", "Q", "Z"]}
+        params |= {"nu_jt_sources": ["S", "E", "Isym", "Iasym", "R", "J", "Q", "Z"]}
 
         model = Model(parameters=params)
         model.components = [Susceptible, Exposed, Vaccinated, Census]
@@ -488,7 +488,7 @@ class TestVaccinated(unittest.TestCase):
         params = self.get_test_parameters(V1=0, V2=0, overrides=sim_duration(start=datetime(2023, 1, 1), stop=datetime(2024, 12, 17)))
         params.R_j_initial[:] = params.S_j_initial // 2
         params.S_j_initial -= params.R_j_initial
-        params += {"nu_jt_sources": ["S", "E", "Isym", "Iasym", "R"]}
+        params |= {"nu_jt_sources": ["S", "E", "Isym", "Iasym", "R"]}
         # Turn off natural mortality and waning immunity so Recovered population
         # is static except for vaccine delivery.
         params.d_jt[:] = 0.0  # no non-disease deaths

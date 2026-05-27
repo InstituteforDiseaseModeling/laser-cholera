@@ -17,6 +17,7 @@ class Infectious:
         model.patches.add_vector_property("disease_deaths", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("new_symptomatic", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("reported_cases", length=model.params.nticks + 1, dtype=np.int32, default=0)
+        model.patches.add_vector_property("reported_deaths", length=model.params.nticks + 1, dtype=np.int32, default=0)
         assert hasattr(model, "params"), "Infectious: model needs to have a 'params' attribute."
         assert "I_j_initial" in model.params, "Infectious: model params needs to have a 'I_j_initial' (initial infectious population) parameter."
         assert "sigma" in self.model.params, "Infectious: model params needs to have a 'sigma' (symptomatic fraction) parameter."
@@ -83,6 +84,12 @@ class Infectious:
         model.patches.disease_deaths[tick] = disease_deaths
         Is_next -= disease_deaths
         assert np.all(Is_next >= 0), f"Is_next should not go negative ({tick=}\n\t{Is_next=})"
+
+        idx_death_report = int(tick - model.params.delta_reporting_deaths)
+        if idx_death_report >= 0:
+            model.patches.reported_deaths[tick] += np.round(model.patches.disease_deaths[idx_death_report] * model.params.rho_deaths).astype(
+                model.patches.reported_deaths.dtype
+            )
 
         ## recovery (gamma)
         recovered = model.prng.binomial(Is_next, -np.expm1(-model.params.gamma_1)).astype(Is_next.dtype)

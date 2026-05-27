@@ -63,6 +63,7 @@ class RInterface:
         # self.non_disease_deaths = model.patches.non_disease_deaths[1:, :].T
         # self.Psi = model.patches.Psi[1:, :].T
         # self.reported_cases = model.patches.reported_cases[1:, :].T
+        # self.reported_deaths = model.patches.reported_deaths[1:, :].T
         # self.spatial_hazard = model.patches.spatial_hazard[1:, :].T
         # self.W = model.patches.W[1:, :].T
 
@@ -80,6 +81,7 @@ class RInterface:
             "non_disease_deaths",
             "Psi",
             "reported_cases",
+            "reported_deaths",
             "spatial_hazard",
             "W",
         ]:
@@ -209,6 +211,10 @@ class Model:
         self.tstart = datetime.now(tz=None)  # noqa: DTZ005
         logger.info(f"{self.tstart}: Running the {self.name} model for {self.params.nticks} ticks…")
 
+        # The results are just views onto existing NumPy arrays, so we can
+        # initialize this here. The Analyzer will need it on the last tick.
+        self.results = RInterface(self)
+
         self.metrics = []
 
         for tick in tqdm(range(self.params.nticks), desc="Running model", disable=self.params.quiet):
@@ -220,8 +226,6 @@ class Model:
                 delta = tfinish - tstart
                 timing.append(delta.seconds * 1_000_000 + delta.microseconds)
             self.metrics.append(timing)
-
-        self.results = RInterface(self)
 
         self.tfinish = datetime.now(tz=None)  # noqa: DTZ005
         logger.info(f"{self.tfinish}: Completed the {self.name} model")
