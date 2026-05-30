@@ -1,6 +1,7 @@
 import gzip
 import io
 import logging
+import warnings
 from datetime import datetime
 from pathlib import Path
 from types import MethodType
@@ -18,9 +19,9 @@ class Recorder:
 
     def check(self):
         if not hasattr(self.model, "people"):
-            Warning("Recorder: model expected to have a 'people' attribute.")
+            warnings.warn("Recorder: model expected to have a 'people' attribute.", stacklevel=1)
         if not hasattr(self.model, "patches"):
-            Warning("Recorder: model expected to have a 'patches' attribute.")
+            warnings.warn("Recorder: model expected to have a 'patches' attribute.", stacklevel=1)
 
         return
 
@@ -64,7 +65,7 @@ def save_hdf5_parameters(model, filename: Union[str, Path]) -> Path:
     with h5.File(filename, "w") as h5file:
         save_hdf5(h5file, model)
 
-    return filename  # Unmodified
+    return Path(filename)  # Unmodified
 
 
 def save_compressed_hdf5_parameters(model, filename: Union[str, Path]) -> Path:
@@ -76,6 +77,7 @@ def save_compressed_hdf5_parameters(model, filename: Union[str, Path]) -> Path:
         save_hdf5(h5file, model)
 
     # Step 3: Compress and save to disk
+    filename = Path(filename)
     filename = filename.with_name(filename.name + ".gz")
     with gzip.open(filename, "wb") as gz_file:
         gz_file.write(hdf5_buffer.getvalue())
