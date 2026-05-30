@@ -31,6 +31,8 @@ class PseEncoder(json.JSONEncoder):
             return int(o)
         elif isinstance(o, np.floating):
             return float(o)
+        elif isinstance(o, pd.DataFrame):
+            return o.to_dict(orient="records")
         else:
             return super().default(o)
 
@@ -569,7 +571,9 @@ def validate_parameters(params: PropertySetEx) -> None:
     )
 
     if "epidemic_peaks" in params:
-        assert isinstance(params.epidemic_peaks, pd.DataFrame), f"'epidemic_peaks' should be convertable to a Pandas DataFrame, found {type(params.epidemic_peaks)}"
+        assert isinstance(params.epidemic_peaks, pd.DataFrame), (
+            f"'epidemic_peaks' should be convertable to a Pandas DataFrame, found {type(params.epidemic_peaks)}"
+        )
         assert "iso_code" in params.epidemic_peaks.columns, f"'epidemic_peaks' should contain 'iso_code' column, {params.epidemic_peaks.columns=}"
         assert "peak_date" in params.epidemic_peaks.columns, f"'epidemic_peaks' should contain 'peak_date' column, {params.epidemic_peaks.columns=}"
 
