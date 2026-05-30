@@ -11,9 +11,11 @@ cumulative fractions), and Weighted Interval Score (WIS). All weights default to
 Shape terms are internally T-normalized so that weight parameters share a common
 scale: weight=0.25 means the term contributes roughly 25% as much as the NB core.
 
-The `epidemic_peaks` dataset required by peak shape terms and legacy helpers must be
-supplied as a pandas DataFrame with columns ``iso_code`` and ``peak_date``, either
-via ``config["epidemic_peaks"]`` or as an explicit function argument.
+The peak shape terms in the main function take an explicit
+``epidemic_peaks`` DataFrame argument (columns ``iso_code``, ``peak_date``,
+``loc_idx``) together with ``date_start`` / ``date_stop``. The legacy helpers
+``calc_multi_peak_timing_ll`` / ``calc_multi_peak_magnitude_ll`` accept the same
+DataFrame via their ``epidemic_peaks`` argument.
 
 Translation complete. Here's a summary of the key design decisions:
 
@@ -23,11 +25,12 @@ Translation complete. Here's a summary of the key design decisions:
 
 **`MOSAIC::calc_log_likelihood`**: Implemented locally as `_calc_log_likelihood_nb` since it's not in the provided R source.
 
-**`MOSAIC::epidemic_peaks`**: Replaced with a `epidemic_peaks` parameter (pandas DataFrame) passed either via `config["epidemic_peaks"]` in the main function or as an explicit argument to the legacy helpers.
+**`MOSAIC::epidemic_peaks`**: Replaced with an explicit pandas DataFrame argument — `epidemic_peaks` in the main function and `epidemic_peaks` in the legacy helpers.
 
 **`verbose`**: R's `message()` calls translated to `logger.info()` — the `verbose` flag is respected for the summary messages; internal loop logs are always emitted at INFO level per project convention.
 """
 
+import datetime
 import logging
 from typing import Optional
 
@@ -490,8 +493,9 @@ def calc_model_likelihood(
     # --- peak controls ---
     sigma_peak_time: float = 1,
     sigma_peak_log: float = 0.5,
-    # peak_indices_by_loc=None, # list of int arrays, precomputed from MOSAIC::epidemic_peaks
-    # timestep_to_weeks=7,      # 7 for daily data, 1 for weekly
+    epidemic_peaks: Optional[pd.DataFrame] = None,
+    date_start: Optional[datetime.datetime]=None,
+    date_stop: Optional[datetime.datetime]=None,
     # --- WIS ---
     wis_quantiles: np.ndarray = np.array([0.025, 0.25, 0.5, 0.75, 0.975]),  # noqa: B008
     # --- cumulative ---
@@ -499,7 +503,6 @@ def calc_model_likelihood(
     # --- NB controls ---
     nb_k_min_cases: float = 3,
     nb_k_min_deaths: float = 3,
-    config: Optional[dict] = None,
     verbose: bool = False,
 ) -> float:
     """Compute total model log-likelihood against observed cases and deaths.
@@ -518,8 +521,10 @@ def calc_model_likelihood(
     - **Cumulative progression**: NB on cumulative sums at fractional timepoints.
     - **WIS**: Negated Weighted Interval Score using NB quantile functions.
 
-    The ``epidemic_peaks`` DataFrame (required for peak terms) must be provided via
-    ``config["epidemic_peaks"]`` with columns ``iso_code`` and ``peak_date``.
+    The peak shape terms require a ``epidemic_peaks`` DataFrame (with the
+    ``loc_idx`` column identifying the simulation row each peak belongs to) and
+    the simulation calendar bounds ``date_start`` and ``date_stop``. If any of the
+    three is ``None`` (or no peak weights are set), the peak terms are skipped.
 
     Assembly formula per location j::
 
@@ -539,8 +544,14 @@ def calc_model_likelihood(
         weights_location: Non-negative location weights, length n_locations. Defaults
             to ones.
         weights_time: Non-negative time weights, length n_time_steps. Defaults to ones.
-        config: Optional dict with keys ``location_name`` (list of ISO codes),
-            ``date_start``, ``date_stop``, and optionally ``epidemic_peaks`` (DataFrame).
+        epidemic_peaks: Optional pandas DataFrame of epidemic peaks with
+            columns ``iso_code``, ``peak_date``, and ``loc_idx`` (0-based row
+            index into obs/est arrays). When ``None``, peak shape terms are
+            skipped regardless of their weights.
+        date_start: Calendar date of time-step 0 (any value pandas can promote to
+            a Timestamp). Required for the peak shape terms. Defaults to ``None``.
+        date_stop: Calendar date of the final time-step. Used together with
+            ``date_start`` to build the daily/weekly index lookup. Defaults to ``None``.
         nb_k_min_cases: Minimum NB dispersion floor for cases. Defaults to 3.
         nb_k_min_deaths: Minimum NB dispersion floor for deaths. Defaults to 3.
         verbose: If True, logs per-location component summaries at INFO level.
@@ -603,37 +614,37 @@ def calc_model_likelihood(
         raise ValueError("weights_location and weights_time must not all be zero.")
 
     # --- precompute peak indices per location (once, not per call) ---
-    peak_indices_by_loc = None
+    # `_peak_idx_lists[j]` will hold the 0-based time-step indices of known peaks
+    # for location j, or stay None if the peak terms cannot run.
+    _peak_idx_lists = None
     timestep_to_weeks = 7
-    if (weight_peak_timing > 0 or weight_peak_magnitude > 0) and config is not None:
-        location_names = config.get("location_name")
-        date_start_cfg = config.get("date_start")
-        date_stop_cfg = config.get("date_stop")
-        epidemic_peaks = config.get("epidemic_peaks")
-
-        if location_names is not None and date_start_cfg is not None and date_stop_cfg is not None and epidemic_peaks is not None:
-            date_seq = pd.date_range(start=date_start_cfg, end=date_stop_cfg, freq="D")
+    if (
+        (weight_peak_timing > 0 or weight_peak_magnitude > 0)
+        and epidemic_peaks is not None
+        and date_start is not None
+        and date_stop is not None
+    ):
+        date_seq = pd.date_range(start=date_start, end=date_stop, freq="D")
+        if len(date_seq) != n_time_steps:
+            date_seq = pd.date_range(start=date_start, end=date_stop, freq="W")
             if len(date_seq) != n_time_steps:
-                date_seq = pd.date_range(start=date_start_cfg, end=date_stop_cfg, freq="W")
-                if len(date_seq) != n_time_steps:
-                    date_seq = None
-                else:
-                    timestep_to_weeks = 1
+                date_seq = None
+            else:
+                timestep_to_weeks = 1
 
-            if date_seq is not None:
-                logger.info("Precomputing peak indices for %d locations.", n_locations)
-                peak_indices_by_loc = [[] for _ in range(n_locations)]
-                for j_pk in range(n_locations):
-                    iso_code = location_names[j_pk] if j_pk < len(location_names) else None
-                    if iso_code is None:
-                        continue
-                    loc_peaks = epidemic_peaks[epidemic_peaks["iso_code"] == iso_code]
-                    if len(loc_peaks) == 0:
-                        continue
-                    for peak_date in loc_peaks["peak_date"]:
-                        idx = int(np.argmin(np.abs(date_seq - pd.Timestamp(peak_date))))
-                        if 0 <= idx < n_time_steps:
-                            peak_indices_by_loc[j_pk].append(idx)
+        if date_seq is not None:
+            logger.info("Precomputing peak indices for %d locations.", n_locations)
+            _peak_idx_lists = [[] for _ in range(n_locations)]
+            for row in epidemic_peaks.itertuples(index=False):
+                loc_idx = getattr(row, "loc_idx", None)
+                # Inconsistency note: rows whose `loc_idx` is missing or out of
+                # range silently contribute no peaks rather than raising. The
+                # likelihood is still well-defined for the remaining rows.
+                if loc_idx is None or not (0 <= int(loc_idx) < n_locations):
+                    continue
+                idx = int(np.argmin(np.abs(date_seq - pd.Timestamp(row.peak_date))))
+                if 0 <= idx < n_time_steps:
+                    _peak_idx_lists[int(loc_idx)].append(idx)
 
     # --- main loop ---
     ll_locations = np.full(n_locations, np.nan)
@@ -679,8 +690,8 @@ def calc_model_likelihood(
         ll_peak_time_c = ll_peak_time_d = 0.0
         ll_peak_mag_c = ll_peak_mag_d = 0.0
 
-        if (weight_peak_timing > 0 or weight_peak_magnitude > 0) and peak_indices_by_loc is not None:
-            loc_peak_idx = peak_indices_by_loc[j]
+        if (weight_peak_timing > 0 or weight_peak_magnitude > 0) and _peak_idx_lists is not None:
+            loc_peak_idx = _peak_idx_lists[j]
             if loc_peak_idx:
                 if weight_peak_timing > 0:
                     if have_cases:
@@ -714,7 +725,7 @@ def calc_model_likelihood(
         # N_obs: timesteps with at least one finite observation
         n_obs = int(np.sum(np.isfinite(obs_c) | np.isfinite(obs_d)))
 
-        n_peaks_j = len(peak_indices_by_loc[j]) if peak_indices_by_loc is not None else 0
+        n_peaks_j = len(_peak_idx_lists[j]) if _peak_idx_lists is not None else 0
         n_wis_quant = len(wis_quantiles)
         n_cum_points = len(cumulative_timepoints)
 

@@ -14,6 +14,8 @@ Changelog
 * Add tests/test_compute_wis_parametric_row.py: Python translation of test_compute_wis_parametric_row.R
 * Add tests/test_ll_cumulative_progressive_nb.py: Python translation of test_ll_cumulative_progressive_nb.R
 * Add tests/test_nb_size_from_obs_weighted.py: Python translation of test_nb_size_from_obs_weighted.R
+* Update src/laser/cholera/calc_model_likelihood.py: replace the ``config`` dict argument on ``calc_model_likelihood`` with explicit ``peak_indices_by_loc`` (DataFrame with ``iso_code``, ``peak_date``, ``loc_idx`` columns), ``start_date``, and ``end_date`` kwargs.
+* Update tests/test_params.py: add tests covering ``epidemic_peaks`` ingestion (list-of-dicts and dict-of-lists → DataFrame, optional/absent case) and ``validate_parameters`` enforcement of ``iso_code`` and ``peak_date`` columns.
 
 0.10.1 (2026-01-16)
 -------------------

@@ -12,6 +12,7 @@ from typing import Union
 import h5py as h5
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from laser.core.propertyset import PropertySet
 from matplotlib.figure import Figure
 
@@ -135,7 +136,7 @@ def as_ndarray(input, dtype):
         # Don't make yet another NumPy array ...
         retval = input
     elif isinstance(input, list):
-        # Convert lists to NumPy arrays
+        # Convert lists to NumPy artrays
         sanitized = [value if value != "NA" else 0 for value in input]
         retval = np.array(sanitized, dtype=dtype)
     else:
@@ -302,6 +303,11 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
 
     if params.psi_jt.shape == (num_nodes, num_ticks):
         params.psi_jt = np.array(params.psi_jt.T)  # index on time, then location
+
+    if "epidemic_peaks" in params:
+        params.epidemic_peaks = pd.DataFrame(params.epidemic_peaks)
+        assert all(iso_code in params.location_name for iso_code in params.epidemic_peaks.iso_code)
+        params.epidemic_peaks["loc_idx"] = [params.location_name.index(iso_code) for iso_code in params.epidemic_peaks.iso_code]
 
     return params
 
@@ -561,6 +567,11 @@ def validate_parameters(params: PropertySetEx) -> None:
     assert params.decay_days_short <= params.decay_days_long, (
         f"decay_days_short ({params.decay_days_short}) value must be <= decay_days_long ({params.decay_days_long})"
     )
+
+    if "epidemic_peaks" in params:
+        assert isinstance(params.epidemic_peaks, pd.DataFrame), f"'epidemic_peaks' should be convertable to a Pandas DataFrame, found {type(params.epidemic_peaks)}"
+        assert "iso_code" in params.epidemic_peaks.columns, f"'epidemic_peaks' should contain 'iso_code' column, {params.epidemic_peaks.columns=}"
+        assert "peak_date" in params.epidemic_peaks.columns, f"'epidemic_peaks' should contain 'peak_date' column, {params.epidemic_peaks.columns=}"
 
     return
 
