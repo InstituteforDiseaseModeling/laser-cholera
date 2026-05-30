@@ -1,4 +1,4 @@
-"""Spring likelihood functions for scoring cholera model fits against observed data.
+"""Likelihood functions for scoring cholera model fits against observed data.
 
 Translated from calc_model_likelihood.R. Scores model fits using Negative Binomial
 (NB) time-series log-likelihood per location and outcome (cases, deaths) with a
@@ -15,9 +15,10 @@ The peak shape terms in the main function take an explicit
 ``epidemic_peaks`` DataFrame argument (columns ``iso_code``, ``peak_date``,
 ``loc_idx``) together with ``date_start`` / ``date_stop``. The legacy helpers
 ``calc_multi_peak_timing_ll`` / ``calc_multi_peak_magnitude_ll`` accept the same
-DataFrame via their ``epidemic_peaks`` argument.
+DataFrame via their ``epidemic_peaks`` argument and dispatch by ``iso_code``;
+they do not require the ``loc_idx`` column.
 
-Translation complete. Here's a summary of the key design decisions:
+Key design decisions:
 
 **Indexing**: R uses 1-based indices; Python uses 0-based. All `peak_indices` stored and passed as 0-based. Window slices use `[w_start:w_end]` with `w_end = peak_idx + 15` (exclusive) to match R's `(peak_idx-14):(peak_idx+14)` inclusive range.
 
@@ -25,7 +26,7 @@ Translation complete. Here's a summary of the key design decisions:
 
 **`MOSAIC::calc_log_likelihood`**: Implemented locally as `_calc_log_likelihood_nb` since it's not in the provided R source.
 
-**`MOSAIC::epidemic_peaks`**: Replaced with an explicit pandas DataFrame argument — `epidemic_peaks` in the main function and `epidemic_peaks` in the legacy helpers.
+**`MOSAIC::epidemic_peaks`**: Replaced with an explicit pandas DataFrame argument — `epidemic_peaks` in both the main function and the legacy helpers.
 
 **`verbose`**: R's `message()` calls translated to `logger.info()` — the `verbose` flag is respected for the summary messages; internal loop logs are always emitted at INFO level per project convention.
 """
@@ -237,7 +238,9 @@ def calc_multi_peak_timing_ll(
     """Compute peak timing log-likelihood using epidemic peaks data (legacy interface).
 
     Matches epidemic peak dates to the time series via a date sequence, then scores
-    estimated peak timing within ±14-step windows using a Normal prior.
+    estimated peak timing within ±14-step windows using a Normal prior. Unlike the
+    main ``calc_model_likelihood`` function, this helper dispatches by ``iso_code``
+    against the supplied DataFrame and does *not* require a ``loc_idx`` column.
 
     Args:
         obs_vec: Observed time series for one location (1-D array).
@@ -246,12 +249,17 @@ def calc_multi_peak_timing_ll(
         date_start: Start date of the time series (string or date-like).
         date_stop: End date of the time series (string or date-like).
         sigma_peak_time: SD in weeks for the Normal timing prior. Defaults to 1.
-        epidemic_peaks: pandas DataFrame with columns ``iso_code`` and ``peak_date``.
+        epidemic_peaks: pandas DataFrame with at least ``iso_code`` and
+            ``peak_date`` columns. A ``loc_idx`` column, if present, is ignored.
             Returns 0.0 if None.
 
     Returns:
         Sum of Normal log-PDFs for timing offsets. Returns 0.0 if required inputs
         are missing, no peaks are found, or the date sequence cannot be built.
+
+    Raises:
+        KeyError: If ``epidemic_peaks`` is supplied but lacks an ``iso_code`` or
+            ``peak_date`` column — propagated from pandas indexing.
     """
     if epidemic_peaks is None or iso_code is None or date_start is None or date_stop is None:
         return 0.0
@@ -292,7 +300,10 @@ def calc_multi_peak_magnitude_ll(
     """Compute peak magnitude log-likelihood using epidemic peaks data (legacy interface).
 
     Matches epidemic peak dates to the time series via a date sequence, then scores
-    estimated peak magnitudes within ±14-step windows using an adaptive log-Normal prior.
+    estimated peak magnitudes within ±14-step windows using an adaptive log-Normal
+    prior. Unlike the main ``calc_model_likelihood`` function, this helper
+    dispatches by ``iso_code`` against the supplied DataFrame and does *not*
+    require a ``loc_idx`` column.
 
     Args:
         obs_vec: Observed time series for one location (1-D array).
@@ -301,12 +312,17 @@ def calc_multi_peak_magnitude_ll(
         date_start: Start date of the time series (string or date-like).
         date_stop: End date of the time series (string or date-like).
         sigma_peak_log: Base SD on the log scale. Defaults to 0.5.
-        epidemic_peaks: pandas DataFrame with columns ``iso_code`` and ``peak_date``.
+        epidemic_peaks: pandas DataFrame with at least ``iso_code`` and
+            ``peak_date`` columns. A ``loc_idx`` column, if present, is ignored.
             Returns 0.0 if None.
 
     Returns:
         Sum of Normal log-PDFs for log-ratio peak magnitudes. Returns 0.0 if required
         inputs are missing, no peaks are found, or the date sequence cannot be built.
+
+    Raises:
+        KeyError: If ``epidemic_peaks`` is supplied but lacks an ``iso_code`` or
+            ``peak_date`` column — propagated from pandas indexing.
     """
     if epidemic_peaks is None or iso_code is None or date_start is None or date_stop is None:
         return 0.0
@@ -521,7 +537,7 @@ def calc_model_likelihood(
     - **Cumulative progression**: NB on cumulative sums at fractional timepoints.
     - **WIS**: Negated Weighted Interval Score using NB quantile functions.
 
-    The peak shape terms require a ``epidemic_peaks`` DataFrame (with the
+    The peak shape terms require an ``epidemic_peaks`` DataFrame (with the
     ``loc_idx`` column identifying the simulation row each peak belongs to) and
     the simulation calendar bounds ``date_start`` and ``date_stop``. If any of the
     three is ``None`` (or no peak weights are set), the peak terms are skipped.
@@ -542,29 +558,32 @@ def calc_model_likelihood(
         weight_cases: Scalar weight multiplier for all case components. Defaults to 1.
         weight_deaths: Scalar weight multiplier for all death components. Defaults to 1.
         weights_location: Non-negative location weights, length n_locations. Defaults
-            to ones.
-        weights_time: Non-negative time weights, length n_time_steps. Defaults to ones.
-        epidemic_peaks: Optional pandas DataFrame of epidemic peaks with
-            columns ``iso_code``, ``peak_date``, and ``loc_idx`` (0-based row
-            index into obs/est arrays). When ``None``, peak shape terms are
-            skipped regardless of their weights.
-        date_start: Calendar date of time-step 0 (any value pandas can promote to
-            a Timestamp). Required for the peak shape terms. Defaults to ``None``.
-        date_stop: Calendar date of the final time-step. Used together with
-            ``date_start`` to build the daily/weekly index lookup. Defaults to ``None``.
-        nb_k_min_cases: Minimum NB dispersion floor for cases. Defaults to 3.
-        nb_k_min_deaths: Minimum NB dispersion floor for deaths. Defaults to 3.
-        verbose: If True, logs per-location component summaries at INFO level.
+            to ones. Must contain at least one positive entry; an all-zero vector
+            raises ``ValueError`` (see Raises).
+        weights_time: Non-negative time weights, length n_time_steps. Defaults to
+            ones. Must contain at least one positive entry; an all-zero vector
+            raises ``ValueError`` (see Raises).
         weight_peak_timing: Weight for peak timing term (T-normalized). Defaults to 0.
         weight_peak_magnitude: Weight for peak magnitude term (T-normalized). Defaults to 0.
         weight_cumulative_total: Weight for cumulative progression term. Defaults to 0.
         weight_wis: Weight for WIS term (T-normalized). Defaults to 0.
         sigma_peak_time: SD in weeks for the peak timing Normal prior. Defaults to 1.
         sigma_peak_log: Base SD on log-scale for peak magnitude prior. Defaults to 0.5.
+        epidemic_peaks: Optional pandas DataFrame of epidemic peaks with columns
+            ``iso_code``, ``peak_date``, and ``loc_idx`` (0-based row index into
+            obs/est arrays). When ``None``, peak shape terms are skipped regardless
+            of their weights.
+        date_start: Calendar date of time-step 0 (any value pandas can promote to
+            a Timestamp). Required for the peak shape terms. Defaults to ``None``.
+        date_stop: Calendar date of the final time-step. Used together with
+            ``date_start`` to build the daily/weekly index lookup. Defaults to ``None``.
         wis_quantiles: Quantile levels for WIS scoring. Defaults to
             [0.025, 0.25, 0.5, 0.75, 0.975].
         cumulative_timepoints: Fractional timepoints for cumulative progression.
             Defaults to [0.25, 0.5, 0.75, 1.0].
+        nb_k_min_cases: Minimum NB dispersion floor for cases. Defaults to 3.
+        nb_k_min_deaths: Minimum NB dispersion floor for deaths. Defaults to 3.
+        verbose: If True, logs per-location component summaries at INFO level.
 
     Returns:
         Scalar total log-likelihood. Returns -np.inf if the total is non-finite and
@@ -574,6 +593,20 @@ def calc_model_likelihood(
         ValueError: If any input is not a 2-D array, dimensions are inconsistent,
             estimated values are negative, weights are negative, or weight vectors
             sum to zero.
+
+    Example:
+        Compute the core NB log-likelihood for a small two-location,
+        four-timestep toy problem with no shape terms:
+
+        >>> import numpy as np
+        >>> from laser.cholera.calc_model_likelihood import calc_model_likelihood
+        >>> obs_cases = np.array([[5, 8, 12, 7], [3, 6, 9, 4]], dtype=float)
+        >>> est_cases = np.array([[6, 9, 11, 7], [4, 6, 8, 5]], dtype=float)
+        >>> obs_deaths = np.zeros_like(obs_cases)
+        >>> est_deaths = np.zeros_like(est_cases)
+        >>> ll = calc_model_likelihood(obs_cases, est_cases, obs_deaths, est_deaths)
+        >>> ll < 0
+        True
     """
     if (
         not (isinstance(obs_cases, np.ndarray) and obs_cases.ndim == 2)
