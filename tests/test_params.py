@@ -63,8 +63,9 @@ class TestEpidemicPeaksIngestion:
     """Tests for ``epidemic_peaks`` ingestion in ``dict_to_propertysetex``.
 
     ``epidemic_peaks`` is optional but, when present, must be promoted to a
-    pandas DataFrame with ``iso_code`` and ``peak_date`` columns so that the
-    likelihood code can filter by ISO code. These tests pin that contract.
+    pandas DataFrame with ``iso_code``, ``peak_date``, and ``loc_idx`` columns
+    so that the likelihood code can dispatch each peak to the correct
+    simulation row by integer index. These tests pin that contract.
     """
 
     def test_list_of_dicts_input_becomes_dataframe(self):
@@ -73,24 +74,23 @@ class TestEpidemicPeaksIngestion:
         Given default parameters whose ``epidemic_peaks`` field is a list of
         ``{iso_code, peak_date}`` dicts (the on-disk JSON format),
         when ``get_parameters`` ingests them,
-        then ``params.epidemic_peaks`` should be a pandas DataFrame with the
-        expected ``iso_code`` and ``peak_date`` columns and the row count
-        should equal the number of input entries.
+        then ``params.epidemic_peaks`` should be a pandas DataFrame whose
+        columns are exactly ``iso_code``, ``peak_date``, ``loc_idx`` (in that
+        order), and the row count should equal the number of input entries.
 
         Failure implies the conversion in ``dict_to_propertysetex`` did not run
-        or did not preserve the columns the likelihood code expects.
+        or did not produce the columns the likelihood code expects.
         """
         raw = _load_default_dict()
         assert isinstance(raw["epidemic_peaks"], list), (
-            "default_parameters.json should provide epidemic_peaks as a list of dicts; "
-            "if this changed the test setup needs updating"
+            "default_parameters.json should provide epidemic_peaks as a list of dicts; if this changed the test setup needs updating"
         )
         expected_rows = len(raw["epidemic_peaks"])
 
         params = get_parameters(DEFAULT_PARAMS_JSON, mods={"loglevel": "DEBUG"})
 
         assert isinstance(params.epidemic_peaks, pd.DataFrame)
-        assert list(params.epidemic_peaks.columns) == ["iso_code", "peak_date"]
+        assert list(params.epidemic_peaks.columns) == ["iso_code", "peak_date", "loc_idx"]
         assert len(params.epidemic_peaks) == expected_rows
 
     def test_dict_of_lists_input_becomes_dataframe(self):
@@ -98,10 +98,11 @@ class TestEpidemicPeaksIngestion:
 
         Given a parameter dict whose ``epidemic_peaks`` field is a
         ``{column_name: [values]}`` mapping (an alternative serialization shape
-        that pandas accepts),
+        that pandas accepts) with ISO codes that exist in ``location_name``,
         when ``dict_to_propertysetex`` ingests it,
-        then ``params.epidemic_peaks`` should be a DataFrame with the same two
-        columns and the values from the input lists.
+        then ``params.epidemic_peaks`` should be a DataFrame with the input
+        columns plus the computed ``loc_idx`` column, and the row count should
+        match the input.
 
         Failure implies the conversion is too narrow and only accepts one
         serialization, which would break callers that pass the columnar form.
@@ -115,9 +116,64 @@ class TestEpidemicPeaksIngestion:
         params = dict_to_propertysetex(raw)
 
         assert isinstance(params.epidemic_peaks, pd.DataFrame)
-        assert set(params.epidemic_peaks.columns) == {"iso_code", "peak_date"}
+        assert set(params.epidemic_peaks.columns) == {"iso_code", "peak_date", "loc_idx"}
         assert len(params.epidemic_peaks) == 3
         assert params.epidemic_peaks.iloc[0]["iso_code"] == "AGO"
+
+    def test_loc_idx_column_maps_iso_code_to_location_name_index(self):
+        """The ingested ``loc_idx`` matches ``location_name.index(iso_code)`` for every row.
+
+        Given default parameters whose ``epidemic_peaks`` contains ISO codes
+        that all appear in ``location_name`` (the canonical bundled config),
+        when ``get_parameters`` ingests them,
+        then for every row in ``params.epidemic_peaks`` the ``loc_idx`` value
+        must equal the position of its ``iso_code`` inside
+        ``params.location_name``. The check uses a recomputed expected vector
+        rather than spot-checking known indices so the test pins the *rule*,
+        not the current default data.
+
+        Failure implies the ``loc_idx`` column is missing, mis-aligned with
+        the source iso codes, or computed against the wrong location list — any
+        of which would silently route peaks to the wrong simulation row in
+        ``calc_model_likelihood``.
+        """
+        params = get_parameters(DEFAULT_PARAMS_JSON, mods={"loglevel": "DEBUG"})
+
+        assert "loc_idx" in params.epidemic_peaks.columns
+        expected = [params.location_name.index(code) for code in params.epidemic_peaks["iso_code"]]
+        actual = params.epidemic_peaks["loc_idx"].tolist()
+        assert actual == expected
+
+        # Additional spot check: ``loc_idx`` is an integer index in
+        # ``[0, len(location_name))`` for every row.
+        n_locations = len(params.location_name)
+        assert all(0 <= int(idx) < n_locations for idx in actual)
+
+    def test_unknown_iso_code_in_epidemic_peaks_fails_assert(self):
+        """An ISO code in ``epidemic_peaks`` that is absent from ``location_name`` raises.
+
+        Given default parameters whose ``epidemic_peaks`` has an extra row with
+        an ISO code (``"ZZZ"``) that does not appear in ``location_name``,
+        when ``dict_to_propertysetex`` ingests the dict,
+        then the assertion in ``params.py`` that every ``iso_code`` is present
+        in ``location_name`` must fail with an ``AssertionError``.
+
+        Failure implies unknown ISO codes are silently passed through to the
+        downstream ``loc_idx`` computation, where ``list.index`` would raise a
+        ``ValueError`` later — or worse, in a future refactor, the unknown
+        code could land on a wrong index and miscredit peaks to the wrong
+        simulation row.
+        """
+        raw = _load_default_dict()
+        # Inconsistency note: the existing assert message is implicit (just
+        # ``assert all(...)``), so we only match on AssertionError rather than
+        # a specific text. If a more descriptive message is added later, this
+        # test will still pass.
+        raw["epidemic_peaks"] = raw["epidemic_peaks"] + [{"iso_code": "ZZZ", "peak_date": "2024-01-01"}]
+        assert "ZZZ" not in raw["location_name"], "Test setup assumes ZZZ is not a valid ISO code in default location_name"
+
+        with pytest.raises(AssertionError):
+            dict_to_propertysetex(raw)
 
     def test_missing_epidemic_peaks_is_allowed(self):
         """An absent ``epidemic_peaks`` entry is allowed and yields no attribute.

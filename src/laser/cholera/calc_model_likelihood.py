@@ -494,8 +494,8 @@ def calc_model_likelihood(
     sigma_peak_time: float = 1,
     sigma_peak_log: float = 0.5,
     epidemic_peaks: Optional[pd.DataFrame] = None,
-    date_start: Optional[datetime.datetime]=None,
-    date_stop: Optional[datetime.datetime]=None,
+    date_start: Optional[datetime.datetime] = None,
+    date_stop: Optional[datetime.datetime] = None,
     # --- WIS ---
     wis_quantiles: np.ndarray = np.array([0.025, 0.25, 0.5, 0.75, 0.975]),  # noqa: B008
     # --- cumulative ---
@@ -618,12 +618,7 @@ def calc_model_likelihood(
     # for location j, or stay None if the peak terms cannot run.
     _peak_idx_lists = None
     timestep_to_weeks = 7
-    if (
-        (weight_peak_timing > 0 or weight_peak_magnitude > 0)
-        and epidemic_peaks is not None
-        and date_start is not None
-        and date_stop is not None
-    ):
+    if (weight_peak_timing > 0 or weight_peak_magnitude > 0) and epidemic_peaks is not None and date_start is not None and date_stop is not None:
         date_seq = pd.date_range(start=date_start, end=date_stop, freq="D")
         if len(date_seq) != n_time_steps:
             date_seq = pd.date_range(start=date_start, end=date_stop, freq="W")
