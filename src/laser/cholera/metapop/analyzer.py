@@ -23,7 +23,7 @@ class Analyzer:
                 nreports = min(model.params.reported_cases.shape[1], model.patches.incidence.shape[0] - 1)
                 try:
                     optional = {
-                        key: model.params.key
+                        key: model.params[key]
                         for key in [
                             "weight_cases",
                             "weight_deaths",
@@ -37,14 +37,18 @@ class Analyzer:
                             "weight_wis",
                             "sigma_peak_time",
                             "sigma_peak_log",
+                            "epidemic_peaks",
+                            "date_start",
+                            "date_stop",
                         ]
                         if key in model.params
                     }
+
                     model.log_likelihood = calc_model_likelihood(
                         obs_cases=model.params.reported_cases[:, :nreports],
                         est_cases=model.results.reported_cases[:, :nreports],
                         obs_deaths=model.params.reported_deaths[:, :nreports],
-                        est_deaths=model.patches.reported_deaths[:, :nreports],
+                        est_deaths=model.results.reported_deaths[:, :nreports],
                         **optional,
                     )
                 except ValueError as e:
