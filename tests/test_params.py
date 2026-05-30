@@ -58,6 +58,36 @@ class TestGetParameters:
         """
         _params = get_parameters(PARAMS_DIR / "default_parameters.json.gz", mods={"loglevel": "DEBUG"})
 
+    @pytest.mark.parametrize(
+        "suffix",
+        [".h5", ".hdf", ".hdf5", ".h5.gz", ".hdf.gz", ".hdf5.gz"],
+    )
+    def test_hdf5_config_paths_no_longer_supported(self, suffix):
+        """Config-parameter ingestion from HDF5 files is rejected.
+
+        Given a ``get_parameters`` call with a file path whose suffix is one of
+        the historical HDF5 variants (``.h5``, ``.hdf``, ``.hdf5``, and their
+        ``.gz`` compressed forms),
+        when the function attempts to dispatch on suffix,
+        then it should raise a ``KeyError`` because the loader entry has been
+        removed from ``fn_map``.
+
+        Failure implies HDF5 config-parameter loading has been silently
+        re-introduced. This test does not require the file to exist — the
+        suffix-based dispatch error is raised before any disk access.
+
+        Inconsistency note: the propagated error type is ``KeyError`` from a
+        raw dict lookup rather than a domain-specific exception with a helpful
+        message. If a cleaner error is added later, this test can be tightened
+        to assert on the new exception type / message.
+        """
+        # Use a deliberately non-existent path so we don't accidentally read
+        # any real HDF5 fixtures lying around in the data directory.
+        bogus = Path("/nonexistent") / f"params{suffix}"
+
+        with pytest.raises(KeyError):
+            get_parameters(bogus)
+
 
 class TestEpidemicPeaksIngestion:
     """Tests for ``epidemic_peaks`` ingestion in ``dict_to_propertysetex``.

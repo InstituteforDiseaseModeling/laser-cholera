@@ -3,13 +3,11 @@ import io
 import json
 import logging
 from datetime import datetime
-from datetime import timedelta
 from numbers import Number
 from pathlib import Path
 from typing import Optional
 from typing import Union
 
-import h5py as h5
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -59,12 +57,6 @@ def get_parameters(
     fn_map = {
         (".json",): load_json_parameters,
         (".json", ".gz"): load_compressed_json_parameters,
-        (".h5",): load_hdf5_parameters,
-        (".hdf",): load_hdf5_parameters,
-        (".hdf5",): load_hdf5_parameters,
-        (".h5", ".gz"): load_compressed_hdf5_parameters,
-        (".hdf", ".gz"): load_compressed_hdf5_parameters,
-        (".hdf5", ".gz"): load_compressed_hdf5_parameters,
     }
 
     if isinstance(paramsource, (str, Path, type(None))):
@@ -312,85 +304,6 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
         params.epidemic_peaks["loc_idx"] = [params.location_name.index(iso_code) for iso_code in params.epidemic_peaks.iso_code]
 
     return params
-
-
-def load_hdf5_parameters(filename: Union[str, Path]) -> PropertySetEx:
-    with h5.File(filename, "r") as h5file:
-        parameters = load_hdf5(h5file)
-
-    return parameters
-
-
-def load_compressed_hdf5_parameters(filename: Union[str, Path]) -> PropertySetEx:
-    with gzip.open(filename, "rb") as gz_file:
-        with io.BytesIO(gz_file.read()) as file:
-            with h5.File(file, "r") as h5file:
-                parameters = load_hdf5(h5file)
-
-    return parameters
-
-
-def load_hdf5(h5file) -> PropertySetEx:
-    ps = PropertySetEx()
-
-    # date_start and date_stop
-    start = h5file["date_start"][()][0]
-    stop = h5file["date_stop"][()][0]
-    epoch = datetime(year=1970, month=1, day=1)
-    ps.date_start = epoch + timedelta(days=start)
-    ps.date_stop = epoch + timedelta(days=stop)
-    nticks = ps.nticks = (ps.date_stop - ps.date_start).days + 1  # +1 to include stop date
-
-    # scalars
-    for scalar in [
-        "phi_1",
-        "phi_2",
-        "omega_1",
-        "omega_2",
-        "iota",
-        "gamma_1",
-        "gamma_2",
-        "epsilon",
-        "rho",
-        "sigma",
-        "alpha_1",
-        "alpha_2",
-        "zeta_1",
-        "zeta_2",
-        "kappa",
-        "decay_days_short",
-        "decay_days_long",
-        "decay_shape_1",
-        "decay_shape_2",
-    ]:
-        ps[scalar] = h5file[scalar][()][0]
-
-    # per location vectors
-    for vector in [
-        "location_name",
-        "S_j_initial",
-        "E_j_initial",
-        "I_j_initial",
-        "R_j_initial",
-        "V1_j_initial",
-        "V2_j_initial",
-        "beta_j0_hum",
-        "beta_j0_env",
-        "tau_i",
-        "theta_j",
-    ]:
-        ps[vector] = h5file[vector][()]
-
-    npatches = len(ps.location_name)
-
-    # per tick, per location arrays
-    for array in ["b_jt", "d_jt", "nu_1_jt", "nu_2_jt", "mu_jt", "psi_jt"]:
-        temp = np.zeros((nticks, npatches), dtype=np.float32)
-        for ipatch in range(ps.location_name):
-            temp[:, ipatch] = h5file[array][str(ipatch + 1)][()]
-        ps[array] = temp
-
-    return ps
 
 
 def validate_parameters(params: PropertySetEx) -> None:

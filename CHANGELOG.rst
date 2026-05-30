@@ -16,6 +16,7 @@ Changelog
 * Add tests/test_nb_size_from_obs_weighted.py: Python translation of test_nb_size_from_obs_weighted.R
 * Update src/laser/cholera/calc_model_likelihood.py: replace the ``config`` dict argument on ``calc_model_likelihood`` with explicit ``epidemic_peaks`` (DataFrame with ``iso_code``, ``peak_date``, ``loc_idx`` columns), ``date_start``, and ``date_stop`` kwargs.
 * Update src/laser/cholera/metapop/params.py: ingestion of ``epidemic_peaks`` now asserts each ``iso_code`` is in ``location_name`` and appends a ``loc_idx`` column mapping each row to its simulation location index.
+* Remove HDF5 config-parameter loading from src/laser/cholera/metapop/params.py (``load_hdf5_parameters``, ``load_compressed_hdf5_parameters``, ``load_hdf5`` and the ``.h5``/``.hdf``/``.hdf5`` entries in ``get_parameters`` dispatch). HDF5 *output* via ``recorder.py`` is unaffected, as is the ``hdf5_output`` flag in ``utils.py``. Add a parametrized regression test in tests/test_params.py confirming HDF5 suffixes are now rejected by ``get_parameters``.
 * Update tests/test_params.py: add tests covering ``epidemic_peaks`` ingestion (list-of-dicts and dict-of-lists → DataFrame, optional/absent case, ``loc_idx`` mapping correctness, unknown-ISO ``AssertionError``) and ``validate_parameters`` enforcement of ``iso_code`` and ``peak_date`` columns.
 
 0.10.1 (2026-01-16)
