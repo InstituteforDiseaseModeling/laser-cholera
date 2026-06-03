@@ -25,6 +25,7 @@ exact values so the RNG difference does not affect correctness.
 """
 
 import numpy as np
+import pandas as pd
 import pytest
 import scipy.stats
 
@@ -153,7 +154,6 @@ class TestCalcModelLikelihood:
             est_cases=est_na,
             obs_deaths=obs_na,
             est_deaths=est_na,
-            verbose=True,
         )
         assert np.isfinite(ll) or np.isnan(ll)
 
@@ -174,7 +174,6 @@ class TestCalcModelLikelihood:
             est_cases=est_real,
             obs_deaths=obs_na,
             est_deaths=est_real,
-            verbose=True,
         )
         assert np.isfinite(ll) or np.isnan(ll)
 
@@ -396,7 +395,6 @@ class TestCalcModelLikelihood:
             weight_peak_magnitude=0.25,
             weight_cumulative_total=0.25,
             weight_wis=0.10,
-            verbose=False,
         )
         assert np.isfinite(ll_all)
         ll_core_only = calc_model_likelihood(
@@ -444,3 +442,109 @@ class TestCalcModelLikelihood:
             est_deaths=est_deaths,
         )
         assert np.isfinite(ll)
+
+    def test_out_of_window_peaks_are_filtered(self):
+        """Peak dates outside ``[date_start, date_stop]`` do not contribute to the LL.
+
+        Given an ``epidemic_peaks`` DataFrame whose only row falls *before* the
+        simulation window, with ``weight_peak_timing > 0`` and the matching
+        ``date_start``/``date_stop`` kwargs supplied,
+        when ``calc_model_likelihood`` is called,
+        then the result must equal the LL computed with no peak data at all —
+        proving the out-of-window row was dropped rather than clamped to t=0.
+
+        Failure implies the in-window filter has regressed. Before the filter,
+        ``np.argmin`` would have snapped the calendar peak to time-step 0 and
+        the peak-shape term would contribute a non-zero score, making
+        ``ll_with`` and ``ll_without`` differ.
+        """
+        n_loc, n_time = 1, 52
+        obs = np.full((n_loc, n_time), 5, dtype=float)
+        est = np.full((n_loc, n_time), 5, dtype=float)
+        obs_d = np.ones_like(obs)
+        est_d = np.ones_like(est)
+
+        out_of_window = pd.DataFrame(
+            {"iso_code": ["AAA"], "peak_date": ["2010-01-01"], "loc_idx": [0]},
+        )
+        ll_with = calc_model_likelihood(
+            obs_cases=obs,
+            est_cases=est,
+            obs_deaths=obs_d,
+            est_deaths=est_d,
+            weight_peak_timing=0.25,
+            epidemic_peaks=out_of_window,
+            date_start="2024-01-01",
+            date_stop="2024-12-30",
+        )
+        ll_without = calc_model_likelihood(
+            obs_cases=obs,
+            est_cases=est,
+            obs_deaths=obs_d,
+            est_deaths=est_d,
+            weight_peak_timing=0.25,
+        )
+        assert ll_with == pytest.approx(ll_without)
+
+    def test_mixed_window_peaks_only_in_window_counted(self):
+        """In-window peaks contribute exactly as if out-of-window rows were absent.
+
+        Given an ``epidemic_peaks`` DataFrame containing one in-window peak
+        (mid-simulation) and one far-out-of-window peak for the same location,
+        and a second DataFrame with only the in-window peak,
+        when ``calc_model_likelihood`` is called with each in turn (peak terms
+        enabled and the calendar bounds supplied),
+        then the two scores must be equal — the out-of-window row must
+        contribute exactly zero, not be clamped to an endpoint.
+
+        Failure implies a partial regression where only some out-of-window
+        rows are filtered (e.g., leading edge but not trailing, or NaN dates
+        but not date arithmetic). The estimated time series is non-uniform
+        around the in-window peak so the peak-shape term has a non-trivial
+        contribution; otherwise the test would pass vacuously even with a
+        broken filter.
+        """
+        n_loc, n_time = 1, 52
+        # Build a clear epidemic curve so the peak-shape term has signal.
+        obs = np.full((n_loc, n_time), 5, dtype=float)
+        obs[0, 19:30] = [10, 20, 30, 40, 50, 40, 30, 20, 10, 5, 5]
+        est = np.full((n_loc, n_time), 5, dtype=float)
+        est[0, 19:30] = [10, 20, 30, 40, 50, 40, 30, 20, 10, 5, 5]
+        obs_d = np.ones_like(obs)
+        est_d = np.ones_like(est)
+
+        # Simulation runs 2024-01-01..2024-12-30 → 52 weeks daily-clamped via
+        # the weekly fallback. Calendar peak at week 25 is inside; calendar
+        # peak in 2010 is outside.
+        date_start = "2024-01-01"
+        date_stop = "2024-12-30"
+
+        in_window_only = pd.DataFrame(
+            {
+                "iso_code": ["AAA"],
+                "peak_date": ["2024-06-24"],  # roughly week 25
+                "loc_idx": [0],
+            },
+        )
+        mixed = pd.DataFrame(
+            {
+                "iso_code": ["AAA", "AAA"],
+                "peak_date": ["2024-06-24", "2010-06-01"],
+                "loc_idx": [0, 0],
+            },
+        )
+
+        kwargs = {
+            "obs_cases": obs,
+            "est_cases": est,
+            "obs_deaths": obs_d,
+            "est_deaths": est_d,
+            "weight_peak_timing": 0.25,
+            "weight_peak_magnitude": 0.25,
+            "date_start": date_start,
+            "date_stop": date_stop,
+        }
+        ll_in_only = calc_model_likelihood(epidemic_peaks=in_window_only, **kwargs)
+        ll_mixed = calc_model_likelihood(epidemic_peaks=mixed, **kwargs)
+
+        assert ll_in_only == pytest.approx(ll_mixed)

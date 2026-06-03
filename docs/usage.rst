@@ -3,7 +3,7 @@ Usage
 =====
 
 Computing the model log-likelihood
-==================================
+----------------------------------
 
 The :func:`laser.cholera.calc_model_likelihood.calc_model_likelihood` function
 scores a model fit against observed cases and deaths. It accepts four 2-D
