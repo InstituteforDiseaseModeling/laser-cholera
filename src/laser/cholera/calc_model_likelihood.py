@@ -13,10 +13,14 @@ scale: weight=0.25 means the term contributes roughly 25% as much as the NB core
 
 The peak shape terms in the main function take an explicit
 ``epidemic_peaks`` DataFrame argument (columns ``iso_code``, ``peak_date``,
-``loc_idx``) together with ``date_start`` / ``date_stop``. The legacy helpers
+``loc_idx``) together with ``date_start`` / ``date_stop``. Peak rows whose
+``peak_date`` falls outside ``[date_start, date_stop]`` are dropped before
+index assignment, so out-of-window calendar peaks contribute nothing rather
+than getting clamped to the simulation endpoints. The legacy helpers
 ``calc_multi_peak_timing_ll`` / ``calc_multi_peak_magnitude_ll`` accept the same
-DataFrame via their ``epidemic_peaks`` argument and dispatch by ``iso_code``;
-they do not require the ``loc_idx`` column.
+DataFrame via their ``epidemic_peaks`` argument, apply the same in-window
+filter, and dispatch by ``iso_code``; they do not require the ``loc_idx``
+column.
 
 Key design decisions:
 
@@ -27,8 +31,6 @@ Key design decisions:
 **`MOSAIC::calc_log_likelihood`**: Implemented locally as `_calc_log_likelihood_nb` since it's not in the provided R source.
 
 **`MOSAIC::epidemic_peaks`**: Replaced with an explicit pandas DataFrame argument — `epidemic_peaks` in both the main function and the legacy helpers.
-
-**`verbose`**: R's `message()` calls translated to `logger.info()` — the `verbose` flag is respected for the summary messages; internal loop logs are always emitted at INFO level per project convention.
 """
 
 import datetime
@@ -276,9 +278,16 @@ def calc_multi_peak_timing_ll(
             return 0.0
         timestep_to_weeks = 1
 
+    # Drop peaks outside the simulation window; otherwise `np.argmin` snaps
+    # them to t=0 or t=len(obs_vec)-1 and biases the LL term.
+    date_lo = pd.Timestamp(date_start)  # date_seq[0]
+    date_hi = pd.Timestamp(date_stop)  # date_seq[-1]
     peak_indices = []
     for peak_date in loc_peaks["peak_date"]:
-        idx = int(np.argmin(np.abs(date_seq - pd.Timestamp(peak_date))))
+        peak_ts = pd.Timestamp(peak_date)
+        if pd.isna(peak_ts) or peak_ts < date_lo or peak_ts > date_hi:
+            continue
+        idx = int(np.argmin(np.abs(date_seq - peak_ts)))
         if 0 <= idx < len(obs_vec):
             peak_indices.append(idx)
 
@@ -337,9 +346,16 @@ def calc_multi_peak_magnitude_ll(
         if len(date_seq) != len(obs_vec):
             return 0.0
 
+    # Drop peaks outside the simulation window; otherwise `np.argmin` snaps
+    # them to t=0 or t=len(obs_vec)-1 and biases the LL term.
+    date_lo = pd.Timestamp(date_start)  # date_seq[0]
+    date_hi = pd.Timestamp(date_stop)  # date_seq[-1]
     peak_indices = []
     for peak_date in loc_peaks["peak_date"]:
-        idx = int(np.argmin(np.abs(date_seq - pd.Timestamp(peak_date))))
+        peak_ts = pd.Timestamp(peak_date)
+        if pd.isna(peak_ts) or peak_ts < date_lo or peak_ts > date_hi:
+            continue
+        idx = int(np.argmin(np.abs(date_seq - peak_ts)))
         if 0 <= idx < len(obs_vec):
             peak_indices.append(idx)
 
@@ -519,7 +535,6 @@ def calc_model_likelihood(
     # --- NB controls ---
     nb_k_min_cases: float = 3,
     nb_k_min_deaths: float = 3,
-    verbose: bool = False,
 ) -> float:
     """Compute total model log-likelihood against observed cases and deaths.
 
@@ -583,7 +598,6 @@ def calc_model_likelihood(
             Defaults to [0.25, 0.5, 0.75, 1.0].
         nb_k_min_cases: Minimum NB dispersion floor for cases. Defaults to 3.
         nb_k_min_deaths: Minimum NB dispersion floor for deaths. Defaults to 3.
-        verbose: If True, logs per-location component summaries at INFO level.
 
     Returns:
         Scalar total log-likelihood. Returns -np.inf if the total is non-finite and
@@ -663,14 +677,22 @@ def calc_model_likelihood(
         if date_seq is not None:
             logger.info("Precomputing peak indices for %d locations.", n_locations)
             _peak_idx_lists = [[] for _ in range(n_locations)]
+            date_lo = pd.Timestamp(date_start)  # date_seq[0]
+            date_hi = pd.Timestamp(date_stop)  # date_seq[-1]
             for row in epidemic_peaks.itertuples(index=False):
                 loc_idx = getattr(row, "loc_idx", None)
-                # Inconsistency note: rows whose `loc_idx` is missing or out of
-                # range silently contribute no peaks rather than raising. The
-                # likelihood is still well-defined for the remaining rows.
+                # Rows with missing or out-of-range `loc_idx` silently contribute
+                # no peaks rather than raising; the likelihood is still
+                # well-defined for the remaining rows.
                 if loc_idx is None or not (0 <= int(loc_idx) < n_locations):
                     continue
-                idx = int(np.argmin(np.abs(date_seq - pd.Timestamp(row.peak_date))))
+                peak_ts = pd.Timestamp(row.peak_date)
+                # Drop peaks outside the simulation window; otherwise
+                # `np.argmin` snaps them to t=0 or t=n_time_steps-1 and biases
+                # the peak-shape terms.
+                if pd.isna(peak_ts) or peak_ts < date_lo or peak_ts > date_hi:
+                    continue
+                idx = int(np.argmin(np.abs(date_seq - peak_ts)))
                 if 0 <= idx < n_time_steps:
                     _peak_idx_lists[int(loc_idx)].append(idx)
 
