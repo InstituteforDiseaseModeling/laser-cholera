@@ -75,3 +75,5 @@ docs/_build
 
 tmp/
 /*h5*
+src/laser/cholera/*.R
+tests/*.R

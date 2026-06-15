@@ -13,7 +13,6 @@ class Infectious:
         model.people.add_vector_property("Isym", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.people.add_vector_property("Iasym", length=model.params.nticks + 1, dtype=np.int32, default=0)
         assert hasattr(model, "patches"), "Infectious: model needs to have a 'patches' attribute."
-        model.patches.add_vector_property("expected_cases", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("disease_deaths", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("new_symptomatic", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("reported_cases", length=model.params.nticks + 1, dtype=np.int32, default=0)
@@ -46,6 +45,7 @@ class Infectious:
         assert "iota" in self.model.params, "Infectious: model params needs to have a 'iota' (progression rate) parameter."
         assert "sigma" in self.model.params, "Infectious: model params needs to have a 'sigma' (symptomatic fraction) parameter."
         assert "rho" in self.model.params, "Infectious: model params needs to have a 'rho' (detected/expected cases) parameter."
+        assert "rho_deaths" in self.model.params, "Infectious: model params needs to have a 'rho_deaths' (detected/expected deaths) parameter."
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
 
@@ -87,9 +87,9 @@ class Infectious:
 
         idx_death_report = int(tick - model.params.delta_reporting_deaths)
         if idx_death_report >= 0:
-            model.patches.reported_deaths[tick] += np.round(model.patches.disease_deaths[idx_death_report] * model.params.rho_deaths).astype(
-                model.patches.reported_deaths.dtype
-            )
+            model.patches.reported_deaths[tick] += model.prng.binomial(
+                model.patches.disease_deaths[idx_death_report], model.params.rho_deaths
+            ).astype(model.patches.reported_deaths.dtype)
 
         ## recovery (gamma)
         recovered = model.prng.binomial(Is_next, -np.expm1(-model.params.gamma_1)).astype(Is_next.dtype)
@@ -129,20 +129,15 @@ class Infectious:
         Ia_next += new_asymptomatic
         model.patches.new_symptomatic[tick + 1] = new_symptomatic
 
-        # Update expected cases
-        expected_cases = model.patches.expected_cases[tick + 1]
-        expected_cases += np.round(new_symptomatic / model.params.rho).astype(expected_cases.dtype)
-
         # Update reported cases
         idx_probe = tick - model.params.delta_reporting_cases
         if idx_probe >= 0:
             infected_fraction = model.people.Isym[idx_probe] / model.patches.N[idx_probe]
             # Use chi_endemic or chi_epidemic depending on local infected fraction.
             chi_eff = np.where(infected_fraction < model.params.epidemic_threshold, model.params.chi_endemic, model.params.chi_epidemic)
-            # Note that sigma is already factored into the calculation of Isym (see above).
-            model.patches.reported_cases[tick + 1] += np.round(model.people.Isym[idx_probe] * model.params.rho / chi_eff).astype(
-                model.patches.reported_cases.dtype
-            )
+            model.patches.reported_cases[tick + 1] += np.round(
+                model.prng.binomial(model.patches.new_symptomatic[idx_probe], model.params.rho) / chi_eff
+            ).astype(model.patches.reported_cases.dtype)
 
         # human-to-human infection in humantohuman.py
         # environmental infection in envtohuman.py
