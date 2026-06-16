@@ -52,7 +52,6 @@ Issues = "https://github.com/InstituteforDiseaseModeling/laser-cholera/issues"
 Changelog = "https://github.com/InstituteforDiseaseModeling/laser-cholera/blob/master/CHANGELOG.md"
 
 [project.scripts]
-cli = "laser.cholera.cli:run"
 metapop = "laser.cholera.metapop.model:cli_run"
 
 [tool.uv.build-backend]
