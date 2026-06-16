@@ -137,9 +137,13 @@ class TestOverrideHelper(unittest.TestCase):
         """
         typed = override_helper({"date_start": "2024-01-15", "date_stop": "2024-12-31"})
         assert isinstance(typed["date_start"], datetime)
-        assert typed["date_start"].year == 2024 and typed["date_start"].month == 1 and typed["date_start"].day == 15
+        assert typed["date_start"].year == 2024
+        assert typed["date_start"].month == 1
+        assert typed["date_start"].day == 15
         assert isinstance(typed["date_stop"], datetime)
-        assert typed["date_stop"].year == 2024 and typed["date_stop"].month == 12 and typed["date_stop"].day == 31
+        assert typed["date_stop"].year == 2024
+        assert typed["date_stop"].month == 12
+        assert typed["date_stop"].day == 31
 
     def test_bool_string_overrides_are_coerced(self):
         """Truthy/falsy strings are mapped to True/False via the bool-from-string helper.

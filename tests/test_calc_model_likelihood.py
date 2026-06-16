@@ -445,7 +445,6 @@ class TestCalcModelLikelihood:
         )
         assert np.isfinite(ll)
 
-
     def test_out_of_window_peaks_are_filtered(self):
         """Peak dates outside ``[date_start, date_stop]`` do not contribute to the LL.
 
@@ -551,6 +550,7 @@ class TestCalcModelLikelihood:
         ll_mixed = calc_model_likelihood(epidemic_peaks=mixed, **kwargs)
 
         assert ll_in_only == pytest.approx(ll_mixed)
+
 
 class TestLegacyPeakHelpers:
     """Tests for ``calc_multi_peak_timing_ll`` and ``calc_multi_peak_magnitude_ll``.
@@ -1125,15 +1125,15 @@ class TestCalcModelLikelihoodCoverage:
                 "loc_idx": [0, 99],  # 99 is out of range for n_locations=1
             },
         )
-        kw = dict(
-            obs_cases=obs,
-            est_cases=est,
-            obs_deaths=obs_d,
-            est_deaths=est_d,
-            weight_peak_timing=0.25,
-            date_start="2024-01-01",
-            date_stop="2024-12-31",
-        )
+        kw = {
+            "obs_cases": obs,
+            "est_cases": est,
+            "obs_deaths": obs_d,
+            "est_deaths": est_d,
+            "weight_peak_timing": 0.25,
+            "date_start": "2024-01-01",
+            "date_stop": "2024-12-31",
+        }
         ll_valid = calc_model_likelihood(epidemic_peaks=valid_only, **kw)
         ll_mixed = calc_model_likelihood(epidemic_peaks=mixed, **kw)
         assert ll_valid == pytest.approx(ll_mixed)
@@ -1182,7 +1182,6 @@ class TestCalcModelLikelihoodCoverage:
         ``nb_size_from_obs_weighted`` is dead; the function would divide by
         a non-positive denominator and emit NaN.
         """
-        n_loc, n_time = 1, 3
         obs = np.array([[5.0, 5.0, 5.0]])
         est = np.array([[5.0, 5.0, 5.0]])
         obs_d = np.zeros_like(obs)
@@ -1208,7 +1207,6 @@ class TestCalcModelLikelihoodCoverage:
         ``_calc_log_likelihood_nb`` has regressed; the function would
         compute a weighted sum over an empty mask, producing NaN.
         """
-        n_loc, n_time = 1, 3
         obs = np.array([[5.0, 5.0, 5.0]])
         est = np.array([[1.0, 1.0, np.nan]])  # NaN at the only non-zero-weight index
         obs_d = np.zeros_like(obs)
@@ -1239,7 +1237,6 @@ class TestCalcModelLikelihoodCoverage:
         single mis-scaled location could poison the entire model LL with
         NaN.
         """
-        n_loc, n_time = 1, 5
         # Mild mismatch so ll_cases is a finite negative number.
         obs = np.array([[5.0, 6.0, 7.0, 8.0, 9.0]])
         est = np.array([[1.0, 2.0, 3.0, 4.0, 5.0]])
