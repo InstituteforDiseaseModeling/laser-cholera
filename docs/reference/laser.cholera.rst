@@ -33,14 +33,6 @@ laser.cholera.calc\_model\_likelihood module
    :show-inheritance:
    :undoc-members:
 
-laser.cholera.cli module
-------------------------
-
-.. automodule:: laser.cholera.cli
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 laser.cholera.core module
 -------------------------
 
@@ -53,14 +45,6 @@ laser.cholera.iso\_codes module
 -------------------------------
 
 .. automodule:: laser.cholera.iso_codes
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-laser.cholera.likelihood module
--------------------------------
-
-.. automodule:: laser.cholera.likelihood
    :members:
    :show-inheritance:
    :undoc-members:
