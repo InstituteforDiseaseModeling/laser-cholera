@@ -1,5 +1,4 @@
 from datetime import datetime
-from functools import partial
 
 import numpy as np
 from laser.core.migration import distance
@@ -80,10 +79,15 @@ def override_helper(overrides) -> dict:
     def bool_from_string(value):
         return str(value).lower() in ("true", "1", "yes", "y", "t", "on", "enabled")
 
+    # `datetime.strptime` is a C function that rejects keyword arguments, so
+    # `functools.partial` against it would TypeError; wrap in a lambda instead.
+    def _parse_date(value):
+        return datetime.strptime(value, "%Y-%m-%d")  # noqa: DTZ007
+
     mapping = {
         "seed": int,
-        "date_start": partial(datetime.strptime, format="%Y-%m-%d"),
-        "date_stop": partial(datetime.strptime, format="%Y-%m-%d"),
+        "date_start": _parse_date,
+        "date_stop": _parse_date,
         "location_name": None,  # vector
         "S_j_initial": None,  # vector # TODO consider partial np.array(dtype=np.int32)
         "E_j_initial": None,  # vector

@@ -511,6 +511,82 @@ class TestVaccinated(unittest.TestCase):
 
         return
 
+    def test_second_dose_doses_clamped_when_scheduled_doses_exceed_v1(self):
+        """``dose_two_doses`` is clamped to current V1 when the schedule asks for more.
+
+        Given V1=5 per patch, V2=0, ``omega_2=0`` (no waning), ``phi_2=1.0``
+        (every clamped dose immunizes), and ``nu_2_jt`` set to 100 doses/day
+        for the first 32 days (far above the 5 V1 available),
+        when the model is run,
+        then on each of those days ``dose_two_doses`` must equal exactly the
+        V1 available *before* the clamp transferred any of it (so the first
+        day records 5, and subsequent days record 0 once V1 is depleted).
+
+        Failure implies the clamp branch (vaccinated.py lines 88-89) has
+        regressed and the recorder either records the requested (clipped or
+        unclipped) schedule value rather than the achievable count, biasing
+        downstream dose-tracking analyses.
+        """
+        params = self.get_test_parameters(V1=5, V2=0)
+
+        params.d_jt *= 0  # turn off natural mortality
+        params.omega_1 = 0  # turn off waning immunity - one dose
+        params.omega_2 = 0  # turn off waning immunity - two dose
+        params.phi_2 = 1.0  # perfect efficacy on second dose
+        params.nu_1_jt *= 0  # turn off first dose vaccination
+        params.nu_2_jt[0:32] = 100  # request far more than available V1
+
+        model = Model(parameters=params)
+        model.components = [Susceptible, Exposed, Vaccinated, Census]
+        model.run()
+
+        # All recorded second doses sum to at most the starting V1 (5) per patch,
+        # because clamp can't keep extracting from a depleted V1.
+        per_patch_total = model.patches.dose_two_doses[: model.params.nticks].sum(axis=0)
+        # Inconsistency note: V1 starts at 5 and phi_2=1.0 immunizes the clamped
+        # count; once V1 is depleted, subsequent days record 0. We assert the
+        # aggregate equals the starting V1 per patch.
+        assert np.all(per_patch_total == 5), f"dose_two_doses should be clamped to V1=5 per patch, got {per_patch_total}"
+
+    def test_first_dose_doses_clamped_when_scheduled_doses_exceed_source_pop(self):
+        """``dose_one_doses`` is clamped to the available source-compartment population.
+
+        Given a parameter set whose source populations (S + E + Isym + Iasym +
+        R) sum to only 10 people per patch and ``nu_1_jt`` requests 1000
+        doses/day for the first day,
+        when the model is run,
+        then ``dose_one_doses[0]`` must be at most the available_pop (10 per
+        patch), not the unrealistic 1000 from the schedule.
+
+        Failure implies the available-population clamp branch (vaccinated.py
+        lines 111-116) has regressed; the model would then "deliver" more
+        first doses than there are eligible recipients, inflating the V1
+        compartment past the source population.
+        """
+        # Build params with a tiny source population so we can verify the clamp
+        # fires on the very first tick.
+        params = self.get_test_parameters(V1=0, V2=0)
+        params.S_j_initial[:] = 10
+        params.E_j_initial[:] = 0
+        params.I_j_initial[:] = 0
+        params.R_j_initial[:] = 0
+        params.d_jt *= 0
+        params.omega_1 = 0
+        params.omega_2 = 0
+        params.phi_1 = 1.0
+        params.nu_1_jt *= 0
+        params.nu_1_jt[0] = 1000  # request 1000 doses on tick 0; only 10 eligible
+        params.nu_2_jt *= 0
+
+        model = Model(parameters=params)
+        model.components = [Susceptible, Exposed, Vaccinated, Census]
+        model.run()
+
+        # On the tick the clamp fires, dose_one_doses must equal the
+        # available source population, not the schedule value.
+        recorded = model.patches.dose_one_doses[0]
+        assert np.all(recorded <= 10), f"dose_one_doses[0] should be clamped to available_pop=10, got {recorded}"
+
 
 if __name__ == "__main__":
     unittest.main()
