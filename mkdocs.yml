@@ -84,18 +84,11 @@ extra_javascript:
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
-# Files in docs/ that should NOT end up in the built site. During the
-# parallel-build phase the legacy Sphinx artefacts live alongside the new
-# Markdown content; MkDocs would otherwise copy them through as static
-# assets. Each line is a fnmatch pattern relative to docs/.
+# Files in docs/ that should NOT end up in the built site.
 exclude_docs: |
-  *.rst
-  conf.py
   requirements.txt
-  spelling_wordlist.txt
   _gen_reference.py
   __pycache__/*
-  reference/*.rst
 
 # Note: the nav is intentionally minimal during the parallel-build phase.
 # The literate-nav plugin pulls reference/ from docs/_gen_reference.py's

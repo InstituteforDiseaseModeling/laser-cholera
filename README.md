@@ -2,7 +2,7 @@
 
 -----
 
-[![documentation](https://readthedocs.org/projects/laser-cholera/badge/?style=flat)](https://docs.idmod.org/projects/laser-cholera/en/latest/)
+[![documentation](https://img.shields.io/badge/docs-mkdocs--material-blue)](https://InstituteforDiseaseModeling.github.io/laser-cholera/)
 
 ![tests](https://github.com/InstituteforDiseaseModeling/laser-cholera/actions/workflows/github-actions.yml/badge.svg)
 

@@ -405,15 +405,11 @@ admin — cannot be automated):
 After the new site is live at
 `https://InstituteforDiseaseModeling.github.io/laser-cholera/`:
 
-- [ ] `pyproject.toml`: change
-  `Documentation = "https://laser-cholera.readthedocs.io/en/latest/"` to
-  `Documentation = "https://InstituteforDiseaseModeling.github.io/laser-cholera/"`.
-- [ ] `README.md`: update the documentation badge / link.
-- [ ] **Decide whether to keep the RTD project.** Options:
-  - Delete the project on RTD outright (clean break).
-  - Leave it but point its `index.rst` at a redirect notice. Easier on
-    bookmarks but creates two competing sites.
-  - Recommendation: redirect + 2-week notice, then delete.
+- [x] `pyproject.toml`: `Documentation` URL repointed to the GitHub Pages
+  URL.
+- [x] `README.md`: documentation badge updated to point at the new URL.
+- [ ] **Decide whether to keep the RTD project.** Manual decision; not
+  automatable. Recommendation: redirect + 2-week notice, then delete.
 
 ---
 
@@ -474,13 +470,16 @@ it.
 
 The conversion is finished when all of the following are true:
 
-- [ ] `mkdocs build --strict` is green locally and in CI.
-- [ ] The site is live at the new URL.
-- [ ] `pyproject.toml`'s `Documentation` link points at the new URL.
-- [ ] `tox -e docs` (if retained) builds via `mkdocs`, not Sphinx.
-- [ ] `pytest tests/ docs/` passes — including any doctests that survived
-  the move.
-- [ ] No remaining `.rst` files under `docs/`. (Top-level `.rst` files
-  decided per §4.)
-- [ ] `docs/conf.py` deleted.
-- [ ] CHANGELOG entry added describing the migration.
+- [ ] `mkdocs build --strict` is green locally and in CI. *(Still
+  blocked on the known mkdocstrings cross-ref + griffe annotation
+  warnings — needs a source-side cleanup pass before flipping.)*
+- [ ] The site is live at the new URL. *(Pending the manual repo
+  setting "Settings → Pages → Source = GitHub Actions" after this
+  branch merges.)*
+- [x] `pyproject.toml`'s `Documentation` link points at the new URL.
+- [x] `tox -e docs` (if retained) builds via `mkdocs`, not Sphinx.
+- [x] `pytest tests/ docs/` passes — including the surviving doctest
+  in `docs/usage.md`. (199 passing locally as of §8 commit.)
+- [x] No remaining `.rst` files under `docs/`. Confirmed by `ls`.
+- [x] `docs/conf.py` deleted.
+- [x] CHANGELOG entry added describing the migration.
