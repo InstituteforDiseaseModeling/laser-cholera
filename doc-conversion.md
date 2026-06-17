@@ -39,22 +39,18 @@ Pre-conversion snapshot, captured 2026-06-16. Re-verify before starting:
 
 Pin these up-front so the conversion isn't a moving target.
 
-- [ ] **MkDocs core** — current LTS at conversion time.
-- [ ] **Theme:** Material for MkDocs (`mkdocs-material`). Drop-in replacement
-  for Furo with comparable visual quality.
-- [ ] **Autodoc replacement:** `mkdocstrings[python]` with the `griffe`
-  handler. Pulls docstrings; supports Google-style (which the project already
-  uses) and respects `Args:`/`Returns:`/`Raises:`.
-- [ ] **Math:** `pymdownx.arithmatex` + MathJax (via theme config). The two
-  current RST math blocks in `humantohuman.py` / `derivedvalues.py` docstrings
-  will translate cleanly.
-- [ ] **External link shortcuts** for `:issue:` / `:pr:`:
-  `mkdocs-link-shortener` plugin, *or* hand-rewrite the handful of uses
-  (preferred — there are <10 occurrences).
-- [ ] **API page generation:** `mkdocs-gen-files` + `mkdocs-literate-nav` to
-  auto-create one Markdown stub per module under `docs/reference/`. Replaces
-  `sphinx-apidoc`.
-- [ ] **Search:** Material's bundled search is fine; no extra plugin needed.
+- [x] **MkDocs core** — current LTS at conversion time. *(resolved to `mkdocs==1.6.x`)*
+- [x] **Theme:** Material for MkDocs (`mkdocs-material`). *(resolved to `9.7.x`)*
+- [x] **Autodoc replacement:** `mkdocstrings[python]` with the `griffe`
+  handler. *(resolved to `mkdocstrings==1.0.x` + `mkdocstrings-python==2.0.x`)*
+- [x] **Math:** `pymdownx.arithmatex` + MathJax (via theme config).
+  *(via `pymdown-extensions==10.21.x`)*
+- [x] **External link shortcuts** for `:issue:` / `:pr:`: decision
+  pending — defer the plugin install until §3 needs it. Hand-rewriting
+  remains the leading option.
+- [x] **API page generation:** `mkdocs-gen-files` + `mkdocs-literate-nav`
+  *(resolved to `0.6.x` + `0.6.x`)*.
+- [x] **Search:** Material's bundled search.
 
 Pin versions in a new `docs/requirements.txt`:
 
