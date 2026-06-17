@@ -45,14 +45,23 @@ Multiple extras can be combined: `uv pip install -e '.[dev,docs]'`.
 
 ## Verifying the install
 
-The fastest smoke test runs a minimal simulation with default parameters and
-a short window:
+The fastest smoke test runs the model with the default parameters bundled
+in the wheel:
 
 ```bash
-metapop --seed 20240101 --loglevel WARNING --over date_start:2024-01-01 --over date_stop:2024-01-31 --over nticks:31
+metapop --seed 20240101 --loglevel WARNING
 ```
 
-A complete run completes in seconds; if it raises, the install is broken.
+This runs the full default window (~1155 ticks across 40 patches) and
+completes in under ten seconds on a modern laptop. If it raises, the
+install is broken.
+
+Shortening the window from the CLI is not currently supported: the
+time-series matrices (`b_jt`, `d_jt`, `nu_1_jt`, `nu_2_jt`, `psi_jt`) are
+sized from the bundled JSON and would need to be re-sliced to match a
+narrower `[date_start, date_stop]`. For a short programmatic run, see the
+`sim_duration` + matrix-trim pattern in `tests/test_model.py`.
+
 The full test suite (`pytest tests/`) takes ~10 seconds and covers each
 compartment component individually.
 
