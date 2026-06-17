@@ -384,10 +384,14 @@ Choices made above (revisit if you disagree):
 - **PRs build but don't deploy** — catches breakage early without exposing
   PR previews on the public site. Add a PR preview later if useful
   (see "Open questions" §10).
-- **`--strict`** fails the build on any warning — broken links, missing
-  references, etc. Forces docs to stay in sync with code.
+- **`--strict` deliberately NOT used yet.** The known mkdocstrings
+  cross-ref warnings would fail every CI run. Switch to `--strict` once
+  those are resolved (tracked in §11 done definition).
 
-Repo settings to flip after the first successful deploy:
+[x] Workflow file committed at `.github/workflows/docs.yml`.
+
+Repo settings to flip after the first successful deploy (manual, by an
+admin — cannot be automated):
 
 - [ ] In **Settings → Pages**, set **Source = "GitHub Actions"** (not
   "Branch"). This activates the deploy-pages action's target.
