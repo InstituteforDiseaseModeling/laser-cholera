@@ -149,7 +149,7 @@ def override_helper(overrides: dict) -> dict:
         "epsilon": float,
         "mu_jt": None,  # matrix
         "rho": float,
-        "simga": float,
+        "sigma": float,
         "longitude": None,  # vector
         "latitude": None,  # vector
         "mobility_omega": float,
