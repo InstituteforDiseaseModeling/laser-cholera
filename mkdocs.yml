@@ -1,0 +1,98 @@
+site_name: LASER Cholera (LASIK)
+site_description: LASER-based Simulation of Cholera — Python port of the upstream R MOSAIC reference.
+site_url: https://InstituteforDiseaseModeling.github.io/laser-cholera/
+repo_url: https://github.com/InstituteforDiseaseModeling/laser-cholera
+repo_name: laser-cholera
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  palette:
+    - scheme: default
+      primary: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - docs/_gen_reference.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_signature_annotations: true
+            show_root_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            separate_signature: true
+            heading_level: 2
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_javascript:
+  # MathJax for arithmatex (generic mode).
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+# Files in docs/ that should NOT end up in the built site. During the
+# parallel-build phase the legacy Sphinx artefacts live alongside the new
+# Markdown content; MkDocs would otherwise copy them through as static
+# assets. Each line is a fnmatch pattern relative to docs/.
+exclude_docs: |
+  *.rst
+  conf.py
+  requirements.txt
+  spelling_wordlist.txt
+  _gen_reference.py
+  __pycache__/*
+  reference/*.rst
+
+# Note: the nav is intentionally minimal during the parallel-build phase.
+# The literate-nav plugin pulls reference/ from docs/_gen_reference.py's
+# generated SUMMARY.md. Prose pages will be added to `nav` as they migrate
+# from .rst to .md (see Section 3 of doc-conversion.md).
+nav:
+  - Home: index.md
+  - API reference: reference/

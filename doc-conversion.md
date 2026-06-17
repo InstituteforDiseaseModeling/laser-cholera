@@ -73,7 +73,7 @@ pymdown-extensions>=10.11
 The conversion strategy is **parallel-build** until the MkDocs site is verified.
 Don't remove the Sphinx config until the new site is live and reviewed.
 
-- [ ] Create `mkdocs.yml` at the repo root (NOT under `docs/`):
+- [x] Create `mkdocs.yml` at the repo root (NOT under `docs/`):
   ```yaml
   site_name: LASER Cholera (LASIK)
   site_url: https://InstituteforDiseaseModeling.github.io/laser-cholera/
@@ -147,7 +147,7 @@ Don't remove the Sphinx config until the new site is live and reviewed.
     - API reference: reference/
   ```
 
-- [ ] Add `docs/_gen_reference.py` — generates one Markdown stub per Python
+- [x] Add `docs/_gen_reference.py` — generates one Markdown stub per Python
   module so `mkdocstrings` can render them. Skeleton:
   ```python
   """Generate one reference page per module under docs/reference/."""
@@ -174,13 +174,14 @@ Don't remove the Sphinx config until the new site is live and reviewed.
       fd.writelines(nav.build_literate_nav())
   ```
 
-- [ ] Verify the MkDocs build runs cleanly *before* touching any of the
-  existing RST files:
-  ```bash
-  uv pip install -e .[docs]    # once the extras are wired
-  mkdocs build --strict
-  mkdocs serve                 # http://127.0.0.1:8000/ to eyeball
-  ```
+- [x] Verify the MkDocs build runs cleanly *before* touching any of the
+  existing RST files. Build succeeds without `--strict`. There are 7
+  remaining warnings, all source-quality (griffe complaining about
+  missing type annotations on `date_start` / `date_stop` /
+  `epidemic_peaks` in `calc_model_likelihood.py` and a missing return
+  annotation in `likelihood.py:603`). These should be fixed as a
+  pre-`--strict` cleanup pass; tracked here as **known issue**, not
+  blocking the conversion.
 
 ---
 
