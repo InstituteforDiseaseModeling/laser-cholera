@@ -53,7 +53,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://example.com"
-Documentation = "https://laser-cholera.readthedocs.io/en/latest/"
+Documentation = "https://InstituteforDiseaseModeling.github.io/laser-cholera/"
 Repository = "https://github.com/InstituteforDiseaseModeling/laser-cholera.git"
 Issues = "https://github.com/InstituteforDiseaseModeling/laser-cholera/issues"
 Changelog = "https://github.com/InstituteforDiseaseModeling/laser-cholera/blob/master/CHANGELOG.md"
@@ -150,11 +150,6 @@ replace = "since v{new_version}"
 filename = "README.md"
 search = "/v{current_version}.svg"
 replace = "/v{new_version}.svg"
-
-[[tool.bumpversion.files]]
-filename = "docs/conf.py"
-search = 'version = release = "{current_version}"'
-replace = 'version = release = "{new_version}"'
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
