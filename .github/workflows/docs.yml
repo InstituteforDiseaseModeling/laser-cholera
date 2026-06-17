@@ -1,0 +1,65 @@
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment per ref. Don't cancel in-flight deploys —
+# losing a successful upload mid-flight could leave Pages in a half-deployed
+# state.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 lets mkdocs-material's git-revision-date plugin
+          # (if enabled later) read commit timestamps. Cheap enough on a
+          # small repo to enable unconditionally.
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install docs extras
+        run: |
+          uv venv
+          uv pip install -e '.[docs]'
+
+      - name: Build the MkDocs site
+        # `--strict` is intentionally NOT used until the known cross-ref
+        # warnings tracked in doc-conversion.md are resolved.
+        run: uv run mkdocs build
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
