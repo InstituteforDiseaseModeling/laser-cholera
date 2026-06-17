@@ -42,7 +42,7 @@ dependencies = [
 [project.optional-dependencies]
 "dev" = ["pytest>=9.0.3", "build", "uv"]
 "docs" = [
-    "mkdocs>=1.6",
+    "properdocs>=1.6", # "mkdocs>=1.6",
     "mkdocs-material>=9.5",
     "mkdocstrings[python]>=0.27",
     "mkdocs-gen-files>=0.5",

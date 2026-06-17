@@ -58,7 +58,7 @@ compartment component individually.
 
 ## Optional dependencies
 
-- `[docs]` — MkDocs + Material + mkdocstrings for building this site locally.
+- `[docs]` — ProperDocs (MkDocs) + Material + mkdocstrings for building this site locally.
 - `[dev]` — pytest, `build`, and `uv` for the development workflow.
 - `[nb]` — Jupyter + nbconvert/nbformat for the notebook helpers under the
   scenario authoring path.
