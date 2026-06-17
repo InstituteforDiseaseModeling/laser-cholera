@@ -64,7 +64,7 @@ metapop = "laser.cholera.metapop.model:cli_run"
 [tool.uv.build-backend]
 module-name = [ "laser.cholera" ]
 source-include = [
-    "AUTHORS.rst", "CHANGELOG.rst", "CONTRIBUTING.rst", "README.rst",
+    "AUTHORS.md", "CHANGELOG.md", "CONTRIBUTING.md",
     "src/laser/cholera/metapop/data/default_parameters.*",
     "src/laser/cholera/metapop/data/demographics_africa_2000_2023.csv",
     "src/laser/cholera/metapop/data/mosaic_countries*",
@@ -150,16 +150,6 @@ replace = "since v{new_version}"
 filename = "README.md"
 search = "/v{current_version}.svg"
 replace = "/v{new_version}.svg"
-
-[[tool.bumpversion.files]]
-filename = "README.rst"
-search = "/v{current_version}.svg"
-replace = "/v{new_version}.svg"
-
-[[tool.bumpversion.files]]
-filename = "README.rst"
-search = "/v{current_version}...main"
-replace = "/v{new_version}...main"
 
 [[tool.bumpversion.files]]
 filename = "docs/conf.py"

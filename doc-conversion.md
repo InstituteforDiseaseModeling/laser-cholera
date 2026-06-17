@@ -245,25 +245,26 @@ you 80 % there. Hand-finish:
 the repo root, separate from `docs/`. Some are referenced by `pyproject.toml`
 and various tooling.
 
-- [ ] **`CHANGELOG.rst`** — keep as RST or convert to `CHANGELOG.md`? The
-  bump-version config in `pyproject.toml` doesn't touch this file, so a
-  rename is free. Recommendation: rename to `CHANGELOG.md`. Then
-  `docs/changelog.md` is `--8<-- "CHANGELOG.md"` (snippet include) or just a
-  one-line stub that points at the GitHub URL.
-- [ ] **`AUTHORS.rst`** — same treatment. Rename to `AUTHORS.md`.
-- [ ] **`CONTRIBUTING.rst`** — same treatment. GitHub renders both formats
-  on the contributing page; renaming makes it consistent with `README.md`.
-- [ ] **`README.rst`** — already flagged for deletion in M6 of
-  `assessment.md`. Delete during this conversion.
+- [x] **`CHANGELOG.rst` → `CHANGELOG.md`** — mechanically converted via a
+  one-shot Python script targeting the actual patterns in the file
+  (headings, bullet lists, double-backtick code spans). 143 lines.
+  `docs/changelog.md` now uses a `--8<-- "CHANGELOG.md"` snippet include.
+- [x] **`AUTHORS.rst` → `AUTHORS.md`** — 6 lines, hand-written. Snippet
+  include in `docs/authors.md`.
+- [x] **`CONTRIBUTING.rst` → `CONTRIBUTING.md`** — content reused from the
+  conversion I'd already done into `docs/contributing.md` during §3.
+  Snippet include in `docs/contributing.md`.
+- [x] **`README.rst`** — deleted. README.md was already the canonical
+  readme; this closes M6 of `assessment.md`.
 
 `pyproject.toml` references update:
 
-- [ ] Change the `source-include` allow-list under `[tool.uv.build-backend]`
-  from `"AUTHORS.rst", "CHANGELOG.rst", "CONTRIBUTING.rst", "README.rst"` to
-  `"AUTHORS.md", "CHANGELOG.md", "CONTRIBUTING.md"` (and drop the
-  now-deleted `README.rst`).
-- [ ] Update the `[[tool.bumpversion.files]]` blocks that point at
-  `README.rst` — these can be deleted along with the file.
+- [x] `source-include` updated: `*.md` filenames replacing `*.rst`;
+  `README.rst` dropped from the list (since `README.md` is picked up by
+  `readme = "README.md"`).
+- [x] Two `[[tool.bumpversion.files]]` blocks pointing at `README.rst`
+  removed. (The remaining bumpversion entry for `docs/conf.py` stays
+  until §5 removes the Sphinx config.)
 
 ---
 
