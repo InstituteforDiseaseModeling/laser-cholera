@@ -95,4 +95,9 @@ exclude_docs: |
 # from .rst to .md (see Section 3 of doc-conversion.md).
 nav:
   - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Contributing: contributing.md
+  - Authors: authors.md
+  - Changelog: changelog.md
   - API reference: reference/
