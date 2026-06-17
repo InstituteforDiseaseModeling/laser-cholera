@@ -70,6 +70,9 @@ output/*/index.html
 # Sphinx
 docs/_build
 
+# MkDocs
+site/
+
 # Mypy Cache
 .mypy_cache/
 
