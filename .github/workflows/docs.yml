@@ -7,10 +7,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Workflow-level default: minimum every job needs. Each job tightens or
+# widens this with its own `permissions:` block. In particular, the
+# elevated `pages: write` and `id-token: write` are NOT granted here —
+# they would otherwise apply to the `build` job (and to PR-triggered
+# builds), which has no business holding either. They're scoped to the
+# `deploy` job only, below.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Allow one concurrent deployment per ref. Don't cancel in-flight deploys —
 # losing a successful upload mid-flight could leave Pages in a half-deployed
@@ -21,6 +25,11 @@ concurrency:
 
 jobs:
   build:
+    # Build only needs to checkout the repo and upload an artifact;
+    # `actions/upload-pages-artifact@v3` does not require pages:write
+    # (that permission is enforced at deploy time, not at artifact-upload).
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,6 +68,14 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
+    # Elevated permissions live here, scoped to the deploy step only.
+    # `actions/deploy-pages@v4` needs pages:write to publish to GitHub
+    # Pages and id-token:write to mint the OIDC attestation token; it
+    # does not need contents:read since it fetches the artifact via the
+    # GitHub API rather than checking out the repo.
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
