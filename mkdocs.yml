@@ -64,7 +64,15 @@ markdown_extensions:
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      # Allow `--8<-- "CHANGELOG.md"` to resolve files at the repo root,
+      # so docs/changelog.md / docs/authors.md / docs/contributing.md can
+      # snippet-include the canonical root-level Markdown files instead
+      # of duplicating their content.
+      base_path:
+        - .
+        - docs
+      check_paths: true
   - pymdownx.superfences
   - pymdownx.arithmatex:
       generic: true
