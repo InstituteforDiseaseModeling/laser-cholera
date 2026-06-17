@@ -193,28 +193,32 @@ For each RST page below, do: (a) convert to `.md`, (b) preview locally,
 The order below puts the simplest pages first so the conversion pattern
 stabilises before the harder ones.
 
-- [ ] **`docs/index.rst` → `docs/index.md`** — short TOC stub. Mostly a copy
+- [x] **`docs/index.rst` → `docs/index.md`** — short TOC stub. Mostly a copy
   of `README.md`'s headline; the nav itself moves into `mkdocs.yml`.
-- [ ] **`docs/authors.rst` → `docs/authors.md`** — single-include of
-  `AUTHORS.rst` content; trivial.
-- [ ] **`docs/installation.rst` → `docs/installation.md`** — one-line stub
-  today; expand at the same time (see L7 in `assessment.md`).
-- [ ] **`docs/contributing.rst` → `docs/contributing.md`** — mostly text,
-  some lists. Pandoc handles cleanly.
-- [ ] **`docs/changelog.rst` → `docs/changelog.md`** — see §4 below
-  (`CHANGELOG.rst` itself is the source; this docs page only includes it).
-- [ ] **`docs/readme.rst` → `docs/readme.md`** — same situation as
-  `changelog.rst`: the docs page is a wrapper around the top-level README.
-  With `README.md` already the canonical readme (the `README.rst` duplicate
-  flagged in M6 can be deleted at the same time), this page can become a
-  one-line include or be removed entirely (relying on `index.md` to cover
-  the headline).
-- [ ] **`docs/usage.rst` → `docs/usage.md`** — biggest prose page (~200
-  lines). Has a runnable doctest that must continue to execute (see §6).
-  Sphinx cross-references (`:func:`, `:class:`) translate to mkdocstrings
-  cross-refs:
-  - `:func:` ``laser.cholera.metapop.model.run_model`` → `` [`run_model`][laser.cholera.metapop.model.run_model] ``
-  - `:doc:` ``installation`` → `` [Installation](installation.md) ``
+- [x] **`docs/authors.rst` → `docs/authors.md`** — inlined content (will
+  switch to a snippet include when §4 renames `AUTHORS.rst` → `AUTHORS.md`).
+- [x] **`docs/installation.rst` → `docs/installation.md`** — expanded
+  beyond the one-line stub (closes the second half of L7 in `assessment.md`).
+- [x] **`docs/contributing.rst` → `docs/contributing.md`** — inlined the
+  CONTRIBUTING content; updated to point at `CHANGELOG.md` / `AUTHORS.md`
+  in anticipation of §4 rename.
+- [x] **`docs/changelog.rst` → `docs/changelog.md`** — placeholder pointing
+  at the GitHub-hosted changelog; will become a snippet include of
+  `CHANGELOG.md` after §4.
+- [x] **`docs/readme.rst` → ~~`docs/readme.md`~~** — page dropped; `index.md`
+  now serves as the homepage and the canonical README is `README.md` at the
+  repo root.
+- [x] **`docs/usage.rst` → `docs/usage.md`** — full conversion (~200 lines).
+  The runnable doctest survived the move and is exercised once §6 flips the
+  pytest glob.
+
+**Known issue (not blocking):** the mkdocstrings cross-ref syntax
+`[run_model][laser.cholera.metapop.model.run_model]` emits "Could not find
+cross-reference target" warnings during build. The links degrade gracefully
+to plain code spans in the rendered HTML, so the site is functional, but
+the warnings need fixing before `mkdocs build --strict` can ship in CI.
+Likely fix: a mkdocstrings option (`show_root_full_path` or similar) or a
+change to plugin ordering. Track here; fix in the `--strict` cleanup pass.
 
 ### Conversion mechanics
 
@@ -290,9 +294,12 @@ each build. With mkdocstrings + `mkdocs-gen-files`, the equivalent is the
 The current Sphinx build runs `sphinx-build -b doctest`, and pytest also runs
 `--doctest-glob=*.rst`. Both go away with MkDocs (it has no doctest builder).
 
-- [ ] Update `pytest.ini`: change `--doctest-glob=\*.rst` to
+- [x] Update `pytest.ini`: change `--doctest-glob=\*.rst` to
   `--doctest-glob=\*.md` so the runnable example in `docs/usage.md`
-  continues to execute under `pytest`.
+  continues to execute under `pytest`. *(Done as part of §3's commit
+  because deleting `usage.rst` without flipping the glob would have
+  silently stopped exercising the doctest. The remaining `tox -e docs`
+  cleanup stays in §6.)*
 - [ ] Remove the doctest line from `tox -e docs`'s commands:
   ```
   -    sphinx-build {posargs:-E} -b doctest docs dist/docs
