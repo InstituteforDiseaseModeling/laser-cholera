@@ -354,7 +354,7 @@ jobs:
           uv pip install -e '.[docs]'
 
       - name: Build with strict warnings
-        run: uvx properdocs build --strict
+        run: uvx properdocs build -f mkdocs.yml --strict
 
       - name: Upload Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -431,7 +431,7 @@ The point of doing this in-order is to never have the site broken on
 7. §8 — flip the `pyproject.toml` URL, delete `docs/conf.py`, delete the
    `docs/reference/*.rst` files, delete `docs/requirements.txt`'s old
    contents (replace with the MkDocs ones from §1), drop the `[testenv:docs]`
-   block in `tox.ini` (or replace its body with `properdocs build --strict`).
+   block in `tox.ini` (or replace its body with `properdocs build -f mkdocs.yml --strict`).
    Final commit.
 
 If anything goes wrong after step 6 (the workflow is on `main` but the new
@@ -470,7 +470,7 @@ it.
 
 The conversion is finished when all of the following are true:
 
-- [ ] `properdocs build --strict` is green locally and in CI. *(Still
+- [ ] `properdocs build -f mkdocs.yml --strict` is green locally and in CI. *(Still
   blocked on the known mkdocstrings cross-ref + griffe annotation
   warnings — needs a source-side cleanup pass before flipping.)*
 - [ ] The site is live at the new URL. *(Pending the manual repo
@@ -528,7 +528,7 @@ by when each item can be tackled.
 
 ### Pre-`--strict` cleanup pass (separate PR, when ready)
 
-The `properdocs build --strict` flag is not yet in the workflow because three
+The `properdocs build -f mkdocs.yml --strict` flag is not yet in the workflow because three
 classes of warnings would fail every CI run. Each needs a separate fix.
 Group these into one PR (`docs: pre-strict cleanup`) so the `--strict`
 flip lands atomically with the warning fixes.
@@ -558,9 +558,9 @@ flip lands atomically with the warning fixes.
   page. Edit out the obsolete framing; keep the technical "Key design
   decisions" content.
 - [ ] **Flip the workflow to `--strict`.** In
-  `.github/workflows/docs.yml`, change `uvx properdocs build` to
-  `uvx properdocs build --strict`. Mirror in `tox.ini`'s `[testenv:docs]`.
-  After this, §11's "`properdocs build --strict` green" checkbox closes.
+  `.github/workflows/docs.yml`, change `uvx properdocs build -f mkdocs.yml` to
+  `uvx properdocs build -f mkdocs.yml --strict`. Mirror in `tox.ini`'s `[testenv:docs]`.
+  After this, §11's "`properdocs build -f mkdocs.yml --strict` green" checkbox closes.
 
 ### Optional, defer until needed
 

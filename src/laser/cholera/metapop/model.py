@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from typing import Union
 
 import click
 import pandas as pd
@@ -374,7 +375,48 @@ def cli_run(params, **kwargs):
     return
 
 
-def run_model(paramfile, **kwargs):
+def run_model(paramfile: Optional[Union[str, Path, dict]], **kwargs: Optional[dict]) -> Model:
+    """Build and run the default cholera metapopulation simulation.
+
+    The canonical Python entry point. Loads parameters via
+    [`get_parameters`][laser.cholera.metapop.params.get_parameters],
+    constructs a [`Model`][laser.cholera.metapop.model.Model] wired with
+    the full default component pipeline (`Susceptible` → `Exposed` →
+    `Recovered` → `Infectious` → `Vaccinated` → `Census` → `HumanToHuman`
+    → `EnvToHuman` → `Environmental` → `DerivedValues` → `Analyzer` →
+    `Recorder` → `Parameters`), runs the simulation to completion, and
+    optionally renders visualizations.
+
+    Args:
+        paramfile: Parameter source — anything
+            [`get_parameters`][laser.cholera.metapop.params.get_parameters]
+            accepts. Use ``None`` for the bundled defaults, a filesystem
+            path (``str`` / ``pathlib.Path``) to a JSON or JSON.gz file,
+            or an in-memory ``dict``.
+        **kwargs: Forwarded as ``mods`` to
+            [`get_parameters`][laser.cholera.metapop.params.get_parameters]
+            — same shape as the CLI ``--over key:value`` flags.
+
+    Returns:
+        The completed [`Model`][laser.cholera.metapop.model.Model] with
+        per-tick state populated on ``model.people`` / ``model.patches``
+        and the final-tick log-likelihood (when ``calc_likelihood=True``
+        in params) on ``model.log_likelihood``. If ``params.visualize``
+        or ``params.pdf`` is set, ``model.pdf`` is also populated with
+        the rendered output path.
+
+    Raises:
+        ValueError: If ``paramfile`` is not one of the supported types
+            (propagated from ``get_parameters``).
+
+    Example:
+        Run with defaults and inspect the final-tick susceptible counts:
+
+        >>> from laser.cholera.metapop.model import run_model  # doctest: +SKIP
+        >>> model = run_model(None)                            # doctest: +SKIP
+        >>> model.people.S[-1].sum() > 0                       # doctest: +SKIP
+        True
+    """
     parameters = get_parameters(paramfile, mods=kwargs)
 
     model = Model(parameters)

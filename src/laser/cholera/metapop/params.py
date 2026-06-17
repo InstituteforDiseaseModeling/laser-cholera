@@ -54,6 +54,67 @@ def get_parameters(
     do_validation: bool = True,
     mods: Optional[dict] = None,
 ) -> PropertySetEx:
+    """Load parameters from disk or memory and return a typed ``PropertySetEx``.
+
+    The canonical entry point for assembling a simulation parameter set.
+    Accepts a parameter source in any of four forms:
+
+    - ``None`` → loads ``src/laser/cholera/metapop/data/default_parameters.json``
+      (the bundled defaults).
+    - ``str`` or ``pathlib.Path`` → loaded from that filesystem path.
+      Supported suffixes are ``.json`` and ``.json.gz``; HDF5 sources are
+      no longer supported.
+    - ``dict`` → ingested in-memory via
+      [`dict_to_propertysetex`][laser.cholera.metapop.params.dict_to_propertysetex].
+
+    Any of those is then optionally merged with caller-supplied ``mods``:
+    overrides of existing keys are applied first (logged at INFO level),
+    additions of new keys follow. After merge, ``validate_parameters`` is
+    called unless ``do_validation=False``. Finally, default values for
+    the visualization/output flags (``visualize``, ``pdf``, ``quiet``)
+    are filled in if absent so downstream code can read them
+    unconditionally.
+
+    Args:
+        paramsource: ``None`` for the bundled defaults, a filesystem
+            path (str or Path) to a JSON/JSON.gz file, or an already-
+            built parameter dict.
+        do_validation: When True (default), run
+            [`validate_parameters`][laser.cholera.metapop.params.validate_parameters]
+            on the assembled result. Set to ``False`` for tests that
+            deliberately construct partial or invariant-violating
+            configurations.
+        mods: Optional dict of overrides/additions to merge after loading
+            the base parameters. Typed via
+            [`override_helper`][laser.cholera.metapop.utils.override_helper]
+            on the CLI path; passed verbatim from Python callers.
+
+    Returns:
+        A populated [`PropertySetEx`][laser.cholera.metapop.params.PropertySetEx]
+        with all known fields coerced to their working dtypes and
+        (when ``do_validation=True``) verified against the model's
+        invariants.
+
+    Raises:
+        KeyError: If ``paramsource`` is a path whose suffix is not in the
+            dispatch table (e.g., a ``.h5`` file after the HDF5 ingest
+            path was removed).
+        ValueError: If ``paramsource`` is not None, str, Path, or dict —
+            including the historically-supported HDF5 paths.
+        ValueError: From ``validate_parameters`` if the resulting
+            parameter set violates the model's invariants and
+            ``do_validation=True``.
+
+    Example:
+        Load the bundled defaults with a one-month simulation window:
+
+        >>> from laser.cholera.metapop.params import get_parameters
+        >>> from laser.cholera.utils import sim_duration
+        >>> from datetime import datetime
+        >>> params = get_parameters(mods=sim_duration(datetime(2024, 1, 1), datetime(2024, 1, 31)))
+        >>> params.nticks
+        31
+    """
     fn_map = {
         (".json",): load_json_parameters,
         (".json", ".gz"): load_compressed_json_parameters,
@@ -157,6 +218,64 @@ def handle_nan(values, dtype) -> np.ndarray:
 
 
 def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
+    """Wrap a parameters dict in a ``PropertySetEx`` and coerce every field to its runtime dtype.
+
+    The canonical "raw dict → typed parameter set" converter. Performs all
+    of the following in one pass:
+
+    - Wraps the input dict in a [`PropertySetEx`][laser.cholera.metapop.params.PropertySetEx]
+      (attribute-access view over the same key/value pairs).
+    - Parses ``date_start`` / ``date_stop`` ISO-format strings into
+      ``datetime`` instances (if they aren't already typed).
+    - Computes ``nticks`` from the calendar window
+      (``(date_stop - date_start).days + 1``).
+    - Promotes scalar single-location ``location_name`` values to a
+      one-element list so downstream code can always iterate.
+    - Coerces ~30 scalar fields to ``np.float32`` / ``np.int32`` and ~40
+      vector / matrix fields to ``np.ndarray`` of the appropriate dtype.
+    - Transposes ``b_jt``, ``d_jt``, ``nu_1_jt``, ``nu_2_jt``, and
+      ``psi_jt`` from ``(num_nodes, num_ticks)`` to
+      ``(num_ticks, num_nodes)`` if the input came in
+      location-major-axis form.
+    - Handles ``epidemic_threshold`` as either a scalar or a
+      length-``num_nodes`` array.
+    - Reshapes ``beta_j0_env`` to ``(-1, 1)`` so downstream broadcast
+      works correctly.
+    - If ``epidemic_peaks`` is present, promotes it to a pandas
+      DataFrame and appends a ``loc_idx`` column mapping each
+      ``iso_code`` row to its 0-based index in
+      ``params.location_name``.
+
+    Note:
+        The location order in the returned ``PropertySetEx`` is the
+        order the locations appear in the input dict. The TODO at the
+        top of the function flags this as a candidate for canonicalisation
+        (alphabetical by name, or by integer ID) — not done yet.
+
+    Args:
+        parameters: A raw parameters dict, typically from
+            ``json.load(default_parameters.json)`` or a user-supplied
+            override file. Keys whose values would be coerced are stored
+            on the result as attributes of the appropriate dtype; keys
+            not in the coercion list (extras, future-compatibility
+            fields) pass through unchanged.
+
+    Returns:
+        A [`PropertySetEx`][laser.cholera.metapop.params.PropertySetEx]
+        with every recognised field typed for the simulation loop. Pass
+        this to [`Model`][laser.cholera.metapop.model.Model] or run it
+        through
+        [`validate_parameters`][laser.cholera.metapop.params.validate_parameters]
+        for invariant checks.
+
+    Raises:
+        AssertionError: If ``p`` is not integral, ``reported_cases`` /
+            ``reported_deaths`` is neither a list nor an ndarray,
+            ``epidemic_threshold`` is neither scalar nor list/ndarray,
+            ``tau_i`` values fall outside ``[0, 1]``, or any
+            ``epidemic_peaks.iso_code`` value is absent from
+            ``location_name``.
+    """
     # Note the following canonicalizes the order of the locations based on the
     # order in the JSON file.
     # We might consider either
@@ -307,6 +426,51 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
 
 
 def validate_parameters(params: PropertySetEx) -> None:
+    """Verify that a typed parameter set satisfies the model's invariants.
+
+    Run as part of
+    [`get_parameters`][laser.cholera.metapop.params.get_parameters] (when
+    ``do_validation=True``, the default). The checks cover everything the
+    simulation loop will subsequently assume but does not re-verify:
+    consistent calendar dates, the right number of locations for every
+    per-location vector and every per-tick-per-location matrix,
+    non-negative compartment populations, rate/probability values
+    confined to ``[0, 1]`` where required, the seasonality and mobility
+    coefficient lists, the disease- and non-disease-mortality scaling
+    arrays, and the ``epidemic_peaks`` DataFrame columns (when present).
+
+    The function returns silently when every check passes; any failure
+    is raised as ``AssertionError`` with a descriptive message naming
+    the failed invariant.
+
+    Args:
+        params: A typed [`PropertySetEx`][laser.cholera.metapop.params.PropertySetEx]
+            — typically the result of
+            [`dict_to_propertysetex`][laser.cholera.metapop.params.dict_to_propertysetex]
+            via
+            [`get_parameters`][laser.cholera.metapop.params.get_parameters].
+
+    Returns:
+        None. Side effect on success is nothing; on failure, the
+        offending invariant is raised.
+
+    Raises:
+        AssertionError: When any of the per-field invariants fails.
+            Common categories: shape mismatch between a per-location
+            vector and ``len(location_name)``; shape mismatch between a
+            per-tick matrix and ``(nticks, npatches)``; out-of-range
+            scalar (``phi_1`` / ``phi_2`` / ``rho`` / ``rho_deaths`` /
+            ``sigma`` / ``alpha_1`` / ``alpha_2`` / ``theta_j`` /
+            ``tau_i`` outside ``[0, 1]``); negative compartment
+            population; missing required scalar
+            (``mobility_omega`` / ``mobility_gamma`` / ``p``);
+            ``decay_days_short > decay_days_long``;
+            ``epidemic_peaks`` DataFrame missing the ``iso_code`` or
+            ``peak_date`` column.
+        RuntimeError: If ``epidemic_threshold`` is neither a scalar
+            nor an ndarray (i.e., ingestion produced an unexpected
+            type).
+    """
     # date_start and date_stop
     assert params.date_stop >= params.date_start, f"date_stop ({params.date_stop}) must be >= date_start ({params.date_start})"
 

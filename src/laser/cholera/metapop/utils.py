@@ -75,7 +75,47 @@ def get_pi_from_lat_long(params):
     return m_hat
 
 
-def override_helper(overrides) -> dict:
+def override_helper(overrides: dict) -> dict:
+    """Coerce stringly-typed parameter overrides to their expected runtime types.
+
+    Called at the CLI boundary (`metapop --over key:value` repeated) and
+    from any Python caller that wants to push a dict of overrides into
+    `get_parameters(..., mods=...)`. Each known key in the table is
+    coerced according to its declared type:
+
+    - ``int``-mapped keys (e.g., ``seed``, ``p``) → `int(value)`.
+    - ``float``-mapped keys (e.g., ``phi_1``, ``sigma``, ``rho``) →
+      `float(value)`.
+    - ``date_start`` / ``date_stop`` → `datetime` parsed from `"%Y-%m-%d"`.
+    - Boolean-flag keys (`visualize`, `pdf`, `hdf5_output`, `compress`,
+      `quiet`) → `True` for any of `true / 1 / yes / y / t / on / enabled`
+      (case-insensitive), else `False`.
+    - Keys whose mapping is `None` (vector/matrix payloads such as
+      `S_j_initial`, `b_jt`, `psi_jt`, `return`, etc.) — passed through
+      verbatim, no coercion attempted.
+
+    Unknown keys are forwarded unchanged, so misspelled CLI flags surface
+    later as missing-attribute errors at simulation time rather than being
+    silently dropped here.
+
+    Args:
+        overrides: Mapping of override key → raw value. Values are
+            typically strings from the CLI (the table coerces them) or
+            already-typed Python values from in-memory callers (the
+            table will still re-coerce the strings; already-typed values
+            for ``None``-mapped keys pass through unchanged).
+
+    Returns:
+        A new dict with the same keys as the input, values coerced per
+        the table.
+
+    Example:
+        >>> from laser.cholera.metapop.utils import override_helper
+        >>> typed = override_helper({"phi_1": "0.65", "seed": "42", "visualize": "on"})
+        >>> typed["phi_1"] == 0.65 and typed["seed"] == 42 and typed["visualize"] is True
+        True
+    """
+
     def bool_from_string(value):
         return str(value).lower() in ("true", "1", "yes", "y", "t", "on", "enabled")
 
