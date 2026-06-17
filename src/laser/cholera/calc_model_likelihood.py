@@ -232,10 +232,10 @@ def calc_multi_peak_timing_ll(
     obs_vec: np.ndarray,
     est_vec: np.ndarray,
     iso_code: Optional[str] = None,
-    date_start=None,
-    date_stop=None,
+    date_start: Optional[str] = None,
+    date_stop: Optional[str] = None,
     sigma_peak_time: float = 1,
-    epidemic_peaks=None,
+    epidemic_peaks: Optional[pd.DataFrame] = None,
 ) -> float:
     """Compute peak timing log-likelihood using epidemic peaks data (legacy interface).
 
@@ -301,10 +301,10 @@ def calc_multi_peak_magnitude_ll(
     obs_vec: np.ndarray,
     est_vec: np.ndarray,
     iso_code: Optional[str] = None,
-    date_start=None,
-    date_stop=None,
+    date_start: Optional[str] = None,
+    date_stop: Optional[str] = None,
     sigma_peak_log: float = 0.5,
-    epidemic_peaks=None,
+    epidemic_peaks: Optional[pd.DataFrame] = None,
 ) -> float:
     """Compute peak magnitude log-likelihood using epidemic peaks data (legacy interface).
 

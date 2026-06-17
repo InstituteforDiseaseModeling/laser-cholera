@@ -40,7 +40,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-"dev" = ["pytest>=9.0.3", "build", "uv"]
+"dev" = ["pytest>=9.0.3", "build", "uv", "ruff"]
 "docs" = [
     "properdocs>=1.6", # "mkdocs>=1.6",
     "mkdocs-material>=9.5",
@@ -48,6 +48,7 @@ dependencies = [
     "mkdocs-gen-files>=0.5",
     "mkdocs-literate-nav>=0.6",
     "pymdown-extensions>=10.11",
+    "ruff"
 ]
 "nb" = ["jupyter", "nbconvert>=7.17.1", "nbformat", "ipykernel"]
 
