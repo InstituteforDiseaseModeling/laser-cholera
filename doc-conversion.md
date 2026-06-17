@@ -301,12 +301,13 @@ The current Sphinx build runs `sphinx-build -b doctest`, and pytest also runs
   because deleting `usage.rst` without flipping the glob would have
   silently stopped exercising the doctest. The remaining `tox -e docs`
   cleanup stays in §6.)*
-- [ ] Remove the doctest line from `tox -e docs`'s commands:
-  ```
-  -    sphinx-build {posargs:-E} -b doctest docs dist/docs
-  ```
-- [ ] Optionally add a `tox -e docs` that just runs `mkdocs build --strict`
-  for CI parity. See §7.
+- [x] Remove the doctest line from `tox -e docs`'s commands. The whole
+  `[testenv:docs]` body is now `mkdocs build {posargs}` — replacing the
+  four-line Sphinx incantation (`sphinx-apidoc`, `-b doctest`, `-b html`,
+  `-b linkcheck`). Doctests run via pytest, not the docs env.
+- [x] Add a `tox -e docs` that just runs `mkdocs build`. The `--strict`
+  flag is *not* added yet because of the known cross-ref warnings; flip
+  to `--strict` once those are addressed (see §11 done definition).
 
 ---
 
