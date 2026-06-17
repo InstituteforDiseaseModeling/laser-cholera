@@ -483,3 +483,96 @@ The conversion is finished when all of the following are true:
 - [x] No remaining `.rst` files under `docs/`. Confirmed by `ls`.
 - [x] `docs/conf.py` deleted.
 - [x] CHANGELOG entry added describing the migration.
+
+---
+
+## 12. Next steps
+
+Open items as of the §8 commit on the `doc-conversion` branch. Bucketed
+by when each item can be tackled.
+
+### Immediate (this PR)
+
+- [ ] **Push the branch and open a PR against `main`.** The CI workflow
+  in `.github/workflows/docs.yml` triggers on the PR — it builds the
+  MkDocs site but does not deploy. Confirms the workflow runs on real
+  Actions runners (so far only verified locally).
+- [ ] **Review the rendered output yourself before merging.** Run
+  `mkdocs serve` locally and eyeball:
+  - The `CHANGELOG.md` mechanical conversion — re-read headings and
+    code spans to catch anything the script mangled.
+  - A couple of compartment-component reference pages
+    (e.g., `site/reference/metapop/vaccinated/`) for mkdocstrings
+    output sanity.
+  - The snippet-include pages
+    (`site/authors/`, `site/contributing/`, `site/changelog/`) — confirm
+    they render the root-level files, not raw `--8<--` literals.
+- [ ] **Merge to `main`.**
+
+### Post-merge (manual, one-time)
+
+- [ ] **Flip the GitHub Pages source.** In the repo's GitHub
+  *Settings → Pages*, change *Source* from "Branch" to
+  "GitHub Actions". Cannot be automated. After this, the next push to
+  `main` triggers the deploy job in `docs.yml`, and the site appears at
+  `https://InstituteforDiseaseModeling.github.io/laser-cholera/`.
+- [ ] **Verify the first deploy.** The workflow's Actions run will link
+  to the resolved Pages URL. Click through; confirm the index page,
+  installation page, usage page, and a couple of reference pages
+  resolve. If yes, the §11 "site is live" checkbox closes.
+- [ ] **Decide on Read the Docs.** Options:
+  - (a) delete the RTD project outright,
+  - (b) leave it and add a redirect notice to its `index.rst`,
+  - (c) **recommended** — redirect notice + 2-week grace period, then
+    delete.
+
+### Pre-`--strict` cleanup pass (separate PR, when ready)
+
+The `mkdocs build --strict` flag is not yet in the workflow because three
+classes of warnings would fail every CI run. Each needs a separate fix.
+Group these into one PR (`docs: pre-strict cleanup`) so the `--strict`
+flip lands atomically with the warning fixes.
+
+- [ ] **mkdocstrings cross-ref resolution** in `docs/usage.md`. Five
+  `[run_model][laser.cholera.metapop.model.run_model]`-style links fail
+  to resolve at build time. Try in order:
+  1. Re-verify the `plugins:` ordering in `mkdocs.yml` puts
+     `mkdocstrings` *after* `gen-files` and `literate-nav`.
+  2. Add `show_root_full_path: true` and/or `show_root_toc_entry: true`
+     to the mkdocstrings handler options.
+  3. As a last resort, replace the autorefs syntax with explicit
+     anchors like
+     `[run_model](reference/metapop/model.md#laser.cholera.metapop.model.run_model)`.
+- [ ] **Griffe missing-annotation warnings.** Three params in
+  `src/laser/cholera/calc_model_likelihood.py` (`date_start`,
+  `date_stop`, `epidemic_peaks` at approximately lines 251-254 and
+  321-324) and one return annotation in `src/laser/cholera/likelihood.py:603`
+  need type annotations. Trivial edits (e.g.,
+  `date_start: str | None = None`). Pair with a
+  `tests/test_calc_model_likelihood.py` run to confirm no regressions.
+- [ ] **Legacy module docstring** in
+  `src/laser/cholera/calc_model_likelihood.py`. Leftover narrative from
+  the original R port: "Spring likelihood functions for scoring cholera
+  model fits…" and "Translation complete. Here's a summary of the key
+  design decisions:". mkdocstrings dutifully renders these on the module
+  page. Edit out the obsolete framing; keep the technical "Key design
+  decisions" content.
+- [ ] **Flip the workflow to `--strict`.** In
+  `.github/workflows/docs.yml`, change `uv run mkdocs build` to
+  `uv run mkdocs build --strict`. Mirror in `tox.ini`'s `[testenv:docs]`.
+  After this, §11's "`mkdocs build --strict` green" checkbox closes.
+
+### Optional, defer until needed
+
+- [ ] **PR previews.** Material + a Cloudflare Pages / Netlify /
+  preview-deploy GitHub Action can render each PR's docs at a unique
+  URL. Worth doing if reviewers actively eyeball doc PRs.
+- [ ] **Versioned docs via [`mike`](https://github.com/jimporter/mike).**
+  RTD did this for free; on GitHub Pages it needs the plugin. Only
+  matters once releases start linking back to versioned docs.
+- [ ] **Hand-written reference pages instead of `_gen_reference.py`.**
+  The current script *is* the documented mkdocstrings recipe for
+  automatic enumeration. Hand-writing ~20 stubs would eliminate the
+  custom script at the cost of manual maintenance for every new module.
+  Lower-priority; only worth doing if the trade-off feels wrong in
+  practice.
