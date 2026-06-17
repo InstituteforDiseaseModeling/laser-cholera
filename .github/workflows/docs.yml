@@ -44,7 +44,7 @@ jobs:
       - name: Build the MkDocs site
         # `--strict` is intentionally NOT used until the known cross-ref
         # warnings tracked in doc-conversion.md are resolved.
-        run: uv run mkdocs build
+        run: uvx properdocs build
 
       - name: Upload Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

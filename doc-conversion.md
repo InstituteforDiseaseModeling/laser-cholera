@@ -55,7 +55,7 @@ Pin these up-front so the conversion isn't a moving target.
 Pin versions in a new `docs/requirements.txt`:
 
 ```text
-mkdocs>=1.6
+properdocs>=1.6
 mkdocs-material>=9.5
 mkdocstrings[python]>=0.27
 mkdocs-gen-files>=0.5
@@ -354,7 +354,7 @@ jobs:
           uv pip install -e '.[docs]'
 
       - name: Build with strict warnings
-        run: uv run mkdocs build --strict
+        run: uvx properdocs build --strict
 
       - name: Upload Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -421,7 +421,7 @@ The point of doing this in-order is to never have the site broken on
 1. §1, §2 — bring up MkDocs alongside Sphinx. Verify local build. No commit
    yet.
 2. §3 — convert prose pages. Commit when all convert and the local
-   `mkdocs serve` looks right.
+   `properdocs serve` looks right.
 3. §4 — rename top-level `*.rst` files to `*.md`. Commit separately so the
    rename is reviewable.
 4. §5 — wire up auto-generated reference. Commit.
@@ -431,7 +431,7 @@ The point of doing this in-order is to never have the site broken on
 7. §8 — flip the `pyproject.toml` URL, delete `docs/conf.py`, delete the
    `docs/reference/*.rst` files, delete `docs/requirements.txt`'s old
    contents (replace with the MkDocs ones from §1), drop the `[testenv:docs]`
-   block in `tox.ini` (or replace its body with `mkdocs build --strict`).
+   block in `tox.ini` (or replace its body with `properdocs build --strict`).
    Final commit.
 
 If anything goes wrong after step 6 (the workflow is on `main` but the new
@@ -470,14 +470,14 @@ it.
 
 The conversion is finished when all of the following are true:
 
-- [ ] `mkdocs build --strict` is green locally and in CI. *(Still
+- [ ] `properdocs build --strict` is green locally and in CI. *(Still
   blocked on the known mkdocstrings cross-ref + griffe annotation
   warnings — needs a source-side cleanup pass before flipping.)*
 - [ ] The site is live at the new URL. *(Pending the manual repo
   setting "Settings → Pages → Source = GitHub Actions" after this
   branch merges.)*
 - [x] `pyproject.toml`'s `Documentation` link points at the new URL.
-- [x] `tox -e docs` (if retained) builds via `mkdocs`, not Sphinx.
+- [x] `tox -e docs` (if retained) builds via `properdocs` (MkDocs), not Sphinx.
 - [x] `pytest tests/ docs/` passes — including the surviving doctest
   in `docs/usage.md`. (199 passing locally as of §8 commit.)
 - [x] No remaining `.rst` files under `docs/`. Confirmed by `ls`.
@@ -498,7 +498,7 @@ by when each item can be tackled.
   MkDocs site but does not deploy. Confirms the workflow runs on real
   Actions runners (so far only verified locally).
 - [ ] **Review the rendered output yourself before merging.** Run
-  `mkdocs serve` locally and eyeball:
+  `properdocs serve` locally and eyeball:
   - The `CHANGELOG.md` mechanical conversion — re-read headings and
     code spans to catch anything the script mangled.
   - A couple of compartment-component reference pages
@@ -528,7 +528,7 @@ by when each item can be tackled.
 
 ### Pre-`--strict` cleanup pass (separate PR, when ready)
 
-The `mkdocs build --strict` flag is not yet in the workflow because three
+The `properdocs build --strict` flag is not yet in the workflow because three
 classes of warnings would fail every CI run. Each needs a separate fix.
 Group these into one PR (`docs: pre-strict cleanup`) so the `--strict`
 flip lands atomically with the warning fixes.
@@ -558,9 +558,9 @@ flip lands atomically with the warning fixes.
   page. Edit out the obsolete framing; keep the technical "Key design
   decisions" content.
 - [ ] **Flip the workflow to `--strict`.** In
-  `.github/workflows/docs.yml`, change `uv run mkdocs build` to
-  `uv run mkdocs build --strict`. Mirror in `tox.ini`'s `[testenv:docs]`.
-  After this, §11's "`mkdocs build --strict` green" checkbox closes.
+  `.github/workflows/docs.yml`, change `uvx properdocs build` to
+  `uvx properdocs build --strict`. Mirror in `tox.ini`'s `[testenv:docs]`.
+  After this, §11's "`properdocs build --strict` green" checkbox closes.
 
 ### Optional, defer until needed
 
