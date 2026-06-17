@@ -10,9 +10,9 @@ Each generated file has the form::
 
     ::: laser.cholera.metapop.params
 
-Files are emitted via ``mkdocs_gen_files.open(...)``: they live in the
-build only, not on disk. The repo's ``docs/reference/`` directory is
-*not* populated by this script — that's the point.
+Files are emitted into the MkDocs ``docs_dir`` at build time via
+``mkdocs_gen_files.open(...)``. They are derived from ``src/`` and should not
+be committed (see the repo's ``.gitignore`` entries for ``docs/reference/``).
 
 Run automatically by the ``gen-files`` plugin (see ``mkdocs.yml``); do
 not invoke directly.
