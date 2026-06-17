@@ -41,7 +41,14 @@ dependencies = [
 
 [project.optional-dependencies]
 "dev" = ["pytest>=9.0.3", "build", "uv"]
-# "docs" = ["sphinx", "sphinx-rtd-theme"]
+"docs" = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.27",
+    "mkdocs-gen-files>=0.5",
+    "mkdocs-literate-nav>=0.6",
+    "pymdown-extensions>=10.11",
+]
 "nb" = ["jupyter", "nbconvert>=7.17.1", "nbformat", "ipykernel"]
 
 [project.urls]
