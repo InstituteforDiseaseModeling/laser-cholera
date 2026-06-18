@@ -191,22 +191,45 @@ def get_pi_from_lat_long(params: "PropertySetEx") -> np.ndarray:
     omega = params.mobility_omega
     gamma = params.mobility_gamma
     N = params.S_j_initial + params.E_j_initial + params.I_j_initial + params.R_j_initial + params.V1_j_initial + params.V2_j_initial
-    for i in range(x.shape[0]):
-        for j in range(x.shape[1]):
-            if j == i:
-                continue
-            # gravity model uses origin and destination populations
-            # we'll incorporate the destination population now
-            # and the effective origin population, including tau (migrating fraction) at runtime
-            x[i, j] = np.power(N[j], omega) * np.power(d[i, j], -gamma)
 
+    # PERF: vectorized fill. The original nested loop did `x[i, j] =
+    # np.power(N[j], omega) * np.power(d[i, j], -gamma)` skipping `j == i`,
+    # leaving the diagonal at the zeros-init value. Equivalent broadcast:
+    # replace the diagonal of `d` with `1.0` so `d^(-gamma)` is finite,
+    # multiply by the row-broadcast `N^omega`, then zero the diagonal back
+    # out. `np.power(N[j], omega)` (scalar) and `np.power(N, omega)[j]`
+    # (array) take the same path in NumPy, so the multiplied products are
+    # bit-identical and the float32 down-cast on assignment matches too.
+    # gravity model uses origin and destination populations
+    # we'll incorporate the destination population now
+    # and the effective origin population, including tau (migrating fraction) at runtime
+    # for i in range(x.shape[0]):
+    #     for j in range(x.shape[1]):
+    #         if j == i:
+    #             continue
+    #         x[i, j] = np.power(N[j], omega) * np.power(d[i, j], -gamma)
+    diag = np.eye(d.shape[0], dtype=bool)
+    d_safe = np.where(diag, np.float32(1.0), d)
+    x[:] = np.power(N[None, :], omega) * np.power(d_safe, -gamma)
+    x[diag] = 0.0
+
+    # PERF: same row-normalization, vectorized. The original computed
+    # `row_sum = np.sum(x[i, :])` once per row, then divided every off-
+    # diagonal cell by it. The single-location case (one row, the only
+    # cell already zero on the diagonal) makes `row_sum` zero; the
+    # original loop skipped the division (its inner `continue`), so the
+    # vectorized form must mirror that with `where=...` to avoid a
+    # NaN-producing 0 / 0.
+    # m_hat = np.zeros_like(x, dtype=np.float32)
+    # for i in range(x.shape[0]):
+    #     row_sum = np.sum(x[i, :])
+    #     for j in range(x.shape[1]):
+    #         if j == i:
+    #             continue
+    #         m_hat[i, j] = x[i, j] / row_sum
+    row_sum = x.sum(axis=1, keepdims=True)
     m_hat = np.zeros_like(x, dtype=np.float32)
-    for i in range(x.shape[0]):
-        row_sum = np.sum(x[i, :])
-        for j in range(x.shape[1]):
-            if j == i:
-                continue
-            m_hat[i, j] = x[i, j] / row_sum
+    np.divide(x, row_sum, where=(row_sum != 0), out=m_hat)
 
     return m_hat
 
