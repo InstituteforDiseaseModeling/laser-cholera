@@ -10,7 +10,6 @@ is performed inside
 
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -90,7 +89,7 @@ class Exposed:
 
         # Do non-disease mortality first
         # PERF: `model.patches.non_disease_death_prob_jt[tick]` is the pre-computed
-        # `-np.expm1(-model.params.d_jt[tick])` cached by Susceptible.check().
+        # and cached `-np.expm1(-model.params.d_jt[tick])`.
         # non_disease_deaths = model.prng.binomial(E, -np.expm1(-model.params.d_jt[tick])).astype(E_next.dtype)
         non_disease_deaths = model.prng.binomial(E, model.patches.non_disease_death_prob_jt[tick]).astype(E_next.dtype)
         E_next -= non_disease_deaths
@@ -98,7 +97,7 @@ class Exposed:
 
         return
 
-    def plot(self, fig: Optional[Figure] = None) -> Iterator[str]:  # pragma: no cover
+    def plot(self, fig: Figure | None = None) -> Iterator[str]:  # pragma: no cover
         """Yield a single Matplotlib figure of `E(t)` for the ten largest patches.
 
         Args:

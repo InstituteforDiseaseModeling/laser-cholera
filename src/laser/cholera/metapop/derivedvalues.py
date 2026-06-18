@@ -20,7 +20,6 @@ invoke them with a single argument.
 import logging
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -156,7 +155,7 @@ class DerivedValues:
 
         return
 
-    def plot(self, fig: Optional[Figure] = None) -> Iterator[str]:  # pragma: no cover
+    def plot(self, fig: Figure | None = None) -> Iterator[str]:  # pragma: no cover
         """Yield one Matplotlib heatmap of `spatial_hazard` (patch × tick).
 
         Args:

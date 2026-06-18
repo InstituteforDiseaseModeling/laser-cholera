@@ -35,7 +35,6 @@ Key design decisions:
 
 import datetime
 import logging
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -89,7 +88,7 @@ def nb_size_from_obs_weighted(
 def mask_weights(
     w: np.ndarray,
     obs_vec: np.ndarray,
-    est_vec: Optional[np.ndarray] = None,
+    est_vec: np.ndarray | None = None,
 ) -> np.ndarray:
     """Zero out weights where observations or estimates are non-finite.
 
@@ -231,11 +230,11 @@ def _calc_peak_magnitude_from_indices(
 def calc_multi_peak_timing_ll(
     obs_vec: np.ndarray,
     est_vec: np.ndarray,
-    iso_code: Optional[str] = None,
-    date_start: Optional[str] = None,
-    date_stop: Optional[str] = None,
+    iso_code: str | None = None,
+    date_start: str | None = None,
+    date_stop: str | None = None,
     sigma_peak_time: float = 1,
-    epidemic_peaks: Optional[pd.DataFrame] = None,
+    epidemic_peaks: pd.DataFrame | None = None,
 ) -> float:
     """Compute peak timing log-likelihood using epidemic peaks data (legacy interface).
 
@@ -300,11 +299,11 @@ def calc_multi_peak_timing_ll(
 def calc_multi_peak_magnitude_ll(
     obs_vec: np.ndarray,
     est_vec: np.ndarray,
-    iso_code: Optional[str] = None,
-    date_start: Optional[str] = None,
-    date_stop: Optional[str] = None,
+    iso_code: str | None = None,
+    date_start: str | None = None,
+    date_stop: str | None = None,
     sigma_peak_log: float = 0.5,
-    epidemic_peaks: Optional[pd.DataFrame] = None,
+    epidemic_peaks: pd.DataFrame | None = None,
 ) -> float:
     """Compute peak magnitude log-likelihood using epidemic peaks data (legacy interface).
 
@@ -369,8 +368,8 @@ def ll_cumulative_progressive_nb(
     obs_vec: np.ndarray,
     est_vec: np.ndarray,
     timepoints: np.ndarray = np.array([0.25, 0.5, 0.75, 1.0]),  # noqa: B008
-    k_data: Optional[float] = None,
-    weights_time: Optional[np.ndarray] = None,
+    k_data: float | None = None,
+    weights_time: np.ndarray | None = None,
     k_fallback: float = 10.0,
 ) -> float:
     """Compute cumulative-progression NB log-likelihood at fractional timepoints.
@@ -515,8 +514,8 @@ def calc_model_likelihood(
     est_deaths: np.ndarray,  # [n_locs x n_steps]
     weight_cases: float = 1.0,
     weight_deaths: float = 1.0,
-    weights_location: Optional[np.ndarray] = None,  # [n_locs] | None
-    weights_time: Optional[np.ndarray] = None,  # [n_steps] | None
+    weights_location: np.ndarray | None = None,  # [n_locs] | None
+    weights_time: np.ndarray | None = None,  # [n_steps] | None
     # -- shape term weights (0 = OFF; 0.25 = 25% of NB core influence) ---
     weight_peak_timing: float = 0,
     weight_peak_magnitude: float = 0,
@@ -525,9 +524,9 @@ def calc_model_likelihood(
     # --- peak controls ---
     sigma_peak_time: float = 1,
     sigma_peak_log: float = 0.5,
-    epidemic_peaks: Optional[pd.DataFrame] = None,
-    date_start: Optional[datetime.datetime] = None,
-    date_stop: Optional[datetime.datetime] = None,
+    epidemic_peaks: pd.DataFrame | None = None,
+    date_start: datetime.datetime | None = None,
+    date_stop: datetime.datetime | None = None,
     # --- WIS ---
     wis_quantiles: np.ndarray = np.array([0.025, 0.25, 0.5, 0.75, 0.975]),  # noqa: B008
     # --- cumulative ---

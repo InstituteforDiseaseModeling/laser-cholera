@@ -47,8 +47,6 @@ from datetime import datetime
 from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing import Optional
-from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -132,9 +130,9 @@ class PropertySetEx(PropertySet):
 
 
 def get_parameters(
-    paramsource: Optional[Union[str, Path, dict]] = None,
+    paramsource: str | Path | dict | None = None,
     do_validation: bool = True,
-    mods: Optional[dict] = None,
+    mods: dict | None = None,
 ) -> PropertySetEx:
     """Load parameters from disk or memory and return a typed ``PropertySetEx``.
 
@@ -249,7 +247,7 @@ def get_parameters(
     return params
 
 
-def load_json_parameters(filename: Union[str, Path]) -> PropertySetEx:
+def load_json_parameters(filename: str | Path) -> PropertySetEx:
     """Read a plain JSON file and return a typed `PropertySetEx`.
 
     Wraps `json.load` + `dict_to_propertysetex`. Used by
@@ -270,7 +268,7 @@ def load_json_parameters(filename: Union[str, Path]) -> PropertySetEx:
     return dict_to_propertysetex(parameters)
 
 
-def load_compressed_json_parameters(filename: Union[str, Path]) -> PropertySetEx:
+def load_compressed_json_parameters(filename: str | Path) -> PropertySetEx:
     """Read a gzip-compressed JSON file and return a typed `PropertySetEx`.
 
     Used by `get_parameters` when the suffix tuple is `(".json", ".gz")`.
@@ -870,7 +868,7 @@ class Parameters:
         x = np.arange(len(self.model.params.location_name))
         bottom = np.zeros(len(self.model.params.location_name))
 
-        for category, values in zip(categories, data):
+        for category, values in zip(categories, data, strict=True):
             plt.bar(x, values, bottom=bottom, label=category)
             bottom += values
 

@@ -23,8 +23,6 @@ import time
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
-from typing import Union
 
 import click
 import pandas as pd
@@ -332,7 +330,7 @@ class Model:
 
         return
 
-    def visualize(self, pdf: bool = True) -> Optional[str]:  # pragma: no cover
+    def visualize(self, pdf: bool = True) -> str | None:  # pragma: no cover
         """
         Visualize each compoonent instances either by displaying plots or saving them to a PDF file.
 
@@ -463,7 +461,7 @@ class Model:
 @click.option("-q", "--quiet", is_flag=True, default=False, help="Suppress console progress output")
 @click.option("--hdf5-output", "hdf5_output", is_flag=True, default=False, help="Write per-tick outputs to an HDF5 file via the Recorder")
 @click.option("--compress", is_flag=True, default=False, help="Gzip the HDF5 output (only meaningful with --hdf5-output)")
-def cli_run(params: Optional[Path], **kwargs: object) -> None:
+def cli_run(params: Path | None, **kwargs: object) -> None:
     """Run the cholera model simulation with the given parameters.
 
     Initializes the model, sets up the default component pipeline, seeds
@@ -512,7 +510,7 @@ def cli_run(params: Optional[Path], **kwargs: object) -> None:
     return
 
 
-def run_model(paramfile: Optional[Union[str, Path, dict]], **kwargs: Optional[dict]) -> Model:
+def run_model(paramfile: str | Path | dict | None, **kwargs: dict | None) -> Model:
     """Build and run the default cholera metapopulation simulation.
 
     The canonical Python entry point. Loads parameters via

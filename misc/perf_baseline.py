@@ -12,12 +12,12 @@ bit-for-bit identical to the baseline.
 
 The committed `misc/perf_baseline.json` is keyed to a specific
 `(seed, default parameter set, component list, laser-core RNG
-version)` tuple. If you intentionally change any of those — adopt a
-new laser-core release that touches the PRNG, swap the default
-parameter file, alter the default component pipeline, edit any of the
-binomial / poisson draw sites in the compartments — the existing
-baseline will go stale and `--verify` will report a (correct,
-expected) mismatch.
+version, NumPy/BLAS build)` tuple. If you intentionally change any of
+those — adopt a new laser-core release that touches the PRNG, swap the
+default parameter file, alter the default component pipeline, upgrade
+NumPy / switch BLAS, or edit any of the binomial / poisson draw sites in
+the compartments — the existing baseline will go stale and `--verify`
+will report a (correct, expected) mismatch.
 
 When you knowingly change model dynamics: re-capture and commit the
 new baseline in the same patch as the dynamics change, so the next
