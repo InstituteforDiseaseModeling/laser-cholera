@@ -1,0 +1,17 @@
+Source: laser-init
+Invocation: uvx --with git+https://github.com/laser-base/laser-init laser-init MOZ 2 2000 2025
+Date pulled: 2026-06-18
+Input files under tmp/laser-init/mozambique-adm2/ (NOT committed; reproduce via the invocation above):
+  - MOZ_admin2.gpkg  (157 adm2 polygons, EPSG:4326)
+  - cxr.csv  (yearly CBR/CDR 2000–2026)
+  - provenance.json  (upstream URLs + timestamps)
+  - age_dist.csv, life_exp.csv  (not used for laser-cholera)
+Date window: 2020-01-01 to 2024-12-31 (1827 ticks)
+nticks: 1827
+npatches: 157
+Notes:
+  - Per-patch values broadcast from default_parameters.json["MOZ"] row across all 157 districts (not per-district calibrated).
+  - b_jt / d_jt derived from cxr.csv (country-level CBR/CDR), per-1000-per-year → per-person-per-day, broadcast.
+  - Initial seed: 100 infected in the most-populous district.
+  - Features ON: mobility, seasonality, human-to-human + environmental transmission.
+  - Features OFF: vaccination, regime switching (chi_endemic=chi_epidemic + mu_j_epidemic_factor=0), likelihood scoring.
