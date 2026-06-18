@@ -63,6 +63,18 @@ class Recovered:
         check_key(self.model.params, "epsilon", "Recovered: model params needs to have a 'epsilon' (waning immunity rate) parameter.")
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
+        # PERF: install `model.patches.non_disease_death_prob_jt` (the
+        # `1 - exp(-d_jt)` cache) idempotently if no earlier component has.
+        # Lets each consumer be exercised in isolation; the cache is built
+        # exactly once across the pipeline.
+        if not hasattr(self.model.patches, "non_disease_death_prob_jt"):
+            self.model.patches.add_vector_property("non_disease_death_prob_jt", length=self.model.params.d_jt.shape[0], dtype=np.float32, default=0.0)
+            self.model.patches.non_disease_death_prob_jt[:] = -np.expm1(-self.model.params.d_jt)
+
+        # PERF: cache `1 - exp(-epsilon)` so the per-tick waning probability
+        # is not recomputed every call.
+        self._waning_prob = -np.expm1(-self.model.params.epsilon)
+
         return
 
     def __call__(self, model: "Model", tick: int) -> None:
@@ -86,12 +98,16 @@ class Recovered:
         R_next += R
 
         # natural mortality
-        non_disease_deaths = model.prng.binomial(R, -np.expm1(-model.params.d_jt[tick])).astype(R_next.dtype)
+        # PERF: pre-computed `-np.expm1(-d_jt)` cached as model.patches.non_disease_death_prob_jt.
+        # non_disease_deaths = model.prng.binomial(R, -np.expm1(-model.params.d_jt[tick])).astype(R_next.dtype)
+        non_disease_deaths = model.prng.binomial(R, model.patches.non_disease_death_prob_jt[tick]).astype(R_next.dtype)
         R_next -= non_disease_deaths
         model.patches.non_disease_deaths[tick] += non_disease_deaths
 
         # waning natural immunity - don't include those removed by natural mortality
-        waned = model.prng.binomial(R - non_disease_deaths, -np.expm1(-model.params.epsilon)).astype(R_next.dtype)
+        # PERF: pre-computed `-np.expm1(-epsilon)` cached as self._waning_prob.
+        # waned = model.prng.binomial(R - non_disease_deaths, -np.expm1(-model.params.epsilon)).astype(R_next.dtype)
+        waned = model.prng.binomial(R - non_disease_deaths, self._waning_prob).astype(R_next.dtype)
         R_next -= waned
         S_next += waned
 

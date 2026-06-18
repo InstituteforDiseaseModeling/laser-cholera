@@ -92,6 +92,15 @@ class Susceptible(Component):
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
 
+        # PERF: pre-compute the per-tick non-disease-death probability matrix
+        # once here. `d_jt` is a static `(nticks, npatches)` parameter, so
+        # `1 - exp(-d_jt)` is also static. Without this cache, seven sites
+        # (Susceptible / Exposed / Recovered / Infectious x2 / Vaccinated x2)
+        # would each recompute `-np.expm1(-d_jt[tick])` every tick.
+        if not hasattr(self.model.patches, "non_disease_death_prob_jt"):
+            self.model.patches.add_vector_property("non_disease_death_prob_jt", length=self.model.params.d_jt.shape[0], dtype=np.float32, default=0.0)
+            self.model.patches.non_disease_death_prob_jt[:] = -np.expm1(-self.model.params.d_jt)
+
         return
 
     def __call__(self, model: "Model", tick: int) -> None:
@@ -120,7 +129,10 @@ class Susceptible(Component):
         S_next[:] = model.people.S[tick]
 
         # natural mortality
-        non_disease_deaths = model.prng.binomial(S_next, -np.expm1(-model.params.d_jt[tick])).astype(S_next.dtype)
+        # PERF: `model.patches.non_disease_death_prob_jt[tick]` is the pre-computed
+        # `-np.expm1(-model.params.d_jt[tick])` cached at check() time.
+        # non_disease_deaths = model.prng.binomial(S_next, -np.expm1(-model.params.d_jt[tick])).astype(S_next.dtype)
+        non_disease_deaths = model.prng.binomial(S_next, model.patches.non_disease_death_prob_jt[tick]).astype(S_next.dtype)
         S_next -= non_disease_deaths
         model.patches.non_disease_deaths[tick] += non_disease_deaths
 

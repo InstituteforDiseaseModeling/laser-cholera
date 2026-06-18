@@ -129,6 +129,19 @@ class Infectious:
         check_key(self.model.params, "rho_deaths", "Infectious: model params needs to have a 'rho_deaths' (detected/expected deaths) parameter.")
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
+        # PERF: install `model.patches.non_disease_death_prob_jt` (the
+        # `1 - exp(-d_jt)` cache) idempotently if no earlier component has.
+        # Lets each consumer be exercised in isolation; the cache is built
+        # exactly once across the pipeline.
+        if not hasattr(self.model.patches, "non_disease_death_prob_jt"):
+            self.model.patches.add_vector_property("non_disease_death_prob_jt", length=self.model.params.d_jt.shape[0], dtype=np.float32, default=0.0)
+            self.model.patches.non_disease_death_prob_jt[:] = -np.expm1(-self.model.params.d_jt)
+
+        # PERF: cache `1 - exp(-rate)` for the three scalar rates that
+        # otherwise get exponentiated every tick.
+        self._iota_prob = -np.expm1(-self.model.params.iota)
+        self._gamma_1_prob = -np.expm1(-self.model.params.gamma_1)
+        self._gamma_2_prob = -np.expm1(-self.model.params.gamma_2)
 
         return
 
@@ -164,7 +177,9 @@ class Infectious:
         Is_next[:] = Isym
 
         ## natural deaths (d_jt)
-        non_disease_deaths = model.prng.binomial(Is_next, -np.expm1(-model.params.d_jt[tick])).astype(Is_next.dtype)
+        # PERF: pre-computed `-np.expm1(-d_jt)` cached as model.patches.non_disease_death_prob_jt.
+        # non_disease_deaths = model.prng.binomial(Is_next, -np.expm1(-model.params.d_jt[tick])).astype(Is_next.dtype)
+        non_disease_deaths = model.prng.binomial(Is_next, model.patches.non_disease_death_prob_jt[tick]).astype(Is_next.dtype)
         Is_next -= non_disease_deaths
         ndd_next = model.patches.non_disease_deaths[tick]
         ndd_next += non_disease_deaths
@@ -198,7 +213,9 @@ class Infectious:
             ).astype(model.patches.reported_deaths.dtype)
 
         ## recovery (gamma)
-        recovered = model.prng.binomial(Is_next, -np.expm1(-model.params.gamma_1)).astype(Is_next.dtype)
+        # PERF: pre-computed `-np.expm1(-gamma_1)` cached as self._gamma_1_prob.
+        # recovered = model.prng.binomial(Is_next, -np.expm1(-model.params.gamma_1)).astype(Is_next.dtype)
+        recovered = model.prng.binomial(Is_next, self._gamma_1_prob).astype(Is_next.dtype)
         Is_next -= recovered
         R_next = model.people.R[tick + 1]
         R_next += recovered
@@ -210,13 +227,17 @@ class Infectious:
         Ia_next[:] = Iasym
 
         ## natural deaths (d_jt)
-        non_disease_deaths = model.prng.binomial(Ia_next, -np.expm1(-model.params.d_jt[tick])).astype(Ia_next.dtype)
+        # PERF: pre-computed `-np.expm1(-d_jt)` cached as model.patches.non_disease_death_prob_jt.
+        # non_disease_deaths = model.prng.binomial(Ia_next, -np.expm1(-model.params.d_jt[tick])).astype(Ia_next.dtype)
+        non_disease_deaths = model.prng.binomial(Ia_next, model.patches.non_disease_death_prob_jt[tick]).astype(Ia_next.dtype)
         Ia_next -= non_disease_deaths
         ndd_next += non_disease_deaths
         assert np.all(Ia_next >= 0), f"Ia_next should not go negative ({tick=}\n\t{Ia_next=})"
 
         ## recovery
-        recovered = model.prng.binomial(Ia_next, -np.expm1(-model.params.gamma_2)).astype(Ia_next.dtype)
+        # PERF: pre-computed `-np.expm1(-gamma_2)` cached as self._gamma_2_prob.
+        # recovered = model.prng.binomial(Ia_next, -np.expm1(-model.params.gamma_2)).astype(Ia_next.dtype)
+        recovered = model.prng.binomial(Ia_next, self._gamma_2_prob).astype(Ia_next.dtype)
         Ia_next -= recovered
         # R_next = model.people.R[tick + 1]
         R_next += recovered
@@ -224,7 +245,9 @@ class Infectious:
 
         # Use E_next here, can't progress deceased individuals
         E_next = model.people.E[tick + 1]
-        progressing = model.prng.binomial(E_next, -np.expm1(-model.params.iota)).astype(E_next.dtype)
+        # PERF: pre-computed `-np.expm1(-iota)` cached as self._iota_prob.
+        # progressing = model.prng.binomial(E_next, -np.expm1(-model.params.iota)).astype(E_next.dtype)
+        progressing = model.prng.binomial(E_next, self._iota_prob).astype(E_next.dtype)
         E_next -= progressing
         assert np.all(E_next >= 0), f"E_next should not go negative ({tick=}\n\t{E_next=})"
 

@@ -114,6 +114,18 @@ class Vaccinated:
 
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
+        # PERF: install `model.patches.non_disease_death_prob_jt` (the
+        # `1 - exp(-d_jt)` cache) idempotently if no earlier component has.
+        # Lets each consumer be exercised in isolation; the cache is built
+        # exactly once across the pipeline.
+        if not hasattr(self.model.patches, "non_disease_death_prob_jt"):
+            self.model.patches.add_vector_property("non_disease_death_prob_jt", length=self.model.params.d_jt.shape[0], dtype=np.float32, default=0.0)
+            self.model.patches.non_disease_death_prob_jt[:] = -np.expm1(-self.model.params.d_jt)
+
+        # PERF: cache `1 - exp(-omega_{1,2})` so the per-tick waning
+        # probabilities are not recomputed every call.
+        self._omega_1_prob = -np.expm1(-self.model.params.omega_1)
+        self._omega_2_prob = -np.expm1(-self.model.params.omega_2)
 
         return
 
@@ -141,21 +153,27 @@ class Vaccinated:
         V2_next[:] = V2
 
         # -natural mortality
-        non_disease_deaths = model.prng.binomial(V1_next, -np.expm1(-model.params.d_jt[tick])).astype(V1_next.dtype)
+        # PERF: pre-computed `-np.expm1(-d_jt)` cached as model.patches.non_disease_death_prob_jt.
+        # non_disease_deaths = model.prng.binomial(V1_next, -np.expm1(-model.params.d_jt[tick])).astype(V1_next.dtype)
+        non_disease_deaths = model.prng.binomial(V1_next, model.patches.non_disease_death_prob_jt[tick]).astype(V1_next.dtype)
         V1_next -= non_disease_deaths
         ndd_next = model.patches.non_disease_deaths[tick]
         ndd_next += non_disease_deaths
 
-        non_disease_deaths = model.prng.binomial(V2_next, -np.expm1(-model.params.d_jt[tick])).astype(V2_next.dtype)
+        # non_disease_deaths = model.prng.binomial(V2_next, -np.expm1(-model.params.d_jt[tick])).astype(V2_next.dtype)
+        non_disease_deaths = model.prng.binomial(V2_next, model.patches.non_disease_death_prob_jt[tick]).astype(V2_next.dtype)
         V2_next -= non_disease_deaths
         ndd_next += non_disease_deaths
 
         # -waning immunity
-        waned = model.prng.binomial(V1_next, -np.expm1(-model.params.omega_1)).astype(V1_next.dtype)
+        # PERF: pre-computed `-np.expm1(-omega_{1,2})` cached as self._omega_{1,2}_prob.
+        # waned = model.prng.binomial(V1_next, -np.expm1(-model.params.omega_1)).astype(V1_next.dtype)
+        waned = model.prng.binomial(V1_next, self._omega_1_prob).astype(V1_next.dtype)
         V1_next -= waned
         S_next += waned  # waned return to Susceptible
 
-        waned = model.prng.binomial(V2_next, -np.expm1(-model.params.omega_2)).astype(V2_next.dtype)
+        # waned = model.prng.binomial(V2_next, -np.expm1(-model.params.omega_2)).astype(V2_next.dtype)
+        waned = model.prng.binomial(V2_next, self._omega_2_prob).astype(V2_next.dtype)
         V2_next -= waned
         S_next += waned  # waned return to Susceptible
 
