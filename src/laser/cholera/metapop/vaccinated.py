@@ -1,15 +1,63 @@
+"""Vaccinated compartment — single-dose and two-dose protected populations.
+
+Owns:
+
+- `model.people.V1` — one-dose vaccinated population.
+- `model.people.V2` — two-dose vaccinated population.
+- `model.patches.dose_one_doses` / `dose_two_doses` — per-tick dose
+  counts (recorded on the day delivered for direct alignment with
+  `nu_1_jt` / `nu_2_jt`).
+
+Per-tick flow:
+
+1. Carry `V1` / `V2` forward, then subtract non-disease deaths (`d_jt`).
+2. Wane `V1 -> S` at rate `omega_1` and `V2 -> S` at rate `omega_2`.
+3. Deliver second doses (`nu_2_jt[tick]`) by moving the effective
+   fraction (`phi_2`) from `V1 -> V2`. Done before first doses so an
+   individual cannot move `S -> V1 -> V2` within a single tick.
+4. Deliver first doses (`nu_1_jt[tick]`) drawn proportionally from the
+   eligible source compartments (default: `S`, `E`, `Isym`, `Iasym`,
+   `R`; overridable via `params.nu_jt_sources`); the effective fraction
+   (`phi_1`) lands in `V1`, with the remainder staying in the source
+   compartment (i.e. the dose failed to take).
+"""
+
 import logging
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
+if TYPE_CHECKING:
+    from laser.cholera.metapop.model import Model
 logger = logging.getLogger("laser.cholera")
 
 
 class Vaccinated:
-    def __init__(self, model) -> None:
+    """Vaccinated compartment: tracks `V1(t)` / `V2(t)` and the per-tick dose flows.
+
+    Attributes:
+        model: The parent `Model` instance.
+        sources: Names of `model.people` compartments eligible to draw
+            first doses from (default `["S", "E", "Isym", "Iasym", "R"]`,
+            overridable via `params.nu_jt_sources`).
+    """
+
+    def __init__(self, model: "Model") -> None:
+        """Allocate `V1` / `V2` and the dose-bookkeeping vectors; seed from `V*_j_initial`.
+
+        Args:
+            model: The `Model` instance. Must have `people`, `patches`,
+                and `params`, with `params.V1_j_initial` and
+                `params.V2_j_initial` populated.
+
+        Raises:
+            AssertionError: When `params.V1_j_initial` or
+                `params.V2_j_initial` is missing.
+        """
         self.model = model
 
         assert hasattr(model, "people"), "Vaccinated: model needs to have a 'people' attribute."
@@ -32,6 +80,16 @@ class Vaccinated:
         return
 
     def check(self):
+        """Validate dose-related parameters and the source compartments.
+
+        Asserts that `model.people.S` and `model.people.E` exist and
+        that `params` provides `phi_1`, `phi_2`, `omega_1`, `omega_2`,
+        `nu_1_jt`, `nu_2_jt`, and `d_jt`.
+
+        Raises:
+            AssertionError: When a required attribute or parameter is
+                missing.
+        """
         assert hasattr(self.model.people, "S"), "Vaccinated: model people needs to have a 'S' (susceptible) attribute."
         assert hasattr(self.model.people, "E"), "Vaccinated: model people needs to have a 'e' (exposed) attribute."
 
@@ -49,7 +107,19 @@ class Vaccinated:
 
         return
 
-    def __call__(self, model, tick: int) -> None:
+    def __call__(self, model: "Model", tick: int) -> None:
+        """Advance `V1` / `V2` one tick: deaths, waning, then dose deliveries.
+
+        Doses scheduled for this tick are clamped against the available
+        donor population (warning logged at `DEBUG` if the schedule
+        exceeds capacity). Only the `phi_*`-effective fraction transits
+        to the vaccinated compartment; ineffective doses leave the
+        recipient in their original compartment.
+
+        Args:
+            model: The parent `Model` instance.
+            tick: Current simulation tick.
+        """
         V1 = model.people.V1[tick]
         V1_next = model.people.V1[tick + 1]
         V2 = model.people.V2[tick]
@@ -134,7 +204,16 @@ class Vaccinated:
 
         return
 
-    def plot(self, fig: Optional[Figure] = None):  # pragma: no cover
+    def plot(self, fig: Optional[Figure] = None) -> Iterator[str]:  # pragma: no cover
+        """Yield two Matplotlib figures: `V1(t)` and `V2(t)` for the ten largest patches.
+
+        Args:
+            fig: Optional existing Matplotlib `Figure` to draw into.
+
+        Yields:
+            Two labels in order: `"Vaccinated (One Dose)"`,
+            `"Vaccinated (Two Doses)"`.
+        """
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Vaccinated (One Dose)") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:

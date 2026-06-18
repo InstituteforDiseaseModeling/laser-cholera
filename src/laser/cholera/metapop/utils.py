@@ -1,8 +1,30 @@
+"""Shared metapop helpers: seasonality, gravity-model mobility, and CLI-override coercion.
+
+Three responsibilities live here:
+
+- [`get_daily_seasonality`][laser.cholera.metapop.utils.get_daily_seasonality]
+  — bakes the per-tick / per-patch human-to-human transmission
+  seasonality envelope from Fourier coefficients (`a_1_j`, `b_1_j`,
+  `a_2_j`, `b_2_j`, period `p`).
+- [`get_pi_from_lat_long`][laser.cholera.metapop.utils.get_pi_from_lat_long]
+  — builds the row-stochastic spatial-connectivity matrix `pi_ij`
+  using a gravity model over patch lat/long, attenuated by
+  `mobility_omega` / `mobility_gamma`.
+- [`override_helper`][laser.cholera.metapop.utils.override_helper] and
+  the [`UnknownOverrideKey`][laser.cholera.metapop.utils.UnknownOverrideKey]
+  exception, used by `cli_run` to type-coerce and strictly validate
+  `--over key:value` overrides against the parameter schema.
+"""
+
 import difflib
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import numpy as np
 from laser.core.migration import distance
+
+if TYPE_CHECKING:
+    from laser.cholera.metapop.params import PropertySetEx
 
 
 class UnknownOverrideKey(ValueError):
@@ -16,7 +38,23 @@ class UnknownOverrideKey(ValueError):
     """
 
 
-def get_daily_seasonality(params):
+def get_daily_seasonality(params: "PropertySetEx") -> np.ndarray:
+    """Build the per-tick, per-patch human-to-human transmission seasonality envelope.
+
+    Computes `beta_j0_hum * (1 + a_1_j cos(2pi t/p) + b_1_j sin(2pi t/p)
+    + a_2_j cos(4pi t/p) + b_2_j sin(4pi t/p))`, returning a
+    `(nticks, npatches)` `float32` array. `t` is 1-indexed to match the
+    R reference implementation.
+
+    Args:
+        params: A `PropertySetEx` with `beta_j0_hum`, `a_1_j`, `b_1_j`,
+            `a_2_j`, `b_2_j`, `p` (period in ticks), and `nticks`.
+
+    Returns:
+        A `(nticks, npatches)` `float32` array of the multiplicative
+        seasonality envelope. Consumed once by `HumanToHuman.__init__`
+        and stored on `patches.beta_jt_human`.
+    """
     beta_j0_hum = params.beta_j0_hum
     a1 = params.a_1_j
     b1 = params.b_1_j
@@ -39,7 +77,33 @@ def get_daily_seasonality(params):
     return seasonality
 
 
-def get_pi_from_lat_long(params):
+def get_pi_from_lat_long(params: "PropertySetEx") -> np.ndarray:
+    """Build the row-stochastic spatial-connectivity matrix `pi_ij` from a gravity model.
+
+    Computes `x_ij = N_j^omega * d_ij^(-gamma)` for each origin/dest
+    pair (excluding the self pair `j == i`), then row-normalizes:
+    `pi_ij = x_ij / sum_j(x_ij)`. The diagonal is zero (no
+    self-mobility). The migrating fraction `tau_i` is *not* applied
+    here; it's factored in at runtime inside
+    [`HumanToHuman.__call__`][laser.cholera.metapop.humantohuman.HumanToHuman]
+    so the migrating fraction can vary per patch without rebuilding
+    `pi_ij`.
+
+    Special-cases the single-location configuration: `distance()`
+    returns a 0-dim scalar that's promoted to a `(1, 1)` array so
+    downstream array operations keep working; the result is then
+    trivially `[[0.0]]`.
+
+    Args:
+        params: A `PropertySetEx` with `latitude` (npatches,),
+            `longitude` (npatches,), `mobility_omega`, `mobility_gamma`,
+            and the seed initial-population vectors
+            (`S_j_initial`, `E_j_initial`, `I_j_initial`, `R_j_initial`,
+            `V1_j_initial`, `V2_j_initial`) used to compute `N_j`.
+
+    Returns:
+        An `(npatches, npatches)` `float32` row-stochastic matrix.
+    """
     # x <- D; x[,] <- NA
     # for (i in 1:length(N_orig)) {
     #   for (j in 1:length(N_dest)) {

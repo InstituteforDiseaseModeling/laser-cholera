@@ -1,6 +1,19 @@
-"""Human-to-human transmission rate."""
+"""Human-to-human transmission component.
+
+Computes a per-tick, per-patch force-of-infection
+[`Lambda`][laser.cholera.metapop.humantohuman.HumanToHuman.__call__]
+from the symptomatic and asymptomatic infectious populations, mixed
+through a gravity-model spatial-connectivity matrix (`pi_ij`, derived
+from latitude/longitude) and modulated by a seasonality envelope
+(`beta_jt_human`, derived from the `a_*_j` / `b_*_j` / `p` Fourier
+coefficients). New `S -> E` transitions are sampled from
+`Binomial(S_next, 1 - exp(-Lambda))` and recorded into
+`patches.incidence_human` and the shared `patches.incidence`.
+"""
 
 import logging
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,11 +22,41 @@ from matplotlib.figure import Figure
 from laser.cholera.metapop.utils import get_daily_seasonality
 from laser.cholera.metapop.utils import get_pi_from_lat_long
 
+if TYPE_CHECKING:
+    from laser.cholera.metapop.model import Model
 logger = logging.getLogger("laser.cholera")
 
 
 class HumanToHuman:
-    def __init__(self, model) -> None:
+    """Direct (human-to-human) transmission component for the metapop pipeline.
+
+    Owns the per-patch force-of-infection vector `patches.Lambda`, the
+    spatial-connectivity matrix `patches.pi_ij`, and the seasonality
+    matrix `patches.beta_jt_human`.
+
+    Attributes:
+        model: The parent `Model` instance.
+    """
+
+    def __init__(self, model: "Model") -> None:
+        """Allocate `Lambda`, build `pi_ij` from lat/long, and bake the seasonality matrix.
+
+        `pi_ij` is computed once via
+        [`get_pi_from_lat_long`][laser.cholera.metapop.utils.get_pi_from_lat_long]
+        (gravity model), and `beta_jt_human` once via
+        [`get_daily_seasonality`][laser.cholera.metapop.utils.get_daily_seasonality]
+        (Fourier sum) — neither changes during the run.
+
+        Args:
+            model: The `Model` instance. Must have `patches`, `people`,
+                and `params` set up, with `latitude`, `longitude`, the
+                seasonality coefficients (`a_*_j`, `b_*_j`, `p`), and
+                the mobility parameters (`mobility_omega`,
+                `mobility_gamma`) populated.
+
+        Raises:
+            AssertionError: When any required parameter is missing.
+        """
         self.model = model
 
         assert hasattr(model, "patches"), "HumanToHuman: model needs to have a 'patches' attribute."
@@ -44,6 +87,16 @@ class HumanToHuman:
         return
 
     def check(self):
+        """Validate the consumer-side compartments and transmission parameters.
+
+        Asserts that `model.people` has `Isym`, `Iasym`, `S`, `E`;
+        `model.patches.N` exists; and `params` provides `tau_i`,
+        `beta_j0_hum`, `alpha_1`, and `alpha_2`.
+
+        Raises:
+            AssertionError: When any required attribute or parameter is
+                missing.
+        """
         assert hasattr(self.model, "people"), "HumanToHuman: model needs to have a 'people' attribute."
         assert hasattr(self.model.people, "Isym"), "HumanToHuman: model people needs to have a 'Isym' (symptomatic) attribute."
         assert hasattr(self.model.people, "Iasym"), "HumanToHuman: model people needs to have a 'Iasym' (asymptomatic) attribute."
@@ -61,7 +114,7 @@ class HumanToHuman:
 
         return
 
-    def __call__(self, model, tick: int) -> None:
+    def __call__(self, model: "Model", tick: int) -> None:
         r"""
         Calculate the current human-to-human transmission rate per patch.
 
@@ -111,7 +164,18 @@ class HumanToHuman:
 
         return
 
-    def plot(self, fig: Figure = None):  # pragma: no cover
+    def plot(self, fig: Figure = None) -> Iterator[str]:  # pragma: no cover
+        """Yield three Matplotlib figures: transmission rate, `pi_ij` heatmap, seasonality heatmap.
+
+        Args:
+            fig: Optional existing Matplotlib `Figure` to draw into.
+
+        Yields:
+            Three labels in order:
+            `"Human-to-Human Transmission Rate"`,
+            `"Spatial Connectivity Matrix (pi_ij)"`,
+            `"Seasonal Human-Human Transmission Factor by Location Over Time"`.
+        """
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Human-to-Human Transmission Rate") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:

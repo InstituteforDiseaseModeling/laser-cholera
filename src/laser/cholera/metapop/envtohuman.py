@@ -1,12 +1,49 @@
-"""Environmental transmission rate."""
+"""Environmental-reservoir-to-human transmission component.
+
+Computes a per-tick, per-patch environmental force-of-infection `Psi`
+from the contaminated-water reservoir `patches.W` (maintained by
+[`Environmental`][laser.cholera.metapop.environmental.Environmental])
+modulated by a per-tick seasonal-suitability matrix `beta_jt_env`
+derived from `params.psi_jt` and `params.beta_j0_env`. The
+`(1 - theta_j)` factor models the fraction of the population NOT
+covered by water/sanitation/hygiene (WASH), and the
+`W / (kappa + W)` term saturates uptake as the reservoir grows.
+"""
+
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
+if TYPE_CHECKING:
+    from laser.cholera.metapop.model import Model
+
 
 class EnvToHuman:
-    def __init__(self, model) -> None:
+    """Environmental transmission component: turns reservoir `W` into new `S -> E` infections.
+
+    Attributes:
+        model: The parent `Model` instance.
+    """
+
+    def __init__(self, model: "Model") -> None:
+        """Allocate `Psi` and bake the `beta_jt_env` seasonality matrix.
+
+        `beta_jt_env` is computed once at construction time from
+        `params.psi_jt` (deviation-from-mean suitability) and
+        `params.beta_j0_env` (baseline) and is constant across the run.
+
+        Args:
+            model: The `Model` instance. Must have `people`, `patches`,
+                and `params` with `psi_jt`, `beta_j0_env` populated.
+
+        Raises:
+            AssertionError: When `params.psi_jt` is missing or the
+                allocated `beta_jt_env` shape disagrees with the
+                provided `psi_jt` / `beta_j0_env` shapes.
+        """
         self.model = model
 
         assert hasattr(model, "people"), "EnvToHuman: model needs to have a 'people' attribute."
@@ -31,6 +68,16 @@ class EnvToHuman:
         return
 
     def check(self):
+        """Validate the consumer-side state and transmission parameters.
+
+        Asserts that `model.people.S` and `.E` exist, that
+        `model.patches.W` exists (allocated by `Environmental`), and
+        that `params` provides `tau_i`, `theta_j`, and `kappa`.
+
+        Raises:
+            AssertionError: When any required attribute or parameter is
+                missing.
+        """
         assert hasattr(self.model.people, "S"), "EnvToHuman: model people needs to have a 'S' (susceptible) attribute."
         assert hasattr(self.model.people, "E"), "EnvToHuman: model people needs to have a 'E' (exposed) attribute."
 
@@ -43,7 +90,23 @@ class EnvToHuman:
 
         return
 
-    def __call__(self, model, tick: int) -> None:
+    def __call__(self, model: "Model", tick: int) -> None:
+        """Compute environmental force-of-infection `Psi` and convert `S -> E`.
+
+        `Psi[tick + 1] = beta_jt_env[tick] * (1 - theta_j) * W /
+        (kappa + W)`. New infections drawn from `Binomial(S_next,
+        1 - exp(-Psi))`, where `S_next` is the susceptible count *after*
+        natural mortality and any human-to-human force-of-infection has
+        already been applied earlier in the tick.
+
+        Args:
+            model: The parent `Model` instance.
+            tick: Current simulation tick.
+
+        Raises:
+            AssertionError: When the post-infection susceptible
+                population goes negative.
+        """
         Psi = model.patches.Psi[tick + 1]
         W = model.patches.W[tick]
         tau_i = model.params.tau_i
@@ -70,7 +133,15 @@ class EnvToHuman:
 
         return
 
-    def plot(self, fig: Figure = None):  # pragma: no cover
+    def plot(self, fig: Figure = None) -> Iterator[str]:  # pragma: no cover
+        """Yield one Matplotlib figure of `Psi(t)` for the ten largest patches.
+
+        Args:
+            fig: Optional existing Matplotlib `Figure` to draw into.
+
+        Yields:
+            The string label `"Environmental Transmission Rate"`.
+        """
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Environmental Transmission Rate") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:

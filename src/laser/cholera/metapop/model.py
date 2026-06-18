@@ -1,4 +1,25 @@
+"""Metapopulation model orchestration: `Model`, `RInterface`, and the `cli_run` / `run_model` entry points.
+
+Contains the runtime glue that turns a parameter set plus an ordered
+list of component classes into a complete simulation run:
+
+- [`Model`][laser.cholera.metapop.model.Model] — owns the PRNG,
+  the `people` / `patches` `LaserFrame` instances, and the per-phase
+  timing metrics. Its `components` setter instantiates each component
+  against the model, registers `__call__`-bearing ones as run phases,
+  and runs each component's `check()` before the first tick.
+- [`RInterface`][laser.cholera.metapop.model.RInterface] — a thin
+  read-only view object exposing each compartment / patch series
+  trimmed of the `t=0` slot and transposed into the `[location, time]`
+  layout the R reference implementation expects.
+- [`cli_run`][laser.cholera.metapop.model.cli_run] — the
+  click-decorated `metapop` console entry point.
+- [`run_model`][laser.cholera.metapop.model.run_model] — the canonical
+  Python entry point used by tests and by `cli_run`.
+"""
+
 import logging
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -38,7 +59,27 @@ logger = logging.getLogger("laser.cholera")
 class RInterface:
     """A simple interface to store results trimmed and transposed for R."""
 
-    def __init__(self, model):
+    def __init__(self, model: "Model"):
+        """Snapshot every per-tick / per-patch series as an R-style trimmed-and-transposed view.
+
+        For each available compartment in `model.people` and each
+        per-patch property in `model.patches`, attaches a view onto
+        `self` named after the property. Time-series (shape
+        `(nticks + 1, npatches)`) are sliced `[1:, :]` to drop the
+        `t=0` seed row and then transposed to `[npatches, nticks]`.
+        Dose-count vectors (`dose_one_doses`, `dose_two_doses`) are
+        already `nticks`-shaped, so they are only transposed.
+        Per-tick environmental / seasonality matrices (`beta_jt_env`,
+        `beta_jt_human`, `delta_jt`) are likewise just transposed.
+        The `pi_ij` and `coupling` matrices are passed through
+        un-transposed (the latter is symmetric).
+
+        These are *views*, not copies — the underlying buffers are the
+        ones the simulation writes into.
+
+        Args:
+            model: The completed (or in-progress) `Model` instance.
+        """
         # self.S = model.people.S[1:, :].T
         # self.E = model.people.E[1:, :].T
         # self.Isym = model.people.Isym[1:, :].T
@@ -122,7 +163,51 @@ class RInterface:
 
 
 class Model:
+    """Top-level metapopulation simulation object: owns state, the PRNG, and the run loop.
+
+    A `Model` is constructed from a `PropertySetEx` of parameters; the
+    caller then assigns a list of component classes to `model.components`
+    (which instantiates each, registers `__call__`-bearing instances as
+    run phases, and validates prerequisites via each component's
+    `check()`). Calling `model.run()` advances the simulation
+    `nticks` times, building up per-phase timing metrics and the R-style
+    [`RInterface`][laser.cholera.metapop.model.RInterface] view on
+    `model.results`.
+
+    Attributes:
+        params: The full parameter `PropertySetEx`.
+        name: Human-readable label used in logs and the PDF filename.
+        scenario: The MOSAIC scenario `GeoDataFrame`
+            ([`laser.cholera.metapop.scenario.scenario`][]).
+        prng: Seeded LASER core PRNG instance shared by every component.
+        people: `LaserFrame` of length `npatches` holding the
+            compartment time-series (one row per patch, vector-property
+            per compartment).
+        patches: `LaserFrame` of length `npatches` holding per-patch
+            inputs and reporting outputs.
+        tinit / tstart / tfinish: Wall-clock timestamps for model
+            construction, run start, and run finish respectively
+            (`datetime.datetime`, naive — local time).
+        metrics: After `run()`, a list of per-tick `(tick, *phase_µs)`
+            timing rows.
+        results: After `run()`, an
+            [`RInterface`][laser.cholera.metapop.model.RInterface] view
+            onto the completed simulation arrays.
+    """
+
     def __init__(self, parameters: PropertySet, name: str = "Cholera Metapop"):
+        """Construct a fresh model: seed the PRNG and allocate `people` / `patches` frames.
+
+        Does NOT install components — assign `model.components = [...]`
+        after construction to wire up the pipeline.
+
+        Args:
+            parameters: A validated `PropertySetEx` (typically from
+                [`get_parameters`][laser.cholera.metapop.params.get_parameters])
+                providing at minimum `seed`, `location_name`, and
+                `nticks`.
+            name: Display name used in logging and visualization output.
+        """
         self.tinit = datetime.now(tz=None)  # noqa: DTZ005
         logger.info(f"{self.tinit}: Creating the {name} model…")
         self.params = parameters
@@ -294,7 +379,23 @@ class Model:
 
         return filename
 
-    def plot(self, fig: Figure = None):  # pragma: no cover
+    def plot(self, fig: Figure = None) -> Iterator[str]:  # pragma: no cover
+        """Yield two top-level scenario figures: patch map and per-phase timing pie.
+
+        The first figure overlays a scatter of patch centroids
+        (sized / colored by population) on the scenario `GeoDataFrame`
+        polygons. The second figure pie-charts the total microseconds
+        spent in each run phase across the entire simulation.
+
+        Args:
+            fig: Optional existing Matplotlib `Figure` to draw into.
+
+        Yields:
+            Two labels in order:
+            `"Scenario Patches and Populations"` and
+            `"Update Phase Times (Total N µsec)"` (where `N` is the
+            formatted total).
+        """
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Scenario Patches and Populations") if fig is None else fig
 
         if "geometry" in self.scenario.columns:
@@ -356,7 +457,7 @@ class Model:
 @click.option("-q", "--quiet", is_flag=True, default=False, help="Suppress console progress output")
 @click.option("--hdf5-output", "hdf5_output", is_flag=True, default=False, help="Write per-tick outputs to an HDF5 file via the Recorder")
 @click.option("--compress", is_flag=True, default=False, help="Gzip the HDF5 output (only meaningful with --hdf5-output)")
-def cli_run(params, **kwargs):
+def cli_run(params: Optional[Path], **kwargs: object) -> None:
     """Run the cholera model simulation with the given parameters.
 
     Initializes the model, sets up the default component pipeline, seeds

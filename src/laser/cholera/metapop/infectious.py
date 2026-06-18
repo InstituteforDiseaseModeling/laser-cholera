@@ -1,12 +1,69 @@
+"""Infectious compartment — symptomatic and asymptomatic cholera cases, plus disease mortality.
+
+Owns four state vectors:
+
+- `model.people.Isym` — symptomatic infectious population.
+- `model.people.Iasym` — asymptomatic infectious population.
+- `model.patches.disease_deaths` — per-tick deaths from disease.
+- `model.patches.new_symptomatic` — per-tick incident symptomatic cases.
+- `model.patches.reported_cases` / `reported_deaths` — observed counts
+  (subject to under-reporting via `rho`, `rho_deaths`, and the
+  `chi_endemic` / `chi_epidemic` healthcare-access modifier).
+
+On each tick the component:
+
+1. Applies non-disease mortality (`d_jt`) to both `Isym` and `Iasym`.
+2. Computes a per-patch `mu_jt` disease-mortality rate that blends a
+   baseline, a tick-linear slope, and an epidemic-factor multiplier
+   gated on whether `Isym / N` exceeded `epidemic_threshold` at the
+   reporting-lag tick.
+3. Samples disease deaths and recoveries (`gamma_1` for symptomatic,
+   `gamma_2` for asymptomatic).
+4. Progresses individuals out of `E` according to `iota`, splitting
+   them into symptomatic (`sigma`) and asymptomatic (`1 - sigma`).
+5. Updates the lagged `reported_cases` and `reported_deaths` series.
+
+Force-of-infection — both human-to-human and environment-to-human — is
+handled by the dedicated components downstream
+([`HumanToHuman`][laser.cholera.metapop.humantohuman.HumanToHuman],
+[`EnvToHuman`][laser.cholera.metapop.envtohuman.EnvToHuman]); this
+component focuses on the within-compartment dynamics.
+"""
+
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
+if TYPE_CHECKING:
+    from laser.cholera.metapop.model import Model
+
 
 class Infectious:
-    def __init__(self, model) -> None:
+    """Infectious compartment: tracks `Isym(t)`, `Iasym(t)`, disease deaths, and reported cases.
+
+    Attributes:
+        model: The parent `Model` instance.
+    """
+
+    def __init__(self, model: "Model") -> None:
+        """Allocate `Isym` / `Iasym` and the disease-deaths / reporting bookkeeping vectors.
+
+        Splits `params.I_j_initial` into symptomatic and asymptomatic
+        seed populations using the symptomatic fraction `params.sigma`.
+
+        Args:
+            model: The `Model` instance. Must have `people`, `patches`,
+                and `params` set up, with `params.I_j_initial` and
+                `params.sigma` populated.
+
+        Raises:
+            AssertionError: When required attributes or parameters are
+                missing.
+        """
         self.model = model
 
         assert hasattr(model, "people"), "Infectious: model needs to have a 'people' attribute."
@@ -26,6 +83,17 @@ class Infectious:
         return
 
     def check(self):
+        """Validate every parameter and prerequisite attribute used by `__call__`.
+
+        Asserts that `model.people.R` exists (so recovery can route into
+        it) and that `params` contains `d_jt`, `mu_j_baseline`,
+        `mu_j_slope`, `mu_j_epidemic_factor`, `epidemic_threshold`,
+        `gamma_1`, `gamma_2`, `iota`, `sigma`, `rho`, and `rho_deaths`.
+
+        Raises:
+            AssertionError: When any of the required parameters or
+                attributes is missing.
+        """
         assert hasattr(self.model.people, "R"), "Infectious: model.people needs to have a 'S' attribute."
         assert "d_jt" in self.model.params, "Infectious: model params needs to have a 'd_jt' (mortality rate) parameter."
 
@@ -51,7 +119,32 @@ class Infectious:
 
         return
 
-    def __call__(self, model, tick: int) -> None:
+    def __call__(self, model: "Model", tick: int) -> None:
+        """Advance `Isym` / `Iasym` one tick: deaths, recoveries, then `E -> I` progression.
+
+        For each patch and within each of `Isym` and `Iasym`:
+
+        1. Carry forward; subtract non-disease deaths (`d_jt`).
+        2. For `Isym` only: compute `mu_jt = mu_baseline * (1 + slope *
+            t_factor) * (1 + epidemic_factor * epidemic_flag)`, sample
+            disease deaths from `Binomial(Isym, 1 - exp(-mu_jt))`, and
+            update `patches.disease_deaths` and lagged `reported_deaths`.
+        3. Sample recoveries (`gamma_1` for symptomatic, `gamma_2` for
+            asymptomatic) and add to `R[tick + 1]`.
+        4. Sample `E -> I` progression from `Binomial(E_next, 1 -
+            exp(-iota))`, split by `sigma`, and add into `Isym` / `Iasym`.
+        5. Update lagged `reported_cases` using `rho` and the
+            `chi_endemic` / `chi_epidemic` healthcare-access modifier.
+
+        Args:
+            model: The parent `Model` instance.
+            tick: Current simulation tick.
+
+        Raises:
+            AssertionError: When any compartment goes negative after a
+                draw (indicates the implementation's invariants have
+                regressed).
+        """
         # Symptomatic
         Isym = model.people.Isym[tick]
         Is_next = model.people.Isym[tick + 1]
@@ -145,7 +238,17 @@ class Infectious:
 
         return
 
-    def plot(self, fig: Optional[Figure] = None):  # pragma: no cover
+    def plot(self, fig: Optional[Figure] = None) -> Iterator[str]:  # pragma: no cover
+        """Yield four Matplotlib figures: symptomatic, asymptomatic, total, and reported-vs-actual cases.
+
+        Args:
+            fig: Optional existing Matplotlib `Figure` to draw into.
+
+        Yields:
+            Four labels in order: `"Infectious (Symptomatic)"`,
+            `"Infectious (Asymptomatic)"`, `"Infectious (Total)"`,
+            `"Reported Cases"`.
+        """
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Infectious (Symptomatic)") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:

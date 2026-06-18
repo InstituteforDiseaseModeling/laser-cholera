@@ -1,3 +1,15 @@
+"""Top-level utilities for `laser.cholera`.
+
+Currently a single helper,
+[`sim_duration`][laser.cholera.utils.sim_duration], for building a
+parameter-override dict that shrinks the simulation window to a
+requested calendar interval. Used by tests and short-run scripts to
+short-cut the bundled `default_parameters.json`'s ~1155-day default
+window. NB: callers also need to slice the time-series matrices
+(`b_jt`, `d_jt`, `nu_1_jt`, `nu_2_jt`, `psi_jt`) to match the new
+`nticks`; see `tests/test_model.py` for the pattern.
+"""
+
 from datetime import datetime
 
 

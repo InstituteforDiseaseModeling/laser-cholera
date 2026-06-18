@@ -6,9 +6,11 @@ that ``mkdocs-literate-nav`` uses to render the nav tree.
 
 Each generated file has the form::
 
-    # `laser.cholera.metapop.params`
-
     ::: laser.cholera.metapop.params
+
+The mkdocstrings handler renders the module heading itself via
+``show_root_heading: true`` in ``mkdocs.yml``; writing a Markdown H1
+here as well produced a duplicated heading on every reference page.
 
 Files are emitted into the MkDocs ``docs_dir`` at build time via
 ``mkdocs_gen_files.open(...)``. They are derived from ``src/`` and should not
@@ -46,7 +48,7 @@ for path in sorted(SRC_ROOT.rglob("*.py")):
     identifier = ".".join(parts)
 
     with mkdocs_gen_files.open(doc_path, "w") as fd:
-        fd.write(f"# `{identifier}`\n\n::: {identifier}\n")
+        fd.write(f"::: {identifier}\n")
 
     # The path written into ``nav`` must be relative to the location of the
     # generated ``SUMMARY.md`` (which lives at ``REFERENCE_ROOT / SUMMARY.md``);
