@@ -306,15 +306,16 @@ class Model:
         for tick in tqdm(range(self.params.nticks), desc="Running model", disable=self.params.quiet):
             timing = [tick]
             for phase in self.phases:
-                # `time.perf_counter()` is the canonical idiom for relative
-                # timing measurements: monotonic, lighter than
-                # `datetime.now()`, and not sensitive to wall-clock jumps.
-                # The per-phase / per-tick site sees ~12 * nticks = ~14k
-                # calls on a default run, so the per-call savings add up.
-                tstart = time.perf_counter()
+                # `time.perf_counter_ns()` is the canonical idiom for relative
+                # timing measurements: monotonic, lighter than `datetime.now()`,
+                # not sensitive to wall-clock jumps, and integer-valued (so
+                # the delta and the ns → µs conversion stay in int arithmetic).
+                # The per-phase / per-tick site sees ~12 * nticks = ~14k calls
+                # on a default run.
+                tstart = time.perf_counter_ns()
                 phase(self, tick)
-                tfinish = time.perf_counter()
-                timing.append(int((tfinish - tstart) * 1_000_000))
+                tfinish = time.perf_counter_ns()
+                timing.append((tfinish - tstart) // 1_000)  # ns → µs
             self.metrics.append(timing)
 
         self.tfinish = datetime.now(tz=None)  # noqa: DTZ005
