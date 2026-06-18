@@ -67,7 +67,7 @@ Inert values, by feature (these are the off-switches the documentation pages wil
 | Vaccination (dose 1 + dose 2) | `nu_1_jt = 0`, `nu_2_jt = 0` over the whole window; `V1_j_initial = V2_j_initial = 0` | `phi_1`, `phi_2`, `omega_1`, `omega_2` then have no effect |
 | Human-to-human transmission | `beta_j0_hum = 0` (vector of zeros) | Disables `HumanToHuman` term |
 | Environmental transmission | `beta_j0_env = 0` (vector of zeros) | Disables `EnvToHuman` term; `theta_j`, `kappa`, `decay_days_*`, `zeta_*`, `psi_jt` then irrelevant |
-| Seasonality | `a_1_j = a_2_j = 0`, `b_1_j = b_2_j = 1` (any non-zero), `p = 365` | Seasonal multiplier collapses to constant 1.0 |
+| Seasonality | `a_1_j = a_2_j = 0`, `b_1_j = b_2_j = 0`, `p = 365` (any positive) | Seasonal multiplier collapses to constant 1.0. (`a_*` and `b_*` are both sine *amplitudes*, not periods — see corrected note below.) |
 | Mobility / coupling | `tau_i = 0` (vector of zeros) | Patches do not exchange exposure; `mobility_omega` / `mobility_gamma` still required by validator but unused |
 | WASH protection | `theta_j = 0` (vector of zeros) | No WASH effect on env transmission |
 | Vital dynamics (closed population) | `b_jt = d_jt = 0` over the whole window | No births / non-disease deaths |
@@ -76,16 +76,17 @@ Inert values, by feature (these are the off-switches the documentation pages wil
 | Asymptomatic split | `sigma = 1` (all symptomatic) or `sigma = 0` (all asymptomatic) | Pick the simpler half |
 | Reporting under-reporting | `rho = rho_deaths = 1` | Observed = estimated |
 | Reporting lag | `delta_reporting_cases = delta_reporting_deaths = 0` | No tick offset |
-| Epidemic vs endemic regime switch | `chi_endemic = chi_epidemic = 1.0`, `epidemic_threshold = 0` (or large) | One regime everywhere |
+| Epidemic vs endemic regime switch | `chi_endemic == chi_epidemic` (e.g. both `1.0`) **and** `mu_j_epidemic_factor = 0` | Necessary partnership: zeroing the threshold alone does NOT disable the feature (see corrected note below). With both partners set, `epidemic_threshold` has no effect on dynamics. |
 | Likelihood scoring | `calc_likelihood = False` (or all four `weight_*` = 0 and `calc_likelihood = True`) | No LL computation; or NB core only. **Either way the scorer requires `reported_cases` and `reported_deaths` arrays** — without observed data, likelihood is undefined. |
 | Environmental forcing curve | `psi_jt = 1` everywhere; `psi_star_*` constants set to match | Constant environmental suitability |
 
 A few cases need a note:
 
-- `b_1_j` / `b_2_j` being zero would divide by zero in the seasonal harmonic — the off-trick is to zero the *amplitudes* (`a_*`), not the periods. Reference page must spell this out.
+- **Seasonality amplitudes vs. period (corrected by wave 1 verify phase).** Both `a_1_j` / `a_2_j` *and* `b_1_j` / `b_2_j` are sine *amplitudes* — `b_1_j` multiplies `sin(2*pi*t/p)`, `b_2_j` multiplies `sin(4*pi*t/p)`. None of them appears in a denominator. The only actual divide-by-zero risk is `p = 0` (the period). The correct off-form is to zero all four amplitudes; `p` stays at any positive value (default `365`). The earlier "must keep `b_*` non-zero" note was wrong.
+- **Regime-switch off-value requires partner parameters (corrected by wave 1 verify phase).** `epidemic_threshold` on its own does not disable regime switching. With `threshold = 0` and any positive `Ireported`, every patch flips to the epidemic branch (`mu_jt` picks up the full `mu_j_epidemic_factor` inflation); with a very large threshold the flag is always `False` (always endemic) but `chi_endemic` still applies. The canonical disable requires the partnership `chi_endemic == chi_epidemic` **and** `mu_j_epidemic_factor == 0` (where `mu_j_epidemic_factor` lives in the vital-dynamics group, not regime-switching).
 - `mobility_omega` / `mobility_gamma` are required by `validate_parameters` even when `tau_i = 0`. Document that they remain valid but have no effect.
 - `epidemic_peaks` can be omitted entirely when `weight_peak_*` are zero; the validator only checks columns *if* the field is present.
-- `nu_jt_sources` is **not** free-text. It is the list of compartments from which vaccine doses are drawn — `["S"]` means doses go to susceptibles only, while the bundled default lists multiple source compartments (e.g. `S`, `E`, `R`, …). Reference page must document the recognized compartment labels, what the default contains, and what each choice implies for the dynamics.
+- `nu_jt_sources` is **not** free-text. It is the list of compartments from which vaccine doses are drawn — `["S"]` means doses go to susceptibles only, while the bundled default lists multiple source compartments (`S`, `E`, `Isym`, `Iasym`, `R`). Reference page must document the recognized compartment labels, what the default contains, and what each choice implies for the dynamics.
 
 ## 5. Parameter taxonomy (groups for §3 Reference pages)
 
