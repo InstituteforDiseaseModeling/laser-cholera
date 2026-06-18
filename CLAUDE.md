@@ -12,4 +12,6 @@
 - Always add a docstring to tests explaining the purpose of the test and the implications of failure(s)
 - Always comment on inconsistencies or ambiguities in functions being tested
 - Always run new tests to verify implementation before considering implementation as complete
--
+## Linting
+- Always run `uvx --with tox-uv tox -e check` and resolve all failures before committing or proposing changes to be committed. The hook runs the pre-commit suite (ruff lint, ruff format, trailing whitespace, end-of-file fixer, debug-statement check); both the work and any follow-up edits the hook auto-applies must be clean.
+- Prefer `pytest.raises(ExceptionType, match=r"...")` over `self.assertRaises(...)`; ruff's PT011 rule flags bare `pytest.raises(ValueError)` without a `match` pattern.

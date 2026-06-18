@@ -1,3 +1,4 @@
+import re
 import unittest
 from datetime import datetime
 from types import SimpleNamespace
@@ -206,13 +207,11 @@ class TestOverrideHelper(unittest.TestCase):
         path has regressed; misspelled CLI flags would silently no-op
         again and surface later as confusing shape errors.
         """
-        with pytest.raises(UnknownOverrideKey) as ctx:
+        with pytest.raises(UnknownOverrideKey, match=r"date_strat.*date_start") as exc_info:
             override_helper({"date_strat": "2024-01-01"})
-        assert "date_strat" in str(ctx.exception)
-        assert "date_start" in str(ctx.exception)
         # Subclass relationship is part of the contract — callers may
         # catch the broader ValueError and still match.
-        assert isinstance(ctx.exception, ValueError)
+        assert isinstance(exc_info.value, ValueError)
 
     def test_unknown_key_with_no_close_match_omits_suggestion(self):
         """Unknown keys with no close match produce a clean, suggestion-free message.
@@ -226,10 +225,9 @@ class TestOverrideHelper(unittest.TestCase):
         Failure implies the difflib cutoff is producing nonsense
         suggestions or the suggestion-suffix branch is wired wrong.
         """
-        with pytest.raises(UnknownOverrideKey) as ctx:
+        with pytest.raises(UnknownOverrideKey, match=r"xyz_garbage_zzz") as exc_info:
             override_helper({"xyz_garbage_zzz": "value"})
-        assert "xyz_garbage_zzz" in str(ctx.exception)
-        assert "Did you mean" not in str(ctx.exception)
+        assert "Did you mean" not in str(exc_info.value)
 
     def test_cli_unsupported_keys_reject_with_helpful_message(self):
         """Vector / matrix / DataFrame parameter overrides are rejected at the CLI boundary.
@@ -250,13 +248,11 @@ class TestOverrideHelper(unittest.TestCase):
         """
         unsupported = ["S_j_initial", "b_jt", "epidemic_peaks", "return", "psi_jt", "nu_jt_sources"]
         for key in unsupported:
-            with pytest.raises(ValueError) as ctx:
+            pattern = rf"{re.escape(key)}.*cannot be set via --over.*--params"
+            with pytest.raises(ValueError, match=pattern) as exc_info:
                 override_helper({key: "anything"})
             # Must NOT be UnknownOverrideKey — these keys ARE known.
-            assert not isinstance(ctx.exception, UnknownOverrideKey), f"{key} should reject as plain ValueError, not UnknownOverrideKey"
-            message = str(ctx.exception)
-            assert key in message, f"{key} not mentioned in error message"
-            assert "--params" in message, f"{key} message should suggest --params"
+            assert not isinstance(exc_info.value, UnknownOverrideKey), f"{key} should reject as plain ValueError, not UnknownOverrideKey"
 
 
 if __name__ == "__main__":
