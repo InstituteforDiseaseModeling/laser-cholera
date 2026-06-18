@@ -261,8 +261,8 @@ Single source of truth for execution. Each box is one mergeable unit. Keep order
 
 - [x] Create `docs/tutorials/`, `docs/how-to/`, `docs/reference/parameters/`, `docs/explanation/`, `docs/configurations/`, `docs/configurations/code/` directories.
 - [x] Add explicit `nav:` block to `mkdocs.yml` exposing the four Diátaxis quadrants + Configurations at the top level; keep `literate-nav` plugin or remove (decide on first wave). *Removed `literate-nav` and the `SUMMARY.md` write in `docs/_gen_reference.py`; explicit `nav:` drives ordering.*
-- [ ] Extend `docs/index.md` with three audience tracks ("run the defaults", "swap in my data", "understand the model") that link into the right quadrant. *(MISSED in wave 1 — schedule into wave 3.)*
-- [ ] Trim `docs/usage.md` to the "if you just want to run the defaults" path; link out to the new tutorials / how-to / reference / explanation pages for everything else. *(MISSED in wave 1 — schedule into wave 3.)*
+- [x] Extend `docs/index.md` with three audience tracks ("run the defaults", "swap in my data", "understand the model") that link into the right quadrant. *Done at the start of wave 3.*
+- [x] Trim `docs/usage.md` to the "if you just want to run the defaults" path; link out to the new tutorials / how-to / reference / explanation pages for everything else. *Trimmed from 242 → ~110 lines; parameter-override + likelihood content removed (will be authored fresh in wave 4); R cross-check section kept as a small subsection since it has no dedicated home yet.*
 - [x] Stub every new page (one sentence + "filled in during wave N" admonition) so `mkdocs build --strict` is green from the start. *28 pages stubbed across tutorials / how-to / reference / explanation / configurations.*
 
 **Seed alignment (code + docs together)**
