@@ -63,6 +63,13 @@ class Exposed:
         check_key(self.model.params, "iota", "Exposed: model params needs to have a 'iota' (progression rate) parameter.")
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
+        # PERF: install `model.patches.non_disease_death_prob_jt` (the
+        # `1 - exp(-d_jt)` cache) idempotently if no earlier component has.
+        # Lets each consumer be exercised in isolation; the cache is built
+        # exactly once across the pipeline.
+        if not hasattr(self.model.patches, "non_disease_death_prob_jt"):
+            self.model.patches.add_vector_property("non_disease_death_prob_jt", length=self.model.params.d_jt.shape[0], dtype=np.float32, default=0.0)
+            self.model.patches.non_disease_death_prob_jt[:] = -np.expm1(-self.model.params.d_jt)
 
         return
 
@@ -82,7 +89,10 @@ class Exposed:
         E_next[:] = E
 
         # Do non-disease mortality first
-        non_disease_deaths = model.prng.binomial(E, -np.expm1(-model.params.d_jt[tick])).astype(E_next.dtype)
+        # PERF: `model.patches.non_disease_death_prob_jt[tick]` is the pre-computed
+        # `-np.expm1(-model.params.d_jt[tick])` cached by Susceptible.check().
+        # non_disease_deaths = model.prng.binomial(E, -np.expm1(-model.params.d_jt[tick])).astype(E_next.dtype)
+        non_disease_deaths = model.prng.binomial(E, model.patches.non_disease_death_prob_jt[tick]).astype(E_next.dtype)
         E_next -= non_disease_deaths
         model.patches.non_disease_deaths[tick] += non_disease_deaths
 
