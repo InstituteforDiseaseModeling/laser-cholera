@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 
+from eradication import Eradication
 from laser.cholera.metapop.census import Census
 from laser.cholera.metapop.environmental import Environmental
 from laser.cholera.metapop.exposed import Exposed
@@ -10,7 +11,6 @@ from laser.cholera.metapop.model import Model
 from laser.cholera.metapop.params import get_parameters
 from laser.cholera.metapop.recovered import Recovered
 from laser.cholera.metapop.susceptible import Susceptible
-from laser.cholera.test import Eradication
 from laser.cholera.utils import sim_duration
 
 

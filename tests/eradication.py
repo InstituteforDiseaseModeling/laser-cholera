@@ -1,9 +1,19 @@
-"""Diagnostic / test components — degenerate scenarios for stress-checking the pipeline.
+"""Test-only pipeline component that wipes out the infectious cohorts on tick 1.
 
-Currently holds [`Eradication`][laser.cholera.test.Eradication], a
-component that wipes the infectious populations on tick 1 to verify
-the rest of the pipeline gracefully handles a "no infection ever
-spreads" run.
+This module lives under `tests/` rather than `src/laser/cholera/` because
+`Eradication` is exclusively a diagnostic / fixture component — it is
+not imported by any production code path. It is consumed by
+[`tests/test_environmental.py`] and [`tests/test_envtohuman.py`] to
+construct "what does the pipeline do when no infection survives
+beyond tick 1?" baselines for the environmental-transmission
+components.
+
+pytest's default discovery pattern is `test_*.py` / `*_test.py` /
+`tests.py`, so this file is not collected as a test module; the test
+files that need it `import` it directly. Both the project's `tox.ini`
+(`PYTHONPATH={toxinidir}/tests`) and pytest's default `prepend`
+import mode put `tests/` on `sys.path`, so a bare
+`from eradication import Eradication` resolves in both contexts.
 """
 
 from collections.abc import Iterator
@@ -58,13 +68,18 @@ class Eradication:
         return
 
     def plot(self, fig: Figure = None) -> Iterator[str]:  # pragma: no cover
-        """No-op generator to satisfy the component-plot protocol.
+        """No-op: `Eradication` contributes no figures to the visualization output.
+
+        Implemented as `yield from ()` so this remains a generator
+        function (matching the component-plot protocol expected by
+        [`Model.visualize`][laser.cholera.metapop.model.Model.visualize])
+        but produces zero items. A bare `yield` here would emit `None`
+        and produce a phantom blank PDF page.
 
         Args:
             fig: Optional existing Matplotlib `Figure` (unused).
 
         Yields:
-            A single `None`.
+            Nothing; the generator is empty.
         """
-        yield
-        return
+        yield from ()

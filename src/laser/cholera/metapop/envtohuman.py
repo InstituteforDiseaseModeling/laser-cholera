@@ -19,6 +19,8 @@ from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
+from laser.cholera.metapop.utils import check_key
 
 
 class EnvToHuman:
@@ -40,17 +42,20 @@ class EnvToHuman:
                 and `params` with `psi_jt`, `beta_j0_env` populated.
 
         Raises:
-            AssertionError: When `params.psi_jt` is missing or the
-                allocated `beta_jt_env` shape disagrees with the
-                provided `psi_jt` / `beta_j0_env` shapes.
+            AttributeError: When `model.people` or `model.params` is
+                missing.
+            ValueError: When `params.psi_jt` is missing.
+            AssertionError: When the allocated `beta_jt_env` shape
+                disagrees with the provided `psi_jt` / `beta_j0_env`
+                shapes (these are invariant checks that remain).
         """
         self.model = model
 
-        assert hasattr(model, "people"), "EnvToHuman: model needs to have a 'people' attribute."
+        check_attr(model, "people", "EnvToHuman: model needs to have a 'people' attribute.")
         model.patches.add_vector_property("Psi", length=model.params.nticks + 1, dtype=np.float32, default=np.float32(0.0))
 
-        assert hasattr(model, "params"), "EnvToHuman: model needs to have a 'params' attribute."
-        assert "psi_jt" in model.params, "EnvToHuman: model params needs to have a 'psi_jt' (environmental contamination rate) parameter."
+        check_attr(model, "params", "EnvToHuman: model needs to have a 'params' attribute.")
+        check_key(model.params, "psi_jt", "EnvToHuman: model params needs to have a 'psi_jt' (environmental contamination rate) parameter.")
 
         psi = model.params.psi_jt  # convenience
         # TODO - use newer laser_core with add_array_property and psi.shape
@@ -75,18 +80,20 @@ class EnvToHuman:
         that `params` provides `tau_i`, `theta_j`, and `kappa`.
 
         Raises:
-            AssertionError: When any required attribute or parameter is
+            AttributeError: When `model.people.S`, `.E`, `model.patches`,
+                or `model.patches.W` is missing.
+            ValueError: When `params.tau_i`, `theta_j`, or `kappa` is
                 missing.
         """
-        assert hasattr(self.model.people, "S"), "EnvToHuman: model people needs to have a 'S' (susceptible) attribute."
-        assert hasattr(self.model.people, "E"), "EnvToHuman: model people needs to have a 'E' (exposed) attribute."
+        check_attr(self.model.people, "S", "EnvToHuman: model people needs to have a 'S' (susceptible) attribute.")
+        check_attr(self.model.people, "E", "EnvToHuman: model people needs to have a 'E' (exposed) attribute.")
 
-        assert hasattr(self.model, "patches"), "EnvToHuman: model needs to have a 'patches' attribute."
-        assert hasattr(self.model.patches, "W"), "EnvToHuman: model patches needs to have a 'W' (environmental) attribute."
+        check_attr(self.model, "patches", "EnvToHuman: model needs to have a 'patches' attribute.")
+        check_attr(self.model.patches, "W", "EnvToHuman: model patches needs to have a 'W' (environmental) attribute.")
 
-        assert "tau_i" in self.model.params, "EnvToHuman: model params needs to have a 'tau_i' (emmigration probability) parameter."
-        assert "theta_j" in self.model.params, "EnvToHuman: model params needs to have a 'theta_j' (fraction of population with WASH) attribute."
-        assert "kappa" in self.model.params, "EnvToHuman: model params needs to have a 'kappa' (environmental transmission rate) parameter."
+        check_key(self.model.params, "tau_i", "EnvToHuman: model params needs to have a 'tau_i' (emmigration probability) parameter.")
+        check_key(self.model.params, "theta_j", "EnvToHuman: model params needs to have a 'theta_j' (fraction of population with WASH) attribute.")
+        check_key(self.model.params, "kappa", "EnvToHuman: model params needs to have a 'kappa' (environmental transmission rate) parameter.")
 
         return
 

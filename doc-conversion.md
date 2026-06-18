@@ -408,8 +408,11 @@ After the new site is live at
 - [x] `pyproject.toml`: `Documentation` URL repointed to the GitHub Pages
   URL.
 - [x] `README.md`: documentation badge updated to point at the new URL.
-- [ ] **Decide whether to keep the RTD project.** Manual decision; not
-  automatable. Recommendation: redirect + 2-week notice, then delete.
+- [x] **Decide whether to keep the RTD project.** Decided: no. The
+  `.readthedocs.yml` config has been deleted from the repo
+  (2026-06-18), the canonical docs live at the GitHub Pages URL, and
+  any remaining external links into `laser-cholera.readthedocs.io`
+  should be updated as they're discovered.
 
 ---
 

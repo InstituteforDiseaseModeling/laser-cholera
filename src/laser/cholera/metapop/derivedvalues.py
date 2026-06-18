@@ -27,6 +27,8 @@ from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
+from laser.cholera.metapop.utils import check_key
 
 
 class DerivedValues:
@@ -44,12 +46,13 @@ class DerivedValues:
                 `params` set up.
 
         Raises:
-            AssertionError: When `patches` or `params` is missing.
+            AttributeError: When `model.patches` or `model.params` is
+                missing.
         """
         self.model = model
 
-        assert hasattr(model, "patches"), "DerivedValues: model needs to have a 'patches' attribute."
-        assert hasattr(model, "params"), "DerivedValues: model needs to have a 'params' attribute."
+        check_attr(model, "patches", "DerivedValues: model needs to have a 'patches' attribute.")
+        check_attr(model, "params", "DerivedValues: model needs to have a 'params' attribute.")
 
         # There's no spatial hazard calculation at the start of the simulation, but we will allocate nticks + 1 to match other outputs.
         model.patches.add_vector_property("spatial_hazard", length=model.params.nticks + 1, dtype=np.float32, default=0.0)
@@ -70,50 +73,68 @@ class DerivedValues:
         earlier in the pipeline.
 
         Raises:
-            AssertionError: When any prerequisite is missing.
+            AttributeError: When `model.people` (with `S` / `Isym` /
+                `Iasym`) or `model.patches` (with `N` / `beta_jt_human` /
+                `pi_ij`) is missing.
+            ValueError: When `params.beta_j0_hum`, `params.p`, or
+                `params.tau_i` is missing.
         """
-        assert hasattr(self.model, "people"), "DerivedValues: model needs to have an 'people' attribute."
-        assert hasattr(self.model.people, "S"), "DerivedValues: model.people needs to have 'S' attribute."
-        assert hasattr(self.model.people, "Isym"), "DerivedValues: model.people needs to have 'Isym' attribute."
-        assert hasattr(self.model.people, "Iasym"), "DerivedValues: model.people needs to have 'Iasym' attribute."
+        check_attr(self.model, "people", "DerivedValues: model needs to have an 'people' attribute.")
+        check_attr(self.model.people, "S", "DerivedValues: model.people needs to have 'S' attribute.")
+        check_attr(self.model.people, "Isym", "DerivedValues: model.people needs to have 'Isym' attribute.")
+        check_attr(self.model.people, "Iasym", "DerivedValues: model.people needs to have 'Iasym' attribute.")
 
-        assert hasattr(self.model, "patches"), "DerivedValues: model needs to have a 'patches' attribute."
-        assert hasattr(self.model.patches, "N"), "DerivedValues: model.patches needs to have 'N' attribute."
-        assert hasattr(self.model.patches, "beta_jt_human"), "DerivedValues: model.patches needs to have 'beta_jt_human' attribute."
-        assert hasattr(self.model.patches, "pi_ij"), "DerivedValues: model.patches needs to have 'pi_ij' attribute."
+        check_attr(self.model, "patches", "DerivedValues: model needs to have a 'patches' attribute.")
+        check_attr(self.model.patches, "N", "DerivedValues: model.patches needs to have 'N' attribute.")
+        check_attr(self.model.patches, "beta_jt_human", "DerivedValues: model.patches needs to have 'beta_jt_human' attribute.")
+        check_attr(self.model.patches, "pi_ij", "DerivedValues: model.patches needs to have 'pi_ij' attribute.")
 
-        assert "beta_j0_hum" in self.model.params, "DerivedValues: model.params needs to have 'beta_j0_hum' attribute."
-        assert "p" in self.model.params, "DerivedValues: model.params needs to have 'p' attribute."
-        assert "tau_i" in self.model.params, "DerivedValues: model.params needs to have 'tau_i' attribute."
+        check_key(self.model.params, "beta_j0_hum", "DerivedValues: model.params needs to have 'beta_j0_hum' attribute.")
+        check_key(self.model.params, "p", "DerivedValues: model.params needs to have 'p' attribute.")
+        check_key(self.model.params, "tau_i", "DerivedValues: model.params needs to have 'tau_i' attribute.")
 
         return
 
     def __call__(self, model: "Model", tick: int) -> None:
-        """Calculate derived values for the model.
+        r"""Calculate derived values for the model.
 
-        Spatial hazard and coupling are calculated at the end of the simulation.
+        Spatial hazard and coupling are calculated at the end of the
+        simulation.
 
-        .. math::
+        Spatial hazard per location and tick:
 
-            h(j,t) = \\frac {\\beta^{hum}_{jt} (1 - e^{-((1 - \\tau_j) (S_{jt} / N_{jt})) \\sum_{\\forall i \\ne j} \\pi_{ij} \\tau_i ((I^{sym}_{it} + I^{asym}_{it}) / N_{it})})} {1/(1 + \\beta^{hum}_{jt}(1 - \\tau_j) S_{jt})}
+        $$
+        h(j,t) = \frac {\beta^{hum}_{jt} (1 - e^{-((1 - \tau_j) (S_{jt} / N_{jt})) \sum_{\forall i \ne j} \pi_{ij} \tau_i ((I^{sym}_{it} + I^{asym}_{it}) / N_{it})})} {1/(1 + \beta^{hum}_{jt}(1 - \tau_j) S_{jt})}
+        $$
 
-        .. math::
+        Prevalence fraction and its time-average per location:
 
-            y_{it} = \\frac {I^{sym}_{it} + I^{asym}_{it}} {N_{it}}
+        $$
+        y_{it} = \frac {I^{sym}_{it} + I^{asym}_{it}} {N_{it}}
+        $$
 
-        .. math::
+        $$
+        \bar y_{i} = \frac 1 T \sum_{t=1}^{T} y_{it}
+        $$
 
-            \\bar y_{i} = \\frac 1 T \\sum_{t=1}^{T} y_{it}
+        Inter-location coupling — Pearson correlation between prevalence
+        fractions:
 
-        .. math::
+        $$
+        C_{ij} = \frac { \sum_{t=1}^T {(y_{it} - \bar y_i) (y_{jt} - \bar y_j)} } { \sqrt {\sum_{t=1}^T {(y_{it} - \bar y_i)}^2} \sqrt {\sum_{t=1}^T {(y_{jt} - \bar y_j)}^2} }
+        $$
 
-            C_{ij} = \\frac { \\sum_{t=1}^T {(y_{it} - \\bar y_i) (y_{jt} - \\bar y_j)} } { \\sqrt {\\sum_{t=1}^T {(y_{it} - \\bar y_i)}^2} \\sqrt {\\sum_{t=1}^T {(y_{jt} - \\bar y_j)}^2} }
+        Equivalently:
 
+        $$
+        C_{ij} = \frac {(y_{it} - \bar y_{i}) (y_{jt} - \bar y_{j})} { \sqrt {\text{var}(y_{i}) \text{var}(y_{j})} }
+        $$
 
-        .. math::
-
-            C_{ij} = \\frac {(y_{it} - \\bar y_{i}) (y_{jt} - \\bar y_{j})} { \\sqrt {\\text {var}(y_{i}) \\text {var}(y_{j})} }
-
+        Args:
+            model: The parent `Model` instance.
+            tick: Current simulation tick. The computation is a no-op
+                for every tick except the last
+                (`model.params.nticks - 1`).
         """
         if tick == model.params.nticks - 1:
             calculate_spatial_hazard(
@@ -175,17 +196,19 @@ def calculate_spatial_hazard_for_model(model):
 
 
 def calculate_spatial_hazard(nticks, beta_jt_human, tau_i, S, Njt, pi_ij, Iasym, Isym, spatial_hazard):
-    """Calculate the spatial hazard for each location at each time step.
-    The spatial hazard is calculated using the formula:
+    r"""Calculate the spatial hazard for each location at each time step.
 
-    https://institutefordiseasemodeling.github.io/MOSAIC-docs/model-description.html#the-spatial-hazard
+    The spatial hazard is calculated using the formula
+    ([reference][hazard-ref]):
 
-    .. math::
+    $$
+    h(j,t) = \frac {\beta^{hum}_{jt} (1 - e^{-((1 - \tau_j) (S_{jt} / N_{jt})) \sum_{\forall i \ne j} \pi_{ij} \tau_i ((I^{sym}_{it} + I^{asym}_{it}) / N_{it})})} {1/(1 + \beta^{hum}_{jt}(1 - \tau_j) S_{jt})}
+    $$
 
-        h(j,t) = \\frac {\\beta^{hum}_{jt} (1 - e^{-((1 - \\tau_j) (S_{jt} / N_{jt})) \\sum_{\\forall i \\ne j} \\pi_{ij} \\tau_i ((I^{sym}_{it} + I^{asym}_{it}) / N_{it})})} {1/(1 + \\beta^{hum}_{jt}(1 - \\tau_j) S_{jt})}
+    Note: To simplify coding and debugging, all arrays are passed in R
+    order: `[j, t]`.
 
-    Note: To simplify coding and debugging, all arrays are passed in R order: [j, t]
-
+    [hazard-ref]: https://institutefordiseasemodeling.github.io/MOSAIC-docs/model-description.html#the-spatial-hazard
     """
 
     beta = beta_jt_human
@@ -248,14 +271,16 @@ def calculate_coupling_for_model(model):
 
 
 def calculate_coupling(Isym, Iasym, N, C):
-    """Calculate the coupling between locations.
+    r"""Calculate the coupling between locations.
 
-    https://institutefordiseasemodeling.github.io/MOSAIC-docs/model-description.html#coupling-among-locations
+    Pearson correlation between per-tick prevalence fractions, computed
+    as ([reference][coupling-ref]):
 
-    .. math::
+    $$
+    C_{ij} = \frac {(y_{it} - \bar y_{i}) (y_{jt} - \bar y_{j})} { \sqrt {\text{var}(y_{i}) \text{var}(y_{j})} }
+    $$
 
-        C_{ij} = \\frac {(y_{it} - \\bar y_{i}) (y_{jt} - \\bar y_{j})} { \\sqrt {\\text {var}(y_{i}) \\text {var}(y_{j})} }
-
+    [coupling-ref]: https://institutefordiseasemodeling.github.io/MOSAIC-docs/model-description.html#coupling-among-locations
     """
     assert Isym.shape == Iasym.shape, "Isym and Iasym must have the same shape."
     assert Isym.shape == N.shape, "Isym and N must have the same shape."
