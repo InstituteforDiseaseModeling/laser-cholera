@@ -19,6 +19,7 @@ list of component classes into a complete simulation run:
 """
 
 import logging
+import time
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
@@ -305,11 +306,15 @@ class Model:
         for tick in tqdm(range(self.params.nticks), desc="Running model", disable=self.params.quiet):
             timing = [tick]
             for phase in self.phases:
-                tstart = datetime.now(tz=None)  # noqa: DTZ005
+                # `time.perf_counter()` is the canonical idiom for relative
+                # timing measurements: monotonic, lighter than
+                # `datetime.now()`, and not sensitive to wall-clock jumps.
+                # The per-phase / per-tick site sees ~12 * nticks = ~14k
+                # calls on a default run, so the per-call savings add up.
+                tstart = time.perf_counter()
                 phase(self, tick)
-                tfinish = datetime.now(tz=None)  # noqa: DTZ005
-                delta = tfinish - tstart
-                timing.append(delta.seconds * 1_000_000 + delta.microseconds)
+                tfinish = time.perf_counter()
+                timing.append(int((tfinish - tstart) * 1_000_000))
             self.metrics.append(timing)
 
         self.tfinish = datetime.now(tz=None)  # noqa: DTZ005
