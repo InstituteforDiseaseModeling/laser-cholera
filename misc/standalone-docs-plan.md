@@ -41,8 +41,8 @@ The four Diátaxis quadrants and what we put in each:
   - `how-to/enable-vaccination.md` — set `nu_1_jt` / `nu_2_jt`, choose `phi_1` / `phi_2`, decide on `omega_1` / `omega_2`.
   - `how-to/configure-mobility.md` — `tau_i`, `mobility_omega`, `mobility_gamma`, and what `tau_i = 0` means.
   - `how-to/enable-seasonality.md` — `a_1_j` / `b_1_j` / `a_2_j` / `b_2_j` / `p` and the inert-form `(a_1_j, b_1_j, a_2_j, b_2_j) = (0, 0, 0, 0)`.
-  - `how-to/calibrate-and-score.md` — `calc_likelihood`, the four shape weights, `reported_cases` / `reported_deaths`, `epidemic_peaks`. Folds existing usage.md content.
-  - `how-to/scenario-builder.md` — point at `metapop/scenario.py` (programmatic config from a small handful of high-level knobs).
+  - `how-to/calibrate-and-score.md` — `calc_likelihood`, the four shape weights, `reported_cases` / `reported_deaths`, `epidemic_peaks`. Folds existing usage.md content. **Opens with the precondition that any meaningful likelihood calculation requires observed `reported_cases` and `reported_deaths` arrays** — without them the scorer has nothing to score against.
+  - `how-to/interoperate-with-mosaic.md` — single-page stub: MOSAIC writes JSON that is a valid `paramsource`; pass the path to `get_parameters`. Links out to MOSAIC's own documentation rather than re-documenting it.
 - **Reference** *(information-oriented; authoritative)*
   - `reference/parameters/index.md` — table of every parameter (name, shape, dtype, range, default-on/off, "what feature it controls"). Source-of-truth for "is this required?".
   - `reference/parameters/<group>.md` — one page per parameter group (see §5). Each parameter gets: definition, shape, dtype, valid range, what value disables the feature it gates, link to the model section that uses it, citation back to `default_parameters.json` and `validate_parameters`.
@@ -77,7 +77,7 @@ Inert values, by feature (these are the off-switches the documentation pages wil
 | Reporting under-reporting | `rho = rho_deaths = 1` | Observed = estimated |
 | Reporting lag | `delta_reporting_cases = delta_reporting_deaths = 0` | No tick offset |
 | Epidemic vs endemic regime switch | `chi_endemic = chi_epidemic = 1.0`, `epidemic_threshold = 0` (or large) | One regime everywhere |
-| Likelihood scoring | `calc_likelihood = False` (or all four `weight_*` = 0 and `calc_likelihood = True`) | No LL computation; or NB core only |
+| Likelihood scoring | `calc_likelihood = False` (or all four `weight_*` = 0 and `calc_likelihood = True`) | No LL computation; or NB core only. **Either way the scorer requires `reported_cases` and `reported_deaths` arrays** — without observed data, likelihood is undefined. |
 | Environmental forcing curve | `psi_jt = 1` everywhere; `psi_star_*` constants set to match | Constant environmental suitability |
 
 A few cases need a note:
@@ -85,7 +85,7 @@ A few cases need a note:
 - `b_1_j` / `b_2_j` being zero would divide by zero in the seasonal harmonic — the off-trick is to zero the *amplitudes* (`a_*`), not the periods. Reference page must spell this out.
 - `mobility_omega` / `mobility_gamma` are required by `validate_parameters` even when `tau_i = 0`. Document that they remain valid but have no effect.
 - `epidemic_peaks` can be omitted entirely when `weight_peak_*` are zero; the validator only checks columns *if* the field is present.
-- `nu_jt_sources` is a free-text-ish field. Treat as documentation, not a knob.
+- `nu_jt_sources` is **not** free-text. It is the list of compartments from which vaccine doses are drawn — `["S"]` means doses go to susceptibles only, while the bundled default lists multiple source compartments (e.g. `S`, `E`, `R`, …). Reference page must document the recognized compartment labels, what the default contains, and what each choice implies for the dynamics.
 
 ## 5. Parameter taxonomy (groups for §3 Reference pages)
 
@@ -112,7 +112,7 @@ We ship three configurations under `docs/configurations/` (and the JSON / Python
 
 - **Shape**: `len(location_name) == 1`, `nticks ≈ 365`.
 - **What's on**: human-to-human transmission, default waning, symptomatic/asymptomatic split.
-- **What's off**: mobility (`tau_i = 0`), environmental transmission (`beta_j0_env = 0`), vaccination, seasonality, WASH, reporting noise (`rho = rho_deaths = 1`), likelihood scoring.
+- **What's off**: mobility (`tau_i = 0`), environmental transmission (`beta_j0_env = 0`), vaccination, seasonality, WASH, reporting noise (`rho = rho_deaths = 1`), likelihood scoring (no observed data, so scoring is not meaningful here).
 - **Purpose**: prove the install works, illustrate the parameter shape conventions in the simplest possible setting, give the reader something they can mutate in 30 seconds.
 
 ### 6.2 Single country, multi-admin
@@ -121,7 +121,7 @@ We ship three configurations under `docs/configurations/` (and the JSON / Python
 - **What's on**: mobility (gravity), seasonality, environmental + human-to-human transmission.
 - **What's off**: vaccination (until we extend the tutorial), regime switching (`chi_endemic = chi_epidemic`).
 - **Purpose**: show how the per-patch vectors and (T, J) matrices scale; show what `pi_ij` does to a single seeded outbreak.
-- **Data source**: link to where we expect admin polygons + populations to come from (worldpop, GADM); we do *not* ship admin1/2 data, but we ship one synthetic example.
+- **Data source**: use [`laser-init`](https://github.com/laser-base/laser-init) to pull administrative boundaries and population rasters for the chosen country at the chosen admin level — `laser-init` is the canonical tool for this in the LASER ecosystem and returns shape + population data in a form we can drop straight into `latitude`, `longitude`, `N_j_initial`, and `location_name`. The configuration page walks through the `laser-init` invocation, the resulting columns, and the mapping into the `laser-cholera` parameter set. We ship one frozen extract (committed under `docs/configurations/code/`) so the doc page is reproducible without re-running `laser-init`, and we reference the upstream tool for readers who want to swap in a different country / admin level.
 
 ### 6.3 Sub-Saharan Africa, country level (baseline)
 
@@ -145,7 +145,7 @@ docs/
     configure-mobility.md             # NEW
     enable-seasonality.md             # NEW
     calibrate-and-score.md            # NEW (lifted from usage.md)
-    scenario-builder.md               # NEW (covers scenario.py)
+    interoperate-with-mosaic.md       # NEW (one-page stub linking out)
   reference/
     index.md                          # existing autogen landing — link in the new parameter pages
     parameters/
@@ -217,7 +217,7 @@ The validator (`validate_parameters` in `params.py`) is the source of truth for 
 
 Five waves, each independently mergeable. Stop and re-scope after each.
 
-1. **Wave 1 — Scaffold + Reference.** Add the directory layout, add `nav:` to `mkdocs.yml`, write all ten Parameter group pages, add the param-coverage test. No tutorial / how-to / explanation content yet; pages exist as stubs with "coming in wave N". The site immediately becomes navigable and the reference is the new source of truth.
+1. **Wave 1 — Scaffold + Reference + seed alignment.** Add the directory layout, add `nav:` to `mkdocs.yml`, write all ten Parameter group pages, add the param-coverage test, and align the canonical default seed to `20240930` (CLI default in `model.py`, examples in `docs/usage.md`, and any tests that pin a seed for illustration only). No tutorial / how-to / explanation content yet; pages exist as stubs with "coming in wave N". The site immediately becomes navigable and the reference is the new source of truth.
 2. **Wave 2 — Three configurations.** Author the three JSON configs, the three configuration-page narratives, and the smoke test that runs each.
 3. **Wave 3 — Tutorials.** First-run + single-location + multi-admin. Doctest-validated.
 4. **Wave 4 — How-to guides.** Six task-oriented pages. Each one references back to the relevant Reference page and Configuration.
@@ -225,14 +225,21 @@ Five waves, each independently mergeable. Stop and re-scope after each.
 
 Inside each wave: parameter group pages, how-to pages, etc. are independent and can be fanned out across multiple PRs.
 
-## 11. Open questions
+## 11. Decisions & remaining open questions
 
-- **Where do admin1/admin2 starter datasets come from?** Configuration 6.2 needs *some* coordinates + populations. Option A: ship a small synthetic example committed under `docs/configurations/code/`. Option B: point at an external dataset and provide a script that downloads + normalizes it. Recommend A for v1 (reproducibility), B as a follow-up.
-- **Should `scenario.py` be a Reference page or a How-to?** It currently isn't documented at all. Treat as How-to in wave 4 and decide whether to elevate later.
-- **`epidemic_peaks` in-window filter**: the recent change (`f8e3b38 Port R upstream's in-window peak filter`) shifted behaviour. Reference page must reflect the post-port semantics, not pre-port.
-- **Visualisation parameters** (`visualize`, `pdf`, `quiet`): these are run-time toggles that `get_parameters` fills in with defaults. Document under "Run identity & calendar" or under the CLI flags section? Recommend the CLI flags section in `how-to/override-parameters.md` since that's where people will look.
-- **MOSAIC linkage**: do we want a single "interoperating with MOSAIC" how-to page that documents the schema MOSAIC writes, or do we leave that to MOSAIC's own docs? Recommend a one-page stub that links out and says "MOSAIC's JSON is a valid `paramsource` — pass the path to `get_parameters`".
-- **Default seed**: usage.md mentions `--seed 20240101` but the CLI default is `20241107`. Pick one canonical default and use it everywhere.
+**Decided (2026-06-18 review):**
+
+- **Admin1/admin2 starter data**: configuration 6.2 sources its coordinates + populations from [`laser-init`](https://github.com/laser-base/laser-init). We ship one frozen extract under `docs/configurations/code/` so the page is reproducible without re-running `laser-init`, and the page documents the `laser-init` invocation for readers who want to swap in a different country / admin level.
+- **`scenario.py`**: out of scope for this round. No Reference or How-to page; revisit later.
+- **`epidemic_peaks` in-window filter**: the Reference page reflects the post-port (`f8e3b38`) semantics. Pre-port behaviour is not documented.
+- **Visualisation parameters** (`visualize`, `pdf`, `quiet`): treated as CLI flags. Lives in `how-to/override-parameters.md`, not in the per-parameter Reference pages.
+- **MOSAIC linkage**: one-page stub at `how-to/interoperate-with-mosaic.md` says "MOSAIC's JSON is a valid `paramsource`; pass the path to `get_parameters`" and links out to MOSAIC's docs.
+- **Canonical default seed**: `20240930` (date of the first commit to `laser-cholera`). Used in `usage.md`, every tutorial, every how-to, and as the new CLI default. This is a code change *and* a docs change — the CLI default in `model.py` (currently `20241107`) and the example seed in `docs/usage.md` (currently `20240101`) both move to `20240930` in wave 1.
+
+**Still open:**
+
+- **Likelihood-and-no-data edge case**: how visible do we want to make the "scoring requires observed data" precondition? Recommend a sidebar / admonition at the top of `how-to/calibrate-and-score.md`, plus a one-liner on the Likelihood row of the §4 inert-values table (already added).
+- **Where `nu_jt_sources` is documented in depth**: it belongs on the Vaccination Reference page (group 4), but a short note also needs to land on the `enable-vaccination.md` how-to since changing the source-compartment list has visible dynamic consequences. Decide whether the how-to gets a worked example contrasting `["S"]` against the bundled multi-compartment default.
 
 ## 12. Definition of done
 
