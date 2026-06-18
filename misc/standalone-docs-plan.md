@@ -249,3 +249,87 @@ Inside each wave: parameter group pages, how-to pages, etc. are independent and 
 - All three configurations run end-to-end via the smoke test.
 - Doctest CI is green.
 - `docs/index.md` carries three labelled audience tracks ("I want to run defaults", "I want to swap in my data", "I want to understand the model") that funnel into the right quadrant.
+
+## 13. Monolithic todo checklist
+
+Single source of truth for execution. Each box is one mergeable unit. Keep ordering inside a wave but execute boxes in parallel where possible.
+
+### Wave 1 — Scaffold + Reference + seed alignment
+
+**Layout & navigation**
+
+- [ ] Create `docs/tutorials/`, `docs/how-to/`, `docs/reference/parameters/`, `docs/explanation/`, `docs/configurations/`, `docs/configurations/code/` directories.
+- [ ] Add explicit `nav:` block to `mkdocs.yml` exposing the four Diátaxis quadrants + Configurations at the top level; keep `literate-nav` plugin or remove (decide on first wave).
+- [ ] Extend `docs/index.md` with three audience tracks ("run the defaults", "swap in my data", "understand the model") that link into the right quadrant.
+- [ ] Trim `docs/usage.md` to the "if you just want to run the defaults" path; link out to the new tutorials / how-to / reference / explanation pages for everything else.
+- [ ] Stub every new page (one sentence + "filled in during wave N" admonition) so `mkdocs build --strict` is green from the start.
+
+**Seed alignment (code + docs together)**
+
+- [ ] Change CLI default seed in `src/laser/cholera/metapop/model.py` from `20241107` to `20240930`.
+- [ ] Update `docs/usage.md` CLI example from `--seed 20240101` to `--seed 20240930`.
+- [ ] Grep `tests/` for any test that pins `20241107` or `20240101` *for illustration only* (not for baseline-hash determinism); update to `20240930`.
+- [ ] Leave `misc/perf_baseline.py`'s `SEED = 20260618` untouched (it is a perf-baseline seed, not a doc-example seed); re-capture `misc/perf_baseline.json` only if the CLI-default change touches the baseline path.
+- [ ] Note the seed change in `CHANGELOG.md`.
+
+**Parameter reference pages** (one per group; each follows the §8 template; each `assert`-derived range traces back to `validate_parameters`)
+
+- [ ] `docs/reference/parameters/index.md` — alphabetical + grouped index of every parameter, with type/shape/group columns.
+- [ ] `docs/reference/parameters/run-identity.md` — `seed`, `date_start`, `date_stop`, `location_name`.
+- [ ] `docs/reference/parameters/initial-populations.md` — `N_j_initial`, `S_j_initial`, `E_j_initial`, `I_j_initial`, `R_j_initial`, `V1_j_initial`, `V2_j_initial`, `prop_*_initial`.
+- [ ] `docs/reference/parameters/vital-dynamics.md` — `b_jt`, `d_jt`, `mu_j_baseline`, `mu_j_slope`, `mu_j_epidemic_factor`, `mu_jt`.
+- [ ] `docs/reference/parameters/vaccination.md` — `nu_1_jt`, `nu_2_jt`, `phi_1`, `phi_2`, `omega_1`, `omega_2`, `nu_jt_sources` (with full enumeration of recognized source-compartment labels and what the bundled default contains).
+- [ ] `docs/reference/parameters/disease-progression.md` — `iota`, `gamma_1`, `gamma_2`, `epsilon`, `sigma`.
+- [ ] `docs/reference/parameters/reporting.md` — `rho`, `rho_deaths`, `delta_reporting_cases`, `delta_reporting_deaths`, `reported_cases`, `reported_deaths`.
+- [ ] `docs/reference/parameters/regime-switching.md` — `chi_endemic`, `chi_epidemic`, `epidemic_threshold`, `epidemic_peaks` (document post-`f8e3b38` in-window-filter semantics).
+- [ ] `docs/reference/parameters/geography-and-mobility.md` — `longitude`, `latitude`, `tau_i`, `mobility_omega`, `mobility_gamma` (call out that the two `mobility_*` scalars are required by the validator even when `tau_i = 0`).
+- [ ] `docs/reference/parameters/human-transmission.md` — `beta_j0_hum`, `a_1_j`, `a_2_j`, `b_1_j`, `b_2_j`, `p`, `alpha_1`, `alpha_2`, `beta_j0_tot`, `p_beta` (off-trick: zero the amplitudes, never the periods).
+- [ ] `docs/reference/parameters/environmental-transmission.md` — `beta_j0_env`, `theta_j`, `psi_jt`, `psi_star_a`, `psi_star_b`, `psi_star_z`, `psi_star_k`, `zeta_1`, `zeta_2`, `zeta_ratio`, `kappa`, `decay_days_short`, `decay_days_long`, `decay_days_spread`, `decay_shape_1`, `decay_shape_2`.
+
+**Coverage test**
+
+- [ ] Add `tests/test_docs_param_coverage.py` that loads `default_parameters.json`, the `scalars`/`arrays` lists in `dict_to_propertysetex`, the validator's asserts, and the rendered Reference group pages, and fails if any parameter is documented in zero or two places.
+
+### Wave 2 — Three worked configurations
+
+- [ ] Author `docs/configurations/code/single-location.json` (config 6.1: one patch, mobility off, env transmission off, vaccination off, seasonality off, WASH off, reporting noise off, likelihood scoring off).
+- [ ] Pick the country + admin level for config 6.2; run `laser-init` and freeze its output as `docs/configurations/code/multi-admin.json` and `docs/configurations/code/multi-admin.metadata.txt` (records the `laser-init` invocation, version, and date).
+- [ ] Symlink or reference `docs/configurations/code/ssa-baseline.json` → the bundled `src/laser/cholera/metapop/data/default_parameters.json` (no duplication).
+- [ ] Write `docs/configurations/single-location.md` (config 6.1 narrative).
+- [ ] Write `docs/configurations/multi-admin.md` (config 6.2 narrative; document the `laser-init` invocation and the column mapping into `latitude` / `longitude` / `N_j_initial` / `location_name`).
+- [ ] Write `docs/configurations/ssa-baseline.md` (config 6.3 narrative; document the date window, country set, and calibration source assumptions baked into the defaults).
+- [ ] Add `tests/test_docs_configurations.py` smoke test: load each of the three configs, run for ~30 ticks, assert the model returns without raising.
+
+### Wave 3 — Tutorials
+
+- [ ] Author `docs/tutorials/first-run.md` — install, `metapop --seed 20240930`, inspect outputs.
+- [ ] Author `docs/tutorials/single-location.md` — build the single-patch SEIRV config from scratch via `get_parameters(mods=…)`, with every optional feature off; turn one feature on at a time at the end.
+- [ ] Author `docs/tutorials/multi-location-country.md` — extend single-location to N admin units of one country; turn on mobility; show what `pi_ij` does to a seeded outbreak.
+- [ ] Add a doctest tox env (e.g. `[testenv:doctest-docs]`) that runs `pytest --doctest-glob='docs/**/*.md'`; wire into CI alongside `check`.
+
+### Wave 4 — How-to guides
+
+- [ ] `docs/how-to/override-parameters.md` — lifted from `usage.md`; extends with the full CLI flag list including the visualisation toggles (`--viz`, `--pdf`, `-q`/`--quiet`).
+- [ ] `docs/how-to/enable-vaccination.md` — set `nu_1_jt` / `nu_2_jt`, choose `phi_1` / `phi_2`, decide on `omega_1` / `omega_2`; **decide whether to include a worked `["S"]`-only vs. bundled-default contrast for `nu_jt_sources`** (open question §11).
+- [ ] `docs/how-to/configure-mobility.md` — `tau_i`, `mobility_omega`, `mobility_gamma`; explicit treatment of `tau_i = 0` as the off-switch.
+- [ ] `docs/how-to/enable-seasonality.md` — `a_*` / `b_*` / `p`; off-trick is to zero the amplitudes, not the periods.
+- [ ] `docs/how-to/calibrate-and-score.md` — `calc_likelihood`, the four shape weights, `reported_cases` / `reported_deaths`, `epidemic_peaks`; **opens with a prominent admonition that any meaningful likelihood calculation requires observed cases and deaths data**.
+- [ ] `docs/how-to/interoperate-with-mosaic.md` — one-page stub: "MOSAIC's JSON is a valid `paramsource`; pass the path to `get_parameters`"; link out to MOSAIC's own docs.
+
+### Wave 5 — Explanation
+
+- [ ] `docs/explanation/model-overview.md` — compartments (S, E, I_sym, I_asym, R, V1, V2), tick cadence, component pipeline.
+- [ ] `docs/explanation/transmission.md` — split between `humantohuman.py` + `envtohuman.py` + `environmental.py`; how the `beta_*`, `theta_j`, `kappa`, `decay_days_*`, `zeta_*` parameters combine.
+- [ ] `docs/explanation/seasonality.md` — two-mode harmonic; what `a_*`, `b_*`, `p` do.
+- [ ] `docs/explanation/mobility.md` — gravity-model `pi_ij`; role of `tau_i`, `mobility_omega`, `mobility_gamma`; what falls out at single-patch.
+- [ ] `docs/explanation/reporting-and-likelihood.md` — `rho`, `rho_deaths`, `delta_reporting_*`, observed-vs-estimated, NB core, four shape terms.
+
+### Cross-cutting / Definition of done
+
+- [ ] Every parameter in `default_parameters.json` is referenced by exactly one Reference group page (enforced by the wave-1 coverage test).
+- [ ] Every parameter has a documented off-value (or a documented note explaining why one doesn't exist).
+- [ ] `mkdocs build --strict` is green in CI.
+- [ ] Doctest CI is green.
+- [ ] All three configurations pass `tests/test_docs_configurations.py`.
+- [ ] `CHANGELOG.md` updated at each wave boundary.
+- [ ] Resolve the two §11 still-open items (likelihood-no-data admonition placement; `nu_jt_sources` how-to worked example) before declaring the doc set done.
