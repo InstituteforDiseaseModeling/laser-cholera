@@ -9,6 +9,7 @@ NaN, not as 0 and not as an error.
 """
 
 import logging
+import warnings
 
 import numpy as np
 import pytest
@@ -60,7 +61,8 @@ def test_calculate_coupling_with_constant_column_returns_nan(caplog):
     keep = np.array([0, 1, 3, 4])
     sub = C[np.ix_(keep, keep)]
     assert np.all(np.isfinite(sub)), f"Non-constant sub-block should be finite, got {sub}"
-    assert np.all(sub >= -1.0001) and np.all(sub <= 1.0001), "Correlations must be in [-1, 1]"
+    assert np.all(sub >= -1.0001), f"Correlations must be >= -1, got min {sub.min()}"
+    assert np.all(sub <= 1.0001), f"Correlations must be <= 1, got max {sub.max()}"
 
     # Diagonal of non-constant columns is 1.0 (within float tolerance).
     assert np.allclose(np.diag(sub), 1.0, atol=1e-5), f"Non-constant diagonal should be 1.0, got {np.diag(sub)}"
@@ -86,8 +88,6 @@ def test_calculate_coupling_emits_no_warning_on_constant_columns():
     """
     Isym, Iasym, N, C = _make_inputs(T=200, L=5, with_const_cols=(2,))
 
-    import warnings
-
     with warnings.catch_warnings():
         warnings.simplefilter("error", category=RuntimeWarning)
         calculate_coupling(Isym, Iasym, N, C)
@@ -107,8 +107,6 @@ def test_calculate_coupling_all_constant_columns_produces_all_nan():
     columns survive the constant filter.
     """
     Isym, Iasym, N, C = _make_inputs(T=50, L=4, with_const_cols=(0, 1, 2, 3))
-
-    import warnings
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", category=RuntimeWarning)
