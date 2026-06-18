@@ -17,6 +17,7 @@ do the math; the per-model wrappers exist primarily so R callers can
 invoke them with a single argument.
 """
 
+import logging
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 from typing import Optional
@@ -29,6 +30,8 @@ if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
 from laser.cholera.metapop.utils import check_attr
 from laser.cholera.metapop.utils import check_key
+
+logger = logging.getLogger("laser.cholera")
 
 
 class DerivedValues:
@@ -313,12 +316,30 @@ def calculate_coupling(Isym, Iasym, N, C):
     #         else:
     #             C_ij = np.nan
     #         C[i, j] = C[j, i] = C_ij
-    # `np.corrcoef` divides by the column standard deviations and emits a
-    # RuntimeWarning if any column has zero variance (a constant patch). The
-    # NaN result that comes out is the same value the explicit `if denominator
-    # != 0` branch above produced; suppress the warning to keep the silent-
-    # NaN behavior consistent.
-    with np.errstate(invalid="ignore", divide="ignore"):
+    #
+    # `np.corrcoef` produces NaN for any column with zero variance (a patch
+    # whose prevalence was constant for the whole run — typically because
+    # `I_j_initial = 0` and no force-of-infection reached it). That's a
+    # legitimate model state, not an error: Pearson correlation with a
+    # constant series is mathematically undefined (0 / 0), and the original
+    # nested-loop branch above returned NaN explicitly. Naively calling
+    # `np.corrcoef(y, rowvar=False)` works but emits a `RuntimeWarning` for
+    # the underlying divide. Detect the constant columns up front and run
+    # corrcoef only on the variable subset so the warning never fires;
+    # constant rows/cols are filled with NaN explicitly (and logged at INFO
+    # so the situation is visible in run logs).
+    constant_cols = y.var(axis=0) == 0
+    if constant_cols.any():
+        n_const = int(constant_cols.sum())
+        logger.info(
+            f"calculate_coupling: {n_const} of {L} patches have constant prevalence over the simulation; "
+            f"their rows and columns in `coupling` are NaN (correlation with a constant series is undefined)."
+        )
+        keep = ~constant_cols
+        C[:] = np.nan
+        if keep.any():
+            C[np.ix_(keep, keep)] = np.corrcoef(y[:, keep], rowvar=False)
+    else:
         C[:] = np.corrcoef(y, rowvar=False)
 
     return
