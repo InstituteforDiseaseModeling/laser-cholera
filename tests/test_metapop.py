@@ -37,9 +37,9 @@ class TestCliOverrideValidation(unittest.TestCase):
         of a one-line "Usage:" hint.
         """
         ctx = click.Context(cli_run)
-        with pytest.raises(click.UsageError) as exc_ctx:
+        with pytest.raises(click.UsageError, match=r"date_strat.*date_start") as exc_info:
             ctx.invoke(cli_run, seed=20250326, loglevel="WARNING", viz=False, pdf=False, over=("date_strat:2024-01-01",))
-        message = str(exc_ctx.exception)
+        message = str(exc_info.value)
         assert "date_strat" in message
         assert "date_start" in message
 
@@ -59,11 +59,10 @@ class TestCliOverrideValidation(unittest.TestCase):
         errors to user-input errors.
         """
         ctx = click.Context(cli_run)
-        with pytest.raises(ValueError) as exc_ctx:
+        with pytest.raises(ValueError, match=r"b_jt.*cannot be set via --over") as exc_info:
             ctx.invoke(cli_run, seed=20250326, loglevel="WARNING", viz=False, pdf=False, over=("b_jt:anything",))
         # Must NOT be a UsageError — that path is reserved for typos.
-        assert not isinstance(exc_ctx.exception, click.UsageError)
-        assert "b_jt" in str(exc_ctx.exception)
+        assert not isinstance(exc_info.value, click.UsageError)
 
 
 if __name__ == "__main__":
