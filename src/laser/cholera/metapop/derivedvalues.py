@@ -289,18 +289,36 @@ def calculate_coupling(Isym, Iasym, N, C):
 
     y = (Isym + Iasym) / N
 
-    y_bar = np.mean(y, axis=0)  # mean over time (axis=0) for each location
-
-    diff = y - y_bar  # difference from mean
-
-    for i in range(L):
-        for j in range(i, L):
-            numerator = np.sum(diff[:, i] * diff[:, j])
-            denominator = np.sqrt(np.sum(diff[:, i] ** 2) * np.sum(diff[:, j] ** 2))
-            if denominator != 0:
-                C_ij = numerator / denominator
-            else:
-                C_ij = np.nan
-            C[i, j] = C[j, i] = C_ij
+    # PERF: the manual `for i / for j in range(i, L)` double loop computed
+    # the Pearson correlation between every pair of patch columns of `y`.
+    # `np.corrcoef(y, rowvar=False)` is the canonical NumPy equivalent and
+    # delegates the cov-and-divide to BLAS-backed reductions. Constant
+    # columns (zero variance) produce NaN entries — same as the original
+    # `denominator == 0` branch.
+    #
+    # Note: results may differ from the original by a few ULPs in
+    # individual cells because the BLAS reduction order is not the same
+    # as `np.sum`'s pairwise reduction; `coupling` is a final-tick
+    # diagnostic that nothing else in the simulation reads, so the drift
+    # is fully isolated.
+    #
+    # y_bar = np.mean(y, axis=0)  # mean over time (axis=0) for each location
+    # diff = y - y_bar  # difference from mean
+    # for i in range(L):
+    #     for j in range(i, L):
+    #         numerator = np.sum(diff[:, i] * diff[:, j])
+    #         denominator = np.sqrt(np.sum(diff[:, i] ** 2) * np.sum(diff[:, j] ** 2))
+    #         if denominator != 0:
+    #             C_ij = numerator / denominator
+    #         else:
+    #             C_ij = np.nan
+    #         C[i, j] = C[j, i] = C_ij
+    # `np.corrcoef` divides by the column standard deviations and emits a
+    # RuntimeWarning if any column has zero variance (a constant patch). The
+    # NaN result that comes out is the same value the explicit `if denominator
+    # != 0` branch above produced; suppress the warning to keep the silent-
+    # NaN behavior consistent.
+    with np.errstate(invalid="ignore", divide="ignore"):
+        C[:] = np.corrcoef(y, rowvar=False)
 
     return
