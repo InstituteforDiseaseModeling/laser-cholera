@@ -1,3 +1,19 @@
+"""`laser.cholera.metapop` — metapopulation cholera simulation pipeline.
+
+Re-exports the canonical component classes and `get_parameters` /
+`scenario` helpers as a flat namespace, so user code can write
+`from laser.cholera.metapop import Susceptible, Exposed, ...` instead
+of importing from each submodule. Importing this package also
+triggers [`logsetup`][laser.cholera.metapop.logsetup] which configures
+the `laser.cholera` logger and reserves a timestamped log file path.
+
+The default component pipeline (`Susceptible` -> `Exposed` ->
+`Recovered` -> `Infectious` -> `Vaccinated` -> `Census` ->
+`HumanToHuman` -> `EnvToHuman` -> `Environmental` -> `DerivedValues` ->
+`Analyzer` -> `Recorder` -> `Parameters`) is wired up by
+[`run_model`][laser.cholera.metapop.model.run_model].
+"""
+
 from . import logsetup  # noqa: F401, I001
 
 

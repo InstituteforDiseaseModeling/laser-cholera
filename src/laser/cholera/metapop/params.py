@@ -1,10 +1,52 @@
+"""Parameter loading, typing, validation, and the `Parameters` reporting component.
+
+Three layered jobs:
+
+1. **I/O.** [`load_json_parameters`][laser.cholera.metapop.params.load_json_parameters]
+   and
+   [`load_compressed_json_parameters`][laser.cholera.metapop.params.load_compressed_json_parameters]
+   read a JSON / JSON.gz file into a plain dict.
+2. **Typing & coercion.**
+   [`dict_to_propertysetex`][laser.cholera.metapop.params.dict_to_propertysetex]
+   wraps the dict in a [`PropertySetEx`][laser.cholera.metapop.params.PropertySetEx]
+   and coerces ~30 scalars to `np.float32` / `np.int32` and ~40 vectors /
+   matrices to `np.ndarray` of the appropriate dtype; converts ISO date
+   strings to `datetime`; promotes `epidemic_peaks` to a DataFrame with
+   a `loc_idx` column. The
+   [`as_ndarray`][laser.cholera.metapop.params.as_ndarray] and
+   [`handle_nan`][laser.cholera.metapop.params.handle_nan] helpers live
+   here.
+3. **Validation.**
+   [`validate_parameters`][laser.cholera.metapop.params.validate_parameters]
+   enforces shape and range invariants over the typed result.
+
+The
+[`get_parameters`][laser.cholera.metapop.params.get_parameters] facade
+composes those steps and applies any caller-supplied `mods` overrides.
+
+[`Parameters`][laser.cholera.metapop.params.Parameters] is a pipeline
+component that owns no per-tick logic but renders an extensive
+parameter-overview PDF section via its
+[`plot`][laser.cholera.metapop.params.Parameters.plot] generator
+(initial populations, birth / mortality / vaccination / disease-mortality
+rate heatmaps, emigration / WASH scatter, suitability heatmap).
+
+A small custom JSON encoder,
+[`PseEncoder`][laser.cholera.metapop.params.PseEncoder], teaches
+`json.dumps` how to serialize `PropertySet` / `np.ndarray` / `datetime`
+/ `np.integer` / `np.floating` / `pd.DataFrame` values for `__str__` on
+a `PropertySetEx`.
+"""
+
 import gzip
 import io
 import json
 import logging
+from collections.abc import Iterator
 from datetime import datetime
 from numbers import Number
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Optional
 from typing import Union
 
@@ -14,11 +56,37 @@ import pandas as pd
 from laser.core.propertyset import PropertySet
 from matplotlib.figure import Figure
 
+if TYPE_CHECKING:
+    from laser.cholera.metapop.model import Model
 logger = logging.getLogger("laser.cholera")
 
 
 class PseEncoder(json.JSONEncoder):
-    def default(self, o):
+    """JSON encoder that knows how to serialize the types stored on a `PropertySetEx`.
+
+    Recognized: `PropertySet` (via `.to_dict()`), `np.ndarray`
+    (`.tolist()`), `datetime` (ISO 8601 `YYYY-MM-DD`), `np.integer`,
+    `np.floating`, and `pd.DataFrame` (records-orient list). Anything
+    else falls through to `JSONEncoder.default` (which raises
+    `TypeError` for unsupported types). Used by
+    [`PropertySetEx.__str__`][laser.cholera.metapop.params.PropertySetEx]
+    to produce a human-readable JSON dump.
+    """
+
+    def default(self, o: object) -> object:
+        """Convert one non-stdlib-JSON-serializable value to a JSON-friendly form.
+
+        Args:
+            o: The value `json` is trying to serialize.
+
+        Returns:
+            A JSON-compatible representation (`dict`, `list`, `str`,
+            `int`, or `float`).
+
+        Raises:
+            TypeError: For any type not in the recognized list,
+                propagated from `JSONEncoder.default`.
+        """
         if isinstance(o, PropertySet):
             return o.to_dict()
         elif isinstance(o, np.ndarray):
@@ -36,7 +104,21 @@ class PseEncoder(json.JSONEncoder):
 
 
 class PropertySetEx(PropertySet):
-    def __init__(self, *kvps):
+    """`PropertySet` with a richer `__str__` that round-trips through `PseEncoder`.
+
+    Adds no new state — only a custom string representation that
+    formats the contained dict with indented JSON and the encoder's
+    type-aware conversions. Inherits all of `PropertySet`'s
+    attribute-access, `<<=` override, and `+=` extend semantics.
+    """
+
+    def __init__(self, *kvps: object) -> None:
+        """Forward all positional args to `PropertySet.__init__`.
+
+        Args:
+            *kvps: One or more key/value mappings or `(k, v)` pairs;
+                the canonical form is a single `dict`.
+        """
         super().__init__(*kvps)
 
         return
@@ -168,6 +250,19 @@ def get_parameters(
 
 
 def load_json_parameters(filename: Union[str, Path]) -> PropertySetEx:
+    """Read a plain JSON file and return a typed `PropertySetEx`.
+
+    Wraps `json.load` + `dict_to_propertysetex`. Used by
+    `get_parameters` when the suffix tuple is `(".json",)`.
+
+    Args:
+        filename: Path to a `.json` file containing a parameters
+            object.
+
+    Returns:
+        A typed `PropertySetEx` with every recognized field coerced to
+        its runtime dtype.
+    """
     file_path = Path(filename)
     with file_path.open("r") as file:
         parameters = json.load(file)
@@ -176,6 +271,16 @@ def load_json_parameters(filename: Union[str, Path]) -> PropertySetEx:
 
 
 def load_compressed_json_parameters(filename: Union[str, Path]) -> PropertySetEx:
+    """Read a gzip-compressed JSON file and return a typed `PropertySetEx`.
+
+    Used by `get_parameters` when the suffix tuple is `(".json", ".gz")`.
+
+    Args:
+        filename: Path to a `.json.gz` file.
+
+    Returns:
+        A typed `PropertySetEx`.
+    """
     file_path = Path(filename)
     with gzip.open(file_path, "rb") as gz_file:
         with io.BytesIO(gz_file.read()) as file:
@@ -184,7 +289,23 @@ def load_compressed_json_parameters(filename: Union[str, Path]) -> PropertySetEx
     return dict_to_propertysetex(parameters)
 
 
-def as_ndarray(input, dtype):
+def as_ndarray(input: object, dtype: type) -> np.ndarray:
+    """Coerce a list / scalar / existing ndarray to an `np.ndarray` of `dtype`.
+
+    Pass-through for an existing `np.ndarray` (no extra copy). For
+    lists, replaces any `"NA"` sentinel string with `0` before
+    constructing the array (legacy behavior — upstream MOSAIC R data
+    sometimes uses the R `NA` literal). Scalars are promoted to a
+    one-element array.
+
+    Args:
+        input: An `np.ndarray`, a `list` (possibly containing `"NA"`),
+            or a scalar.
+        dtype: Target NumPy dtype.
+
+    Returns:
+        An `np.ndarray` of `dtype` containing the converted values.
+    """
     retval = None
 
     if isinstance(input, np.ndarray):
@@ -201,7 +322,30 @@ def as_ndarray(input, dtype):
     return retval
 
 
-def handle_nan(values, dtype) -> np.ndarray:
+def handle_nan(values: object, dtype: type) -> np.ndarray:
+    """Convert a list-of-lists with mixed numeric / non-numeric cells to an `np.ndarray`.
+
+    Each cell is run through `int(cell)`; cells that fail conversion
+    become `np.nan` (which is why the caller passes a floating dtype
+    — integer dtypes cannot hold NaN). Used to ingest the
+    `reported_cases` / `reported_deaths` matrices, where missing weeks
+    arrive as non-numeric placeholders.
+
+    Args:
+        values: A list of lists (rows × columns of mixed-type cells)
+            or an existing `np.ndarray` (pass-through).
+        dtype: Target NumPy dtype. Must be a floating type if the
+            input contains any non-numeric cells.
+
+    Returns:
+        An `np.ndarray` of `dtype`. Non-numeric input cells appear as
+        `np.nan`.
+
+    Raises:
+        AssertionError: When `values` is neither a list nor an
+            `np.ndarray`.
+    """
+
     def convert(item):
         try:
             return int(item)
@@ -658,12 +802,34 @@ def validate_parameters(params: PropertySetEx) -> None:
 
 
 class Parameters:
-    def __init__(self, model) -> None:
+    """Pipeline component whose only job is to render an extensive parameter overview.
+
+    Has no per-tick work — `__call__` is a no-op. The
+    [`plot`][laser.cholera.metapop.params.Parameters.plot] generator
+    yields nine figures (initial populations, four rate heatmaps,
+    emigration/WASH scatters, mortality and suitability heatmaps) that
+    surface the input parameters for human review.
+
+    Attributes:
+        model: The parent `Model` instance.
+    """
+
+    def __init__(self, model: "Model") -> None:
+        """Register the component on `model` (no state is allocated).
+
+        Args:
+            model: The `Model` instance.
+        """
         self.model = model
 
         return
 
     def check(self):
+        """Validate that `model.params` is attached.
+
+        Raises:
+            AssertionError: When `model.params` is missing.
+        """
         # assert hasattr(self.model, "patches"), "Parameters: model needs to have a 'patches' attribute."
         # assert hasattr(self.model, "people"), "Parameters: model needs to have a 'people' attribute."
         assert hasattr(self.model, "params"), "Parameters: model needs to have a 'params' attribute."
@@ -671,9 +837,30 @@ class Parameters:
         return
 
     def __call__(self, _model, _tick):
-        pass
+        """No-op per-tick callable; the component only contributes to the post-run plot."""
 
-    def plot(self, fig: Figure = None):  # pragma: no cover
+    def plot(self, fig: Figure = None) -> Iterator[str]:  # pragma: no cover
+        """Yield nine Matplotlib figures summarizing the input parameters.
+
+        Generates (in order): initial-population stacked bar; `b_jt` /
+        `d_jt` / `nu_1_jt` / `nu_2_jt` / `mu_jt` per-patch-per-tick
+        heatmaps; `tau_i` and `theta_j` per-patch scatter; `psi_jt`
+        suitability heatmap.
+
+        Args:
+            fig: Optional existing Matplotlib `Figure` to draw into.
+
+        Yields:
+            Nine labels in order: `"Initial Populations by Category"`,
+            `"Birth Rates by Location Over Time"`,
+            `"Non-Disease Mortality Rates by Location Over Time"`,
+            `"First Dose Vaccination Counts by Location Over Time"`,
+            `"Second Dose Vaccination Counts by Location Over Time"`,
+            `"Disease Mortality Rate by Location Over Time"`,
+            `"Emigration Probabilities by Location"`,
+            `"WASH Coverage by Location"`,
+            `"Environmental Suitability Factor by Location Over Time"`.
+        """
         # Stacked bar chart of initial populations
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Initial Populations by Category") if fig is None else fig
 

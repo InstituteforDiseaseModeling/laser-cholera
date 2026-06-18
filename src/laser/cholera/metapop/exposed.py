@@ -1,12 +1,43 @@
+"""Exposed compartment — incubating individuals between infection and infectiousness.
+
+Allocates `model.people.E` (shape `(nticks + 1, npatches)`), seeds it
+from `params.E_j_initial`, and on each tick applies non-disease
+mortality (drawn from `d_jt`). Progression from `E` to `Isym` / `Iasym`
+is performed inside
+[`Infectious`][laser.cholera.metapop.infectious.Infectious] using the
+`iota` rate, so `Exposed.__call__` only handles the demographic decay.
+"""
+
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
+if TYPE_CHECKING:
+    from laser.cholera.metapop.model import Model
+
 
 class Exposed:
-    def __init__(self, model):
+    """Exposed compartment: tracks `E_j(t)` and bleeds off non-disease deaths each tick.
+
+    Attributes:
+        model: The parent `Model` instance.
+    """
+
+    def __init__(self, model: "Model"):
+        """Allocate the `E` state vector and seed it from `E_j_initial`.
+
+        Args:
+            model: The `Model` instance. Must already have `people` and
+                `params` set up, with `params.E_j_initial` populated.
+
+        Raises:
+            AssertionError: When `model` is missing `people` or
+                `params`, or `params` is missing `E_j_initial`.
+        """
         self.model = model
 
         assert hasattr(model, "people"), "Exposed: model needs to have a 'people' attribute."
@@ -20,6 +51,11 @@ class Exposed:
         return
 
     def check(self):
+        """Validate the `iota` progression-rate parameter and ensure shared bookkeeping is allocated.
+
+        Raises:
+            AssertionError: When `params.iota` is missing.
+        """
         # Don't bother checking for model.params, we did that in __init__()
         assert "iota" in self.model.params, "Exposed: model params needs to have a 'iota' (progression rate) parameter."
         if not hasattr(self.model.patches, "non_disease_deaths"):
@@ -27,7 +63,17 @@ class Exposed:
 
         return
 
-    def __call__(self, model, tick: int) -> None:
+    def __call__(self, model: "Model", tick: int) -> None:
+        """Advance `E` from `tick` to `tick + 1`: carry forward, then remove non-disease deaths.
+
+        Progression `E -> Isym / Iasym` (governed by `iota` and `sigma`)
+        is handled by [`Infectious`][laser.cholera.metapop.infectious.Infectious];
+        this method only applies natural mortality from `d_jt`.
+
+        Args:
+            model: The parent `Model` instance.
+            tick: Current simulation tick.
+        """
         E_next = model.people.E[tick + 1]
         E = model.people.E[tick]
         E_next[:] = E
@@ -39,7 +85,15 @@ class Exposed:
 
         return
 
-    def plot(self, fig: Optional[Figure] = None):  # pragma: no cover
+    def plot(self, fig: Optional[Figure] = None) -> Iterator[str]:  # pragma: no cover
+        """Yield a single Matplotlib figure of `E(t)` for the ten largest patches.
+
+        Args:
+            fig: Optional existing Matplotlib `Figure` to draw into.
+
+        Yields:
+            The string label `"Exposed"`.
+        """
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Exposed") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:

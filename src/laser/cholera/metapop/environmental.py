@@ -1,11 +1,57 @@
+"""Environmental-reservoir component — tracks `W(t)` shedding from infectious people and decay.
+
+Owns `model.patches.W` (the contaminated-water reservoir, one value per
+patch per tick) and `model.patches.delta_jt` (per-patch decay rate
+derived from `psi_jt` via a Beta CDF map). On each tick:
+
+1. Decay: Poisson draw at rate `delta_jt[tick] * W`, clamped not to
+    exceed the current reservoir.
+2. Shedding from symptomatic cases: Poisson draw at `zeta_1 * Isym`,
+    attenuated by `(1 - theta_j)` for WASH coverage.
+3. Shedding from asymptomatic cases: Poisson draw at `zeta_2 * Iasym`,
+    attenuated the same way.
+
+`W` is consumed by
+[`EnvToHuman`][laser.cholera.metapop.envtohuman.EnvToHuman] to drive
+environmental transmission.
+"""
+
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 from scipy.stats import beta
 
+if TYPE_CHECKING:
+    from laser.cholera.metapop.model import Model
+
 
 class Environmental:
-    def __init__(self, model) -> None:
+    """Environmental-reservoir component: maintains `patches.W` per tick.
+
+    Attributes:
+        model: The parent `Model` instance.
+    """
+
+    def __init__(self, model: "Model") -> None:
+        """Allocate `W` / `delta_jt` and pre-compute the suitability-to-decay map.
+
+        `delta_jt` is built once from `params.psi_jt` via
+        [`map_suitability_to_decay`][laser.cholera.metapop.environmental.map_suitability_to_decay]
+        (a Beta-CDF interpolator between `decay_days_short` and
+        `decay_days_long`).
+
+        Args:
+            model: The `Model` instance. Must have `patches` and
+                `params` with `psi_jt`, `decay_days_short`,
+                `decay_days_long`, `decay_shape_1`, and `decay_shape_2`
+                populated.
+
+        Raises:
+            AssertionError: When any required parameter is missing.
+        """
         self.model = model
 
         assert hasattr(model, "patches"), "Environmental: model needs to have a 'patches' attribute."
@@ -41,6 +87,13 @@ class Environmental:
         return
 
     def check(self):
+        """Validate `Isym` / `Iasym` are available and shedding parameters are present.
+
+        Raises:
+            AssertionError: When `model.people.Isym` / `.Iasym` are
+                missing, or `params.zeta_1` / `params.zeta_2` /
+                `params.theta_j` are missing.
+        """
         assert hasattr(self.model, "people"), "Environmental: model needs to have a 'people' attribute."
         assert hasattr(self.model.people, "Isym"), "Environmental: model people needs to have a 'Isym' (symptomatic) attribute."
         assert hasattr(self.model.people, "Iasym"), "Environmental: model people needs to have a 'Iasym' (asymptomatic) attribute."
@@ -50,7 +103,17 @@ class Environmental:
 
         return
 
-    def __call__(self, model, tick: int) -> None:
+    def __call__(self, model: "Model", tick: int) -> None:
+        """Advance `W` one tick: carry forward, decay, then shed from infectious cohorts.
+
+        Decay is clamped not to exceed `W` so the reservoir never goes
+        negative even on extreme Poisson draws. WASH coverage
+        (`1 - theta_j`) attenuates the shed amount entering the reservoir.
+
+        Args:
+            model: The parent `Model` instance.
+            tick: Current simulation tick.
+        """
         W = model.patches.W[tick]
         W_next = model.patches.W[tick + 1]
         W_next[:] = W
@@ -73,7 +136,16 @@ class Environmental:
 
         return
 
-    def plot(self, fig: Figure = None):  # pragma: no cover
+    def plot(self, fig: Figure = None) -> Iterator[str]:  # pragma: no cover
+        """Yield three Matplotlib figures: reservoir trajectory, decay heatmap, suitability map.
+
+        Args:
+            fig: Optional existing Matplotlib `Figure` to draw into.
+
+        Yields:
+            Three labels in order: `"Environmental Reservoir"`,
+            `"Environmental Decay Rate"`, `"Suitability to Decay Mapping"`.
+        """
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Environmental Reservoir") if fig is None else fig
 
         for ipatch in np.argsort(self.model.params.S_j_initial)[-10:]:

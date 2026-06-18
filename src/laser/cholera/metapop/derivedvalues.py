@@ -1,9 +1,51 @@
+"""End-of-run derived diagnostics: spatial hazard and inter-location coupling.
+
+[`DerivedValues`][laser.cholera.metapop.derivedvalues.DerivedValues]
+runs every tick but only does its real work on the final tick, computing:
+
+- `patches.spatial_hazard` — per-patch, per-tick infection-pressure
+  metric incorporating local susceptibility, emigration / immigration
+  via `pi_ij`, and the seasonality envelope `beta_jt_human`.
+- `patches.coupling` — `(npatches × npatches)` Pearson correlation
+  matrix of the per-tick prevalence-fraction series across patch pairs.
+
+Module-level helpers
+[`calculate_spatial_hazard`][laser.cholera.metapop.derivedvalues.calculate_spatial_hazard]
+and
+[`calculate_coupling`][laser.cholera.metapop.derivedvalues.calculate_coupling]
+do the math; the per-model wrappers exist primarily so R callers can
+invoke them with a single argument.
+"""
+
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
+
+if TYPE_CHECKING:
+    from laser.cholera.metapop.model import Model
 
 
 class DerivedValues:
-    def __init__(self, model) -> None:
+    """Computes end-of-run diagnostics: spatial hazard and coupling matrix.
+
+    Attributes:
+        model: The parent `Model` instance.
+    """
+
+    def __init__(self, model: "Model") -> None:
+        """Allocate `spatial_hazard` and `coupling` arrays on `model.patches`.
+
+        Args:
+            model: The `Model` instance. Must have `patches` and
+                `params` set up.
+
+        Raises:
+            AssertionError: When `patches` or `params` is missing.
+        """
         self.model = model
 
         assert hasattr(model, "patches"), "DerivedValues: model needs to have a 'patches' attribute."
@@ -16,6 +58,20 @@ class DerivedValues:
         return
 
     def check(self):
+        """Validate every upstream attribute and parameter the final-tick math needs.
+
+        Verifies `model.people` has `S`/`Isym`/`Iasym`; `model.patches`
+        has `N`/`beta_jt_human`/`pi_ij`; and `params` provides
+        `beta_j0_hum`, `p`, and `tau_i`. These are populated by
+        [`Susceptible`][laser.cholera.metapop.susceptible.Susceptible],
+        [`Infectious`][laser.cholera.metapop.infectious.Infectious],
+        [`Census`][laser.cholera.metapop.census.Census], and
+        [`HumanToHuman`][laser.cholera.metapop.humantohuman.HumanToHuman]
+        earlier in the pipeline.
+
+        Raises:
+            AssertionError: When any prerequisite is missing.
+        """
         assert hasattr(self.model, "people"), "DerivedValues: model needs to have an 'people' attribute."
         assert hasattr(self.model.people, "S"), "DerivedValues: model.people needs to have 'S' attribute."
         assert hasattr(self.model.people, "Isym"), "DerivedValues: model.people needs to have 'Isym' attribute."
@@ -32,7 +88,7 @@ class DerivedValues:
 
         return
 
-    def __call__(self, model, tick: int) -> None:
+    def __call__(self, model: "Model", tick: int) -> None:
         """Calculate derived values for the model.
 
         Spatial hazard and coupling are calculated at the end of the simulation.
@@ -76,7 +132,15 @@ class DerivedValues:
 
         return
 
-    def plot(self, fig=None):  # pragma: no cover
+    def plot(self, fig: Optional[Figure] = None) -> Iterator[str]:  # pragma: no cover
+        """Yield one Matplotlib heatmap of `spatial_hazard` (patch × tick).
+
+        Args:
+            fig: Optional existing Matplotlib `Figure` to draw into.
+
+        Yields:
+            The string label `"Spatial Hazard by Location Over Time"`.
+        """
         _fig = plt.figure(figsize=(12, 9), dpi=128, num="Spatial Hazard by Location Over Time") if fig is None else fig
 
         plt.imshow(self.model.patches.spatial_hazard.T, aspect="auto", cmap="Reds", interpolation="nearest")
