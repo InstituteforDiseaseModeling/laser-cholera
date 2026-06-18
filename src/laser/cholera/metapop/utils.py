@@ -1,7 +1,19 @@
+import difflib
 from datetime import datetime
 
 import numpy as np
 from laser.core.migration import distance
+
+
+class UnknownOverrideKey(ValueError):
+    """Raised when `override_helper` receives a key that is not in its mapping.
+
+    Subclass of `ValueError` so callers that catch `ValueError` continue
+    to work. CLI front-ends (`cli_run`) catch this specific subclass and
+    re-raise as `click.UsageError` for a clean CLI presentation; other
+    `ValueError`s (notably the `_cli_unsupported` rejections raised for
+    valid-but-non-scalar parameter keys) propagate as-is.
+    """
 
 
 def get_daily_seasonality(params):
@@ -75,70 +87,150 @@ def get_pi_from_lat_long(params):
     return m_hat
 
 
-def override_helper(overrides: dict) -> dict:
-    """Coerce stringly-typed parameter overrides to their expected runtime types.
+def _cli_unsupported(key):
+    """Build a coercer that rejects CLI overrides for non-scalar parameters.
 
-    Called at the CLI boundary (`metapop --over key:value` repeated) and
-    from any Python caller that wants to push a dict of overrides into
-    `get_parameters(..., mods=...)`. Each known key in the table is
-    coerced according to its declared type:
-
-    - ``int``-mapped keys (e.g., ``seed``, ``p``) → `int(value)`.
-    - ``float``-mapped keys (e.g., ``phi_1``, ``sigma``, ``rho``) →
-      `float(value)`.
-    - ``date_start`` / ``date_stop`` → `datetime` parsed from `"%Y-%m-%d"`.
-    - Boolean-flag keys (`visualize`, `pdf`, `hdf5_output`, `compress`,
-      `quiet`) → `True` for any of `true / 1 / yes / y / t / on / enabled`
-      (case-insensitive), else `False`.
-    - Keys whose mapping is `None` (vector/matrix payloads such as
-      `S_j_initial`, `b_jt`, `psi_jt`, `return`, etc.) — passed through
-      verbatim, no coercion attempted.
-
-    Unknown keys are forwarded unchanged, so misspelled CLI flags surface
-    later as missing-attribute errors at simulation time rather than being
-    silently dropped here.
+    The returned function raises a `ValueError` describing why the key
+    cannot be set from `--over` and pointing at the escape hatches
+    (`--params` JSON file, or `get_parameters(mods=...)` from Python).
+    Used in `override_helper`'s mapping for every known parameter whose
+    value is a vector, matrix, DataFrame, or other non-trivially-string-
+    coercible payload.
 
     Args:
-        overrides: Mapping of override key → raw value. Values are
-            typically strings from the CLI (the table coerces them) or
-            already-typed Python values from in-memory callers (the
-            table will still re-coerce the strings; already-typed values
-            for ``None``-mapped keys pass through unchanged).
+        key: Parameter name; embedded into the error message so the user
+            sees which override they need to drop.
+
+    Returns:
+        A unary callable that always raises `ValueError`.
+    """
+
+    def reject(_value):
+        raise ValueError(
+            f"Parameter '{key}' cannot be set via --over (requires a non-scalar "
+            f"value). Pass a parameters JSON file via --params, or call "
+            f"get_parameters(mods={{'{key}': ...}}) from Python."
+        )
+
+    return reject
+
+
+def override_helper(overrides: dict) -> dict:
+    """Coerce stringly-typed `--over` parameter overrides to their runtime types.
+
+    Called from `cli_run` against the parsed `--over key:value` payload
+    only (CLI flags like `--seed` / `--hdf5-output` are typed by click
+    itself and never reach this function). Each entry in the mapping
+    table is a unary callable invoked on the raw string value:
+
+    - ``int``-mapped keys (e.g. ``seed``, ``p``, ``delta_reporting_cases``)
+      → `int(value)`.
+    - ``float``-mapped keys (e.g. ``phi_1``, ``sigma``, ``rho``,
+      ``chi_endemic``) → `float(value)`.
+    - ``date_start`` / ``date_stop`` → `datetime` parsed from `"%Y-%m-%d"`.
+    - "CLI-unsupported" keys (vectors, matrices, DataFrames such as
+      ``S_j_initial``, ``b_jt``, ``epidemic_peaks``, ``return``) — the
+      coercer immediately raises `ValueError`. These are valid model
+      parameters but cannot meaningfully be passed as a CLI string;
+      use `--params` or `get_parameters(mods=...)` instead.
+    - Unknown keys raise `UnknownOverrideKey` (a `ValueError` subclass)
+      with a `difflib`-derived "did you mean" suggestion when a close
+      match exists.
+
+    The mapping is the source of truth for which parameter names exist;
+    every key in `default_parameters.json` is represented, plus the
+    `cli_run`-only sentinels (none, after the `--hdf5-output` / `--compress`
+    promotions in the same change).
+
+    Args:
+        overrides: Mapping of override key → raw string value, as parsed
+            from `--over` tokens by `cli_run`.
 
     Returns:
         A new dict with the same keys as the input, values coerced per
         the table.
 
+    Raises:
+        UnknownOverrideKey: When an override key is not in the mapping.
+        ValueError: When an override key is in the mapping but flagged
+            as CLI-unsupported (vector / matrix / DataFrame).
+
     Example:
         >>> from laser.cholera.metapop.utils import override_helper
-        >>> typed = override_helper({"phi_1": "0.65", "seed": "42", "visualize": "on"})
-        >>> typed["phi_1"] == 0.65 and typed["seed"] == 42 and typed["visualize"] is True
+        >>> typed = override_helper({"phi_1": "0.65", "seed": "42"})
+        >>> typed["phi_1"] == 0.65 and typed["seed"] == 42
         True
+        >>> override_helper({"b_jt": "anything"})
+        Traceback (most recent call last):
+            ...
+        ValueError: Parameter 'b_jt' cannot be set via --over...
+        >>> override_helper({"date_strat": "2024-01-01"})
+        Traceback (most recent call last):
+            ...
+        laser.cholera.metapop.utils.UnknownOverrideKey: Unknown override key 'date_strat'. Did you mean 'date_start'?
     """
-
-    def bool_from_string(value):
-        return str(value).lower() in ("true", "1", "yes", "y", "t", "on", "enabled")
 
     # `datetime.strptime` is a C function that rejects keyword arguments, so
     # `functools.partial` against it would TypeError; wrap in a lambda instead.
     def _parse_date(value):
         return datetime.strptime(value, "%Y-%m-%d")  # noqa: DTZ007
 
+    _unsupported_keys = (
+        # Vectors (length-npatches or length-ncompartments)
+        "location_name",
+        "N_j_initial",
+        "S_j_initial",
+        "E_j_initial",
+        "I_j_initial",
+        "R_j_initial",
+        "V1_j_initial",
+        "V2_j_initial",
+        "prop_S_initial",
+        "prop_E_initial",
+        "prop_I_initial",
+        "prop_R_initial",
+        "prop_V1_initial",
+        "prop_V2_initial",
+        "longitude",
+        "latitude",
+        "tau_i",
+        "beta_j0_hum",
+        "beta_j0_env",
+        "beta_j0_tot",
+        "p_beta",
+        "a_1_j",
+        "a_2_j",
+        "b_1_j",
+        "b_2_j",
+        "theta_j",
+        "psi_star_a",
+        "psi_star_b",
+        "psi_star_z",
+        "psi_star_k",
+        "epidemic_threshold",
+        "mu_j_baseline",
+        "mu_j_slope",
+        "mu_j_epidemic_factor",
+        "nu_jt_sources",
+        # Matrices (npatches × nticks)
+        "b_jt",
+        "d_jt",
+        "nu_1_jt",
+        "nu_2_jt",
+        "psi_jt",
+        "mu_jt",
+        "reported_cases",
+        "reported_deaths",
+        # Structured
+        "epidemic_peaks",
+        "return",
+    )
+
     mapping = {
+        # --- scalars: CLI-coercible ---
         "seed": int,
         "date_start": _parse_date,
         "date_stop": _parse_date,
-        "location_name": None,  # vector
-        "S_j_initial": None,  # vector # TODO consider partial np.array(dtype=np.int32)
-        "E_j_initial": None,  # vector
-        "I_j_initial": None,  # vector
-        "R_j_initial": None,  # vector
-        "V1_j_initial": None,  # vector
-        "V2_j_initial": None,  # vector
-        "b_jt": None,  # matrix
-        "d_jt": None,  # matrix
-        "nu_1_jt": None,  # matrix
-        "nu_2_jt": None,  # matrix
         "phi_1": float,
         "phi_2": float,
         "omega_1": float,
@@ -147,45 +239,37 @@ def override_helper(overrides: dict) -> dict:
         "gamma_1": float,
         "gamma_2": float,
         "epsilon": float,
-        "mu_jt": None,  # matrix
         "rho": float,
+        "rho_deaths": float,
         "sigma": float,
-        "longitude": None,  # vector
-        "latitude": None,  # vector
+        "chi_endemic": float,
+        "chi_epidemic": float,
         "mobility_omega": float,
         "mobility_gamma": float,
-        "tau_i": None,  # vector
-        "beta_j0_hum": None,  # vector
-        "a_1_j": None,  # vector
-        "b_1_j": None,  # vector
-        "a_2_j": None,  # vector
-        "b_2_j": None,  # vector
         "p": int,
         "alpha_1": float,
         "alpha_2": float,
-        "beta_j0_env": None,  # vector
-        "theta_j": None,  # vector
-        "psi_jt": None,  # matrix
         "zeta_1": float,
         "zeta_2": float,
+        "zeta_ratio": float,
         "kappa": float,
         "decay_days_short": float,
         "decay_days_long": float,
+        "decay_days_spread": int,
         "decay_shape_1": float,
         "decay_shape_2": float,
-        "return": None,  # list
-        "visualize": bool_from_string,
-        "pdf": bool_from_string,
-        "hdf5_output": bool_from_string,
-        "compress": bool_from_string,
-        "quiet": bool_from_string,
+        "delta_reporting_cases": int,
+        "delta_reporting_deaths": int,
+        # --- known but CLI-unsupported (vectors / matrices / DataFrames) ---
+        **{k: _cli_unsupported(k) for k in _unsupported_keys},
     }
 
     typed = {}
     for key, value in overrides.items():
-        if key in mapping and (fn := mapping[key]) is not None:
-            typed[key] = fn(value)
-        else:
-            typed[key] = value
+        if key not in mapping:
+            hint = difflib.get_close_matches(key, mapping, n=1, cutoff=0.6)
+            suggestion = f" Did you mean '{hint[0]}'?" if hint else ""
+            raise UnknownOverrideKey(f"Unknown override key '{key}'.{suggestion}")
+        typed[key] = mapping[key](value)
 
     return typed

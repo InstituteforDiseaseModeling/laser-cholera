@@ -29,6 +29,7 @@ from laser.cholera.metapop import Susceptible
 from laser.cholera.metapop import Vaccinated
 from laser.cholera.metapop import get_parameters
 from laser.cholera.metapop import scenario
+from laser.cholera.metapop.utils import UnknownOverrideKey
 from laser.cholera.metapop.utils import override_helper
 
 logger = logging.getLogger("laser.cholera")
@@ -328,47 +329,76 @@ class Model:
 
 
 @click.command()
-@click.option("--seed", default=20241107, help="Random seed")
+@click.option("--seed", type=int, default=20241107, help="Random seed")
 @click.option("--viz", "visualize", is_flag=True, default=False, help="Display visualizations")
 @click.option("--pdf", is_flag=True, default=False, help="Output visualization results as a PDF")
-@click.option("--outdir", "-o", default=Path.cwd(), help="Output file for results")
-@click.option("--params", "-p", default=None, help="JSON file with parameters")
+@click.option(
+    "--outdir",
+    "-o",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default=Path.cwd(),
+    help="Output directory for results",
+)
+@click.option(
+    "--params",
+    "-p",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="JSON (or .json.gz) file with parameters",
+)
 @click.option("--over", multiple=True, help="Additional parameter overrides (param:value or param=value)")
-@click.option("--loglevel", default="WARNING", help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)")
+@click.option(
+    "--loglevel",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
+    default="WARNING",
+    help="Logging level",
+)
 @click.option("-q", "--quiet", is_flag=True, default=False, help="Suppress console progress output")
+@click.option("--hdf5-output", "hdf5_output", is_flag=True, default=False, help="Write per-tick outputs to an HDF5 file via the Recorder")
+@click.option("--compress", is_flag=True, default=False, help="Gzip the HDF5 output (only meaningful with --hdf5-output)")
 def cli_run(params, **kwargs):
+    """Run the cholera model simulation with the given parameters.
+
+    Initializes the model, sets up the default component pipeline, seeds
+    initial infections, runs the simulation, and optionally renders
+    visualizations.
+    \f
+
+    Args:
+        params: Path to a parameters JSON file (or `.json.gz`). When
+            `None`, the bundled `default_parameters.json` is used.
+        **kwargs: Click-bound options forwarded to
+            [`run_model`][laser.cholera.metapop.model.run_model] as
+            parameter mods. Notable keys: `seed` (int), `visualize` /
+            `pdf` / `quiet` / `hdf5_output` / `compress` (bool), `outdir`
+            (Path), `loglevel` (str — popped before forwarding), and
+            `over` (tuple of `"key:value"` / `"key=value"` strings —
+            parsed and type-coerced through
+            [`override_helper`][laser.cholera.metapop.utils.override_helper]).
+
+    Raises:
+        click.UsageError: When `--over` references an unknown parameter
+            name (with a `difflib` "did you mean" suggestion if a close
+            match exists in the mapping).
+        ValueError: When `--over` references a known but CLI-unsupported
+            parameter (vector / matrix / DataFrame). Propagated as-is so
+            the architectural problem stays visible.
     """
-    Run the cholera model simulation with the given parameters.
 
-    This function initializes the model with the specified parameters, sets up the
-    components of the model, seeds initial infections, runs the simulation, and
-    optionally visualizes the results.
-
-    Parameters:
-
-        **kwargs: Arbitrary keyword arguments containing the parameters for the simulation.
-
-            Expected keys include:
-
-                - "loglevel": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] logging level.
-                - "viz": (bool) Whether to show visualizations.
-                - "pdf": (str) The file path to save the visualization as a PDF.
-
-    Returns:
-
-        None
-    """
-
-    logging.getLogger("laser.cholera").setLevel(kwargs.pop("loglevel", "INFO"))  # Set the root logger level
+    logging.getLogger("laser.cholera").setLevel(kwargs.pop("loglevel", "INFO"))
     logger.info("Starting the cholera model simulation...")
 
-    if "over" in kwargs and (overrides := kwargs.pop("over")):
+    if overrides := kwargs.pop("over", ()):
         logger.info(f"Overriding parameters: {overrides}")
-        for override in overrides:
-            param, value = override.split("=") if "=" in override else override.split(":")
-            kwargs[param] = value
-        typed = override_helper(kwargs)
-        kwargs.update(typed)
+        parsed = {}
+        for token in overrides:
+            sep = "=" if "=" in token else ":"
+            key, _, value = token.partition(sep)
+            parsed[key] = value
+        try:
+            kwargs.update(override_helper(parsed))
+        except UnknownOverrideKey as exc:
+            raise click.UsageError(str(exc)) from exc
 
     run_model(params, **kwargs)
 
@@ -447,4 +477,4 @@ def run_model(paramfile: Optional[Union[str, Path, dict]], **kwargs: Optional[di
 
 if __name__ == "__main__":
     ctx = click.Context(cli_run)
-    ctx.invoke(cli_run, seed=20241107, loglevel="INFO", visualize=True, pdf=False, over=["hdf5_output:0"])
+    ctx.invoke(cli_run, seed=20241107, loglevel="INFO", visualize=True, pdf=False, hdf5_output=False)

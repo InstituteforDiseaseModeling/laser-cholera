@@ -3,8 +3,10 @@ from datetime import datetime
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from laser.cholera.metapop.params import get_parameters
+from laser.cholera.metapop.utils import UnknownOverrideKey
 from laser.cholera.metapop.utils import get_daily_seasonality
 from laser.cholera.metapop.utils import get_pi_from_lat_long
 from laser.cholera.metapop.utils import override_helper
@@ -145,63 +147,116 @@ class TestOverrideHelper(unittest.TestCase):
         assert typed["date_stop"].month == 12
         assert typed["date_stop"].day == 31
 
-    def test_bool_string_overrides_are_coerced(self):
-        """Truthy/falsy strings are mapped to True/False via the bool-from-string helper.
+    def test_new_scalar_coercions(self):
+        """Recently added scalar entries (`sigma`, `rho_deaths`, etc.) coerce to numbers.
 
-        Given a battery of recognized truthy strings (``"true"``, ``"1"``,
-        ``"yes"``, ``"y"``, ``"t"``, ``"on"``, ``"enabled"``) and falsy
-        strings (``"false"``, ``"0"``, ``"no"``, ``"off"``),
-        when each is passed in as a value for a bool-mapped key
-        (``visualize``, ``pdf``, ``hdf5_output``, ``compress``, ``quiet``),
-        then the truthy ones become ``True`` and falsy ones become ``False``.
+        Given a battery of new scalar keys added when `override_helper` was
+        reconciled with `default_parameters.json` (``sigma``, ``rho_deaths``,
+        ``chi_endemic``, ``chi_epidemic``, ``zeta_ratio``,
+        ``delta_reporting_cases``, ``delta_reporting_deaths``,
+        ``decay_days_spread``),
+        when each is passed in as a stringly-typed override,
+        then the coerced value is the expected numeric type with the
+        expected magnitude.
 
-        Failure implies the case-insensitive truthy-string set has shifted,
-        which would break CLI ``--over visualize:on`` style invocations.
+        Failure implies the JSON-vs-mapping reconciliation has regressed
+        and a CLI ``--over sigma:0.5`` style call would either silently
+        forward the string or raise an unexpected error.
         """
-        truthy_strings = ["true", "TRUE", "1", "yes", "y", "t", "on", "enabled"]
-        falsy_strings = ["false", "0", "no", "off"]
-        bool_keys = ["visualize", "pdf", "hdf5_output", "compress", "quiet"]
+        typed = override_helper(
+            {
+                "sigma": "0.5",
+                "rho_deaths": "0.1",
+                "chi_endemic": "0.2",
+                "chi_epidemic": "0.3",
+                "zeta_ratio": "1.5",
+                "delta_reporting_cases": "7",
+                "delta_reporting_deaths": "14",
+                "decay_days_spread": "30",
+            }
+        )
+        assert isinstance(typed["sigma"], float)
+        assert typed["sigma"] == 0.5
+        assert isinstance(typed["rho_deaths"], float)
+        assert typed["rho_deaths"] == 0.1
+        assert isinstance(typed["chi_endemic"], float)
+        assert typed["chi_endemic"] == 0.2
+        assert isinstance(typed["chi_epidemic"], float)
+        assert typed["chi_epidemic"] == 0.3
+        assert isinstance(typed["zeta_ratio"], float)
+        assert typed["zeta_ratio"] == 1.5
+        assert isinstance(typed["delta_reporting_cases"], int)
+        assert typed["delta_reporting_cases"] == 7
+        assert isinstance(typed["delta_reporting_deaths"], int)
+        assert typed["delta_reporting_deaths"] == 14
+        assert isinstance(typed["decay_days_spread"], int)
+        assert typed["decay_days_spread"] == 30
 
-        for key in bool_keys:
-            for s in truthy_strings:
-                typed = override_helper({key: s})
-                assert typed[key] is True, f"key={key} value={s} should map to True"
-            for s in falsy_strings:
-                typed = override_helper({key: s})
-                assert typed[key] is False, f"key={key} value={s} should map to False"
+    def test_unknown_key_raises_with_difflib_suggestion(self):
+        """A misspelled override key raises `UnknownOverrideKey` with a hint.
 
-    def test_unknown_keys_are_passed_through_unchanged(self):
-        """Keys absent from the mapping are forwarded verbatim.
-
-        Given an overrides dict with a key not in the type-coercion table
-        (``some_new_param``),
+        Given an overrides dict whose key (``date_strat``) is one character
+        off from a real mapping entry (``date_start``),
         when ``override_helper`` runs,
-        then the output contains the key with the original value type.
+        then it raises `UnknownOverrideKey` (a `ValueError` subclass) whose
+        message names the bad key and offers a `Did you mean '…'?`
+        suggestion produced by `difflib.get_close_matches`.
 
-        Failure implies the function is dropping unknown keys silently,
-        which would mask typos in CLI ``--over`` flags.
+        Failure implies the strict-key check or the difflib suggestion
+        path has regressed; misspelled CLI flags would silently no-op
+        again and surface later as confusing shape errors.
         """
-        typed = override_helper({"some_new_param": "verbatim_value"})
-        assert typed["some_new_param"] == "verbatim_value"
+        with pytest.raises(UnknownOverrideKey) as ctx:
+            override_helper({"date_strat": "2024-01-01"})
+        assert "date_strat" in str(ctx.exception)
+        assert "date_start" in str(ctx.exception)
+        # Subclass relationship is part of the contract — callers may
+        # catch the broader ValueError and still match.
+        assert isinstance(ctx.exception, ValueError)
 
-    def test_none_mapping_keys_pass_value_through_unchanged(self):
-        """Keys mapped to ``None`` (vectors/matrices) keep their raw value.
+    def test_unknown_key_with_no_close_match_omits_suggestion(self):
+        """Unknown keys with no close match produce a clean, suggestion-free message.
 
-        Given an overrides dict with a key whose mapping is ``None``
-        (e.g., ``S_j_initial`` for population vectors, ``b_jt`` for a
-        birth-rate matrix),
+        Given an overrides dict whose key (``xyz_garbage_zzz``) is too far
+        from any mapping entry to clear the difflib similarity cutoff,
         when ``override_helper`` runs,
-        then the output contains the key with the original value (no
-        attempted coercion or wrapping).
+        then the raised `UnknownOverrideKey` names the bad key but omits
+        any `Did you mean` suffix.
 
-        Failure implies the mapping table is now coercing vector-typed
-        keys with the wrong function, which would corrupt array payloads
-        sent in via the CLI ``--over`` mechanism.
+        Failure implies the difflib cutoff is producing nonsense
+        suggestions or the suggestion-suffix branch is wired wrong.
         """
-        vector_value = [1, 2, 3]
-        typed = override_helper({"S_j_initial": vector_value, "b_jt": "matrix_stub"})
-        assert typed["S_j_initial"] is vector_value
-        assert typed["b_jt"] == "matrix_stub"
+        with pytest.raises(UnknownOverrideKey) as ctx:
+            override_helper({"xyz_garbage_zzz": "value"})
+        assert "xyz_garbage_zzz" in str(ctx.exception)
+        assert "Did you mean" not in str(ctx.exception)
+
+    def test_cli_unsupported_keys_reject_with_helpful_message(self):
+        """Vector / matrix / DataFrame parameter overrides are rejected at the CLI boundary.
+
+        Given an overrides dict containing keys that are valid model
+        parameters but whose values must be non-scalar (`S_j_initial` —
+        vector, `b_jt` — matrix, `epidemic_peaks` — DataFrame, `return` —
+        list),
+        when ``override_helper`` runs,
+        then each raises a plain `ValueError` (NOT `UnknownOverrideKey`)
+        whose message names the rejected key and points at `--params` /
+        `get_parameters` as the escape hatches.
+
+        Failure implies the `_cli_unsupported` factory regressed; the
+        previous behavior of silently forwarding a string to a position
+        expecting a 40-long vector would corrupt the simulation later
+        with a confusing shape mismatch.
+        """
+        unsupported = ["S_j_initial", "b_jt", "epidemic_peaks", "return", "psi_jt", "nu_jt_sources"]
+        for key in unsupported:
+            with pytest.raises(ValueError) as ctx:
+                override_helper({key: "anything"})
+            # Must NOT be UnknownOverrideKey — these keys ARE known.
+            assert not isinstance(ctx.exception, UnknownOverrideKey), f"{key} should reject as plain ValueError, not UnknownOverrideKey"
+            message = str(ctx.exception)
+            assert key in message, f"{key} not mentioned in error message"
+            assert "--params" in message, f"{key} message should suggest --params"
 
 
 if __name__ == "__main__":
