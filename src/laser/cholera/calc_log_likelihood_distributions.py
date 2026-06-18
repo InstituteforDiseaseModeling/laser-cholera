@@ -17,7 +17,6 @@ R mapping notes:
 """
 
 import logging
-from typing import Optional
 
 import numpy as np
 import scipy.stats
@@ -29,7 +28,7 @@ def calc_log_likelihood_beta(
     observed: np.ndarray,
     estimated: np.ndarray,
     mean_precision: bool = True,
-    weights: Optional[np.ndarray] = None,
+    weights: np.ndarray | None = None,
     verbose: bool = True,
 ) -> float:
     """Calculate log-likelihood for Beta-distributed proportions.
@@ -146,7 +145,7 @@ def calc_log_likelihood_binomial(
     observed: np.ndarray,
     estimated: np.ndarray,
     trials: np.ndarray,
-    weights: Optional[np.ndarray] = None,
+    weights: np.ndarray | None = None,
     verbose: bool = True,
 ) -> float:
     """Calculate log-likelihood for Binomial-distributed count data.
@@ -231,7 +230,7 @@ def calc_log_likelihood_binomial(
 def calc_log_likelihood_gamma(
     observed: np.ndarray,
     estimated: np.ndarray,
-    weights: Optional[np.ndarray] = None,
+    weights: np.ndarray | None = None,
     verbose: bool = True,
 ) -> float:
     """Calculate log-likelihood for Gamma-distributed positive continuous data.
@@ -319,9 +318,9 @@ def calc_log_likelihood_gamma(
 def calc_log_likelihood_negbin(
     observed: np.ndarray,
     estimated: np.ndarray,
-    k: Optional[float] = None,
+    k: float | None = None,
     k_min: float = 3,
-    weights: Optional[np.ndarray] = None,
+    weights: np.ndarray | None = None,
     verbose: bool = True,
 ) -> float:
     """Calculate log-likelihood for Negative Binomial-distributed count data.
@@ -454,7 +453,7 @@ def calc_log_likelihood_negbin(
 def calc_log_likelihood_normal(
     observed: np.ndarray,
     estimated: np.ndarray,
-    weights: Optional[np.ndarray] = None,
+    weights: np.ndarray | None = None,
     verbose: bool = True,
 ) -> float:
     """Calculate log-likelihood for Normally-distributed continuous data.
@@ -554,7 +553,7 @@ def calc_log_likelihood_normal(
 def calc_log_likelihood_poisson(
     observed: np.ndarray,
     estimated: np.ndarray,
-    weights: Optional[np.ndarray] = None,
+    weights: np.ndarray | None = None,
     zero_buffer: bool = True,
     verbose: bool = True,
 ) -> float:

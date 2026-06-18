@@ -32,7 +32,6 @@ component focuses on the within-compartment dynamics.
 
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -274,7 +273,7 @@ class Infectious:
 
         return
 
-    def plot(self, fig: Optional[Figure] = None) -> Iterator[str]:  # pragma: no cover
+    def plot(self, fig: Figure | None = None) -> Iterator[str]:  # pragma: no cover
         """Yield four Matplotlib figures: symptomatic, asymptomatic, total, and reported-vs-actual cases.
 
         Args:

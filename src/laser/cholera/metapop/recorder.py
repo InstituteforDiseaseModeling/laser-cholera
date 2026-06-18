@@ -27,7 +27,6 @@ from datetime import datetime
 from pathlib import Path
 from types import MethodType
 from typing import TYPE_CHECKING
-from typing import Union
 
 import h5py as h5
 
@@ -121,7 +120,7 @@ class Recorder:
     #     return
 
 
-def save_hdf5_parameters(model: "Model", filename: Union[str, Path]) -> Path:
+def save_hdf5_parameters(model: "Model", filename: str | Path) -> Path:
     """Write a model's whitelisted `people` / `patches` properties to an HDF5 file.
 
     Args:
@@ -140,7 +139,7 @@ def save_hdf5_parameters(model: "Model", filename: Union[str, Path]) -> Path:
     return Path(filename)  # Unmodified
 
 
-def save_compressed_hdf5_parameters(model: "Model", filename: Union[str, Path]) -> Path:
+def save_compressed_hdf5_parameters(model: "Model", filename: str | Path) -> Path:
     """Write the model state to an in-memory HDF5 buffer, then gzip it to disk.
 
     The returned filename has a `.gz` suffix appended to the input

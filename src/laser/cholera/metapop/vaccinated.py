@@ -25,7 +25,6 @@ Per-tick flow:
 import logging
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -110,7 +109,7 @@ class Vaccinated:
         check_key(self.model.params, "nu_1_jt", "Vaccinated: model params needs to have a 'nu_1_jt' parameter.")
         check_key(self.model.params, "nu_2_jt", "Vaccinated: model params needs to have a 'nu_2_jt' parameter.")
 
-        check_key(self.model.params, "d_jt", "Susceptible: model.params needs to have a 'd_jt' attribute.")
+        check_key(self.model.params, "d_jt", "Vaccinated: model.params needs to have a 'd_jt' attribute.")
 
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
@@ -232,7 +231,7 @@ class Vaccinated:
 
         return
 
-    def plot(self, fig: Optional[Figure] = None) -> Iterator[str]:  # pragma: no cover
+    def plot(self, fig: Figure | None = None) -> Iterator[str]:  # pragma: no cover
         """Yield two Matplotlib figures: `V1(t)` and `V2(t)` for the ten largest patches.
 
         Args:
