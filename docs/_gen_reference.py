@@ -1,8 +1,7 @@
 """Generate one Markdown stub per Python module for mkdocstrings.
 
 Replaces ``sphinx-apidoc``. Walks ``src/laser/cholera`` and writes one
-``docs/reference/<module-path>.md`` file per module, plus a ``SUMMARY.md``
-that ``mkdocs-literate-nav`` uses to render the nav tree.
+``docs/reference/<module-path>.md`` file per module.
 
 Each generated file has the form::
 
@@ -16,6 +15,10 @@ Files are emitted into the MkDocs ``docs_dir`` at build time via
 ``mkdocs_gen_files.open(...)``. They are derived from ``src/`` and should not
 be committed (see the repo's ``.gitignore`` entries for ``docs/reference/``).
 
+Nav for the generated subtree is hand-listed in ``mkdocs.yml`` (the
+``literate-nav`` plugin was retired in favour of an explicit Diátaxis-shaped
+nav block); this script no longer emits a ``SUMMARY.md``.
+
 Run automatically by the ``gen-files`` plugin (see ``mkdocs.yml``); do
 not invoke directly.
 """
@@ -26,8 +29,6 @@ import mkdocs_gen_files
 
 SRC_ROOT = Path("src/laser/cholera")
 REFERENCE_ROOT = Path("reference")
-
-nav = mkdocs_gen_files.Nav()
 
 # Walk every .py file under the package, skipping anything obviously
 # generated or internal-to-the-build (cache files, etc.).
@@ -49,12 +50,3 @@ for path in sorted(SRC_ROOT.rglob("*.py")):
 
     with mkdocs_gen_files.open(doc_path, "w") as fd:
         fd.write(f"::: {identifier}\n")
-
-    # The path written into ``nav`` must be relative to the location of the
-    # generated ``SUMMARY.md`` (which lives at ``REFERENCE_ROOT / SUMMARY.md``);
-    # if we included ``REFERENCE_ROOT`` in the value, mkdocs-literate-nav
-    # would double-prefix the link to ``reference/reference/...``.
-    nav[parts] = doc_path.relative_to(REFERENCE_ROOT).as_posix()
-
-with mkdocs_gen_files.open(REFERENCE_ROOT / "SUMMARY.md", "w") as fd:
-    fd.writelines(nav.build_literate_nav())

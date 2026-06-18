@@ -434,7 +434,7 @@ class Model:
 
 
 @click.command()
-@click.option("--seed", type=int, default=20241107, help="Random seed")
+@click.option("--seed", type=int, default=20240930, help="Random seed")
 @click.option("--viz", "visualize", is_flag=True, default=False, help="Display visualizations")
 @click.option("--pdf", is_flag=True, default=False, help="Output visualization results as a PDF")
 @click.option(
@@ -582,4 +582,4 @@ def run_model(paramfile: str | Path | dict | None, **kwargs: dict | None) -> Mod
 
 if __name__ == "__main__":
     ctx = click.Context(cli_run)
-    ctx.invoke(cli_run, seed=20241107, loglevel="INFO", visualize=True, pdf=False, hdf5_output=False)
+    ctx.invoke(cli_run, seed=20240930, loglevel="INFO", visualize=True, pdf=False, hdf5_output=False)

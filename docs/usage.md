@@ -17,14 +17,14 @@ individual function or class, follow the links into the
 Once installed, the `metapop` entry point runs the default cholera simulation:
 
 ```bash
-metapop --seed 20240101 --loglevel INFO
+metapop --seed 20240930 --loglevel INFO
 ```
 
 Common flags:
 
 - `--params <path>` — load parameters from a JSON file instead of the bundled
   defaults.
-- `--seed <int>` — set the PRNG seed (default `20241107`).
+- `--seed <int>` — set the PRNG seed (default `20240930`).
 - `--viz` / `--pdf` — display matplotlib visualisations or write a PDF.
 - `--outdir <path>` — directory for any HDF5 or PDF outputs.
 - `--over key:value` — override a single parameter, repeatable
@@ -45,7 +45,7 @@ from laser.cholera.metapop.model import run_model
 model = run_model(None)
 
 # Or pass an in-memory dict (e.g., loaded from your own pipeline)
-model = run_model({"seed": 20240101, "loglevel": "INFO"})
+model = run_model({"seed": 20240930, "loglevel": "INFO"})
 ```
 
 After `run_model` returns, the per-tick compartment state is available on
