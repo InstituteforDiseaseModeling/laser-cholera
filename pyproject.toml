@@ -73,7 +73,7 @@ source-include = [
     ]
 
 [tool.ruff]
-extend-exclude = ["static", "ci/templates"]
+extend-exclude = ["static", "ci/templates", "misc"]
 line-length = 150
 src = ["src", "tests"]
 target-version = "py39"
