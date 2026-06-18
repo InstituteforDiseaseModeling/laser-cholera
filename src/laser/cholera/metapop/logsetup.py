@@ -17,7 +17,7 @@ from pathlib import Path
 _log_file_handler = None
 
 
-def setup_logging(loglevel: str, outdir: Path) -> None:
+def setup_logging(loglevel: str | int, outdir: Path) -> None:
     """Configure the `laser.cholera` logger with a lazy timestamped file handler.
 
     The handler is `LazyFileHandler` (subclasses `logging.FileHandler`

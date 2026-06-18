@@ -17,6 +17,7 @@ from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
 
 
 class Census:
@@ -34,14 +35,14 @@ class Census:
                 `params` set up.
 
         Raises:
-            AssertionError: When `model.patches` or `model.params` is
+            AttributeError: When `model.patches` or `model.params` is
                 missing.
         """
         self.model = model
 
-        assert hasattr(model, "patches"), "Census: model needs to have a 'patches' attribute."
+        check_attr(model, "patches", "Census: model needs to have a 'patches' attribute.")
         model.patches.add_vector_property("N", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        assert hasattr(self.model, "params"), "Census: model needs to have a 'params' attribute."
+        check_attr(self.model, "params", "Census: model needs to have a 'params' attribute.")
 
         return
 

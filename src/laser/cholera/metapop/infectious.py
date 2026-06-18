@@ -40,6 +40,8 @@ from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
+from laser.cholera.metapop.utils import check_key
 
 
 class Infectious:
@@ -61,22 +63,24 @@ class Infectious:
                 `params.sigma` populated.
 
         Raises:
-            AssertionError: When required attributes or parameters are
-                missing.
+            AttributeError: When `model` is missing `people`, `patches`,
+                or `params`.
+            ValueError: When a required `params` key is missing (e.g.
+                `I_j_initial`, `sigma`).
         """
         self.model = model
 
-        assert hasattr(model, "people"), "Infectious: model needs to have a 'people' attribute."
+        check_attr(model, "people", "Infectious: model needs to have a 'people' attribute.")
         model.people.add_vector_property("Isym", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.people.add_vector_property("Iasym", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        assert hasattr(model, "patches"), "Infectious: model needs to have a 'patches' attribute."
+        check_attr(model, "patches", "Infectious: model needs to have a 'patches' attribute.")
         model.patches.add_vector_property("disease_deaths", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("new_symptomatic", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("reported_cases", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.patches.add_vector_property("reported_deaths", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        assert hasattr(model, "params"), "Infectious: model needs to have a 'params' attribute."
-        assert "I_j_initial" in model.params, "Infectious: model params needs to have a 'I_j_initial' (initial infectious population) parameter."
-        assert "sigma" in self.model.params, "Infectious: model params needs to have a 'sigma' (symptomatic fraction) parameter."
+        check_attr(model, "params", "Infectious: model needs to have a 'params' attribute.")
+        check_key(model.params, "I_j_initial", "Infectious: model params needs to have a 'I_j_initial' (initial infectious population) parameter.")
+        check_key(self.model.params, "sigma", "Infectious: model params needs to have a 'sigma' (symptomatic fraction) parameter.")
         model.people.Isym[0] = np.round(model.params.sigma * model.params.I_j_initial).astype(model.people.Isym.dtype)
         model.people.Iasym[0] = model.params.I_j_initial - model.people.Isym[0]
 
@@ -91,29 +95,38 @@ class Infectious:
         `gamma_1`, `gamma_2`, `iota`, `sigma`, `rho`, and `rho_deaths`.
 
         Raises:
-            AssertionError: When any of the required parameters or
-                attributes is missing.
+            AttributeError: When `model.people.R` is missing.
+            ValueError: When any of the required `params` keys is missing
+                (`d_jt`, `mu_j_baseline`, `mu_j_slope`,
+                `mu_j_epidemic_factor`, `epidemic_threshold`, `gamma_1`,
+                `gamma_2`, `iota`, `sigma`, `rho`, `rho_deaths`).
         """
-        assert hasattr(self.model.people, "R"), "Infectious: model.people needs to have a 'S' attribute."
-        assert "d_jt" in self.model.params, "Infectious: model params needs to have a 'd_jt' (mortality rate) parameter."
+        check_attr(self.model.people, "R", "Infectious: model.people needs to have a 'R' attribute.")
+        check_key(self.model.params, "d_jt", "Infectious: model params needs to have a 'd_jt' (mortality rate) parameter.")
 
-        assert "mu_j_baseline" in self.model.params, (
-            "Infectious: model params needs to have a 'mu_j_baseline' (baseline disease mortality rate) parameter."
+        check_key(
+            self.model.params,
+            "mu_j_baseline",
+            "Infectious: model params needs to have a 'mu_j_baseline' (baseline disease mortality rate) parameter.",
         )
-        assert "mu_j_slope" in self.model.params, "Infectious: model params needs to have a 'mu_j_slope' (disease mortality rate slope) parameter."
-        assert "mu_j_epidemic_factor" in self.model.params, (
-            "Infectious: model params needs to have a 'mu_j_epidemic_factor' (disease mortality rate epidemic factor) parameter."
+        check_key(self.model.params, "mu_j_slope", "Infectious: model params needs to have a 'mu_j_slope' (disease mortality rate slope) parameter.")
+        check_key(
+            self.model.params,
+            "mu_j_epidemic_factor",
+            "Infectious: model params needs to have a 'mu_j_epidemic_factor' (disease mortality rate epidemic factor) parameter.",
         )
-        assert "epidemic_threshold" in self.model.params, (
-            "Infectious: model params needs to have a 'epidemic_threshold' (disease mortality rate epidemic threshold) parameter."
+        check_key(
+            self.model.params,
+            "epidemic_threshold",
+            "Infectious: model params needs to have a 'epidemic_threshold' (disease mortality rate epidemic threshold) parameter.",
         )
 
-        assert "gamma_1" in self.model.params, "Infectious: model params needs to have a 'gamma_1' (recovery rate) parameter."
-        assert "gamma_2" in self.model.params, "Infectious: model params needs to have a 'gamma_2' (recovery rate) parameter."
-        assert "iota" in self.model.params, "Infectious: model params needs to have a 'iota' (progression rate) parameter."
-        assert "sigma" in self.model.params, "Infectious: model params needs to have a 'sigma' (symptomatic fraction) parameter."
-        assert "rho" in self.model.params, "Infectious: model params needs to have a 'rho' (detected/expected cases) parameter."
-        assert "rho_deaths" in self.model.params, "Infectious: model params needs to have a 'rho_deaths' (detected/expected deaths) parameter."
+        check_key(self.model.params, "gamma_1", "Infectious: model params needs to have a 'gamma_1' (recovery rate) parameter.")
+        check_key(self.model.params, "gamma_2", "Infectious: model params needs to have a 'gamma_2' (recovery rate) parameter.")
+        check_key(self.model.params, "iota", "Infectious: model params needs to have a 'iota' (progression rate) parameter.")
+        check_key(self.model.params, "sigma", "Infectious: model params needs to have a 'sigma' (symptomatic fraction) parameter.")
+        check_key(self.model.params, "rho", "Infectious: model params needs to have a 'rho' (detected/expected cases) parameter.")
+        check_key(self.model.params, "rho_deaths", "Infectious: model params needs to have a 'rho_deaths' (detected/expected deaths) parameter.")
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
 

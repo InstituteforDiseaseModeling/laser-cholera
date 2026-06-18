@@ -17,6 +17,8 @@ from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
+from laser.cholera.metapop.utils import check_key
 
 
 class Recovered:
@@ -34,15 +36,16 @@ class Recovered:
                 set up, with `params.R_j_initial` populated.
 
         Raises:
-            AssertionError: When `model` is missing `people` / `params`
-                or `params` is missing `R_j_initial`.
+            AttributeError: When `model` is missing `people` or
+                `params`.
+            ValueError: When `params.R_j_initial` is missing.
         """
         self.model = model
 
-        assert hasattr(model, "people"), "Recovered: model needs to have a 'people' attribute."
+        check_attr(model, "people", "Recovered: model needs to have a 'people' attribute.")
         model.people.add_vector_property("R", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        assert hasattr(model, "params"), "Recovered: model needs to have a 'params' attribute."
-        assert "R_j_initial" in model.params, "Recovered: model params needs to have a 'R_j_initial' (initial recovered population) parameter."
+        check_attr(model, "params", "Recovered: model needs to have a 'params' attribute.")
+        check_key(model.params, "R_j_initial", "Recovered: model params needs to have a 'R_j_initial' (initial recovered population) parameter.")
 
         model.people.R[0] = model.params.R_j_initial
 
@@ -52,12 +55,12 @@ class Recovered:
         """Validate that `S` (waning destination), `d_jt`, and `epsilon` are available.
 
         Raises:
-            AssertionError: When `model.people.S`, `params.d_jt`, or
-                `params.epsilon` is missing.
+            AttributeError: When `model.people.S` is missing.
+            ValueError: When `params.d_jt` or `params.epsilon` is missing.
         """
-        assert hasattr(self.model.people, "S"), "Recovered: model people needs to have a 'S' (susceptible) attribute."
-        assert "d_jt" in self.model.params, "Recovered: model params needs to have a 'd_jt' (mortality rate) parameter."
-        assert "epsilon" in self.model.params, "Recovered: model params needs to have a 'epsilon' (waning immunity rate) parameter."
+        check_attr(self.model.people, "S", "Recovered: model people needs to have a 'S' (susceptible) attribute.")
+        check_key(self.model.params, "d_jt", "Recovered: model params needs to have a 'd_jt' (mortality rate) parameter.")
+        check_key(self.model.params, "epsilon", "Recovered: model params needs to have a 'epsilon' (waning immunity rate) parameter.")
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
         return

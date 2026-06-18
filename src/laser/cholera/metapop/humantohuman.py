@@ -24,6 +24,9 @@ from laser.cholera.metapop.utils import get_pi_from_lat_long
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
+from laser.cholera.metapop.utils import check_key
+
 logger = logging.getLogger("laser.cholera")
 
 
@@ -55,26 +58,29 @@ class HumanToHuman:
                 `mobility_gamma`) populated.
 
         Raises:
-            AssertionError: When any required parameter is missing.
+            AttributeError: When `model.patches` is missing.
+            ValueError: When any of the seasonality / mobility parameters
+                (`latitude`, `longitude`, `mobility_omega`,
+                `mobility_gamma`, `a_*_j`, `b_*_j`, `p`) is missing.
         """
         self.model = model
 
-        assert hasattr(model, "patches"), "HumanToHuman: model needs to have a 'patches' attribute."
+        check_attr(model, "patches", "HumanToHuman: model needs to have a 'patches' attribute.")
         model.patches.add_vector_property("Lambda", length=model.params.nticks + 1, dtype=np.float32, default=0.0)
 
-        assert "latitude" in self.model.params, "HumanToHuman: model params needs to have a 'latitude' (location latitude) parameter."
-        assert "longitude" in self.model.params, "HumanToHuman: model params needs to have a 'longitude' (location longitude) parameter."
-        assert "mobility_omega" in self.model.params, "HumanToHuman: model params needs to have a 'mobility_omega' (mobility) parameter."
-        assert "mobility_gamma" in self.model.params, "HumanToHuman: model params needs to have a 'mobility_gamma' (mobility) parameter."
+        check_key(self.model.params, "latitude", "HumanToHuman: model params needs to have a 'latitude' (location latitude) parameter.")
+        check_key(self.model.params, "longitude", "HumanToHuman: model params needs to have a 'longitude' (location longitude) parameter.")
+        check_key(self.model.params, "mobility_omega", "HumanToHuman: model params needs to have a 'mobility_omega' (mobility) parameter.")
+        check_key(self.model.params, "mobility_gamma", "HumanToHuman: model params needs to have a 'mobility_gamma' (mobility) parameter.")
 
         model.patches.add_array_property("pi_ij", (model.patches.count, model.patches.count), dtype=np.float32, default=0.0)
         model.patches.pi_ij[:, :] = get_pi_from_lat_long(model.params)
 
-        assert "a_1_j" in self.model.params, "HumanToHuman: model params needs to have a 'a_1_j' (seasonality) parameter."
-        assert "b_1_j" in self.model.params, "HumanToHuman: model params needs to have a 'b_1_j' (seasonality) parameter."
-        assert "a_2_j" in self.model.params, "HumanToHuman: model params needs to have a 'a_2_j' (seasonality) parameter."
-        assert "b_2_j" in self.model.params, "HumanToHuman: model params needs to have a 'b_2_j' (seasonality) parameter."
-        assert "p" in self.model.params, "HumanToHuman: model params needs to have a 'p' (seasonality pahse) parameter."
+        check_key(self.model.params, "a_1_j", "HumanToHuman: model params needs to have a 'a_1_j' (seasonality) parameter.")
+        check_key(self.model.params, "b_1_j", "HumanToHuman: model params needs to have a 'b_1_j' (seasonality) parameter.")
+        check_key(self.model.params, "a_2_j", "HumanToHuman: model params needs to have a 'a_2_j' (seasonality) parameter.")
+        check_key(self.model.params, "b_2_j", "HumanToHuman: model params needs to have a 'b_2_j' (seasonality) parameter.")
+        check_key(self.model.params, "p", "HumanToHuman: model params needs to have a 'p' (seasonality pahse) parameter.")
 
         model.patches.add_array_property("beta_jt_human", (model.params.nticks, model.patches.count), dtype=np.float32, default=0.0)
         model.patches.beta_jt_human[:, :] = get_daily_seasonality(model.params)
@@ -94,34 +100,36 @@ class HumanToHuman:
         `beta_j0_hum`, `alpha_1`, and `alpha_2`.
 
         Raises:
-            AssertionError: When any required attribute or parameter is
-                missing.
+            AttributeError: When `model`, `model.people` (with `Isym` /
+                `Iasym` / `S` / `E`), or `model.patches.N` is missing.
+            ValueError: When `params.tau_i`, `beta_j0_hum`, `alpha_1`, or
+                `alpha_2` is missing.
         """
-        assert hasattr(self.model, "people"), "HumanToHuman: model needs to have a 'people' attribute."
-        assert hasattr(self.model.people, "Isym"), "HumanToHuman: model people needs to have a 'Isym' (symptomatic) attribute."
-        assert hasattr(self.model.people, "Iasym"), "HumanToHuman: model people needs to have a 'Iasym' (asymptomatic) attribute."
-        assert hasattr(self.model.people, "S"), "HumanToHuman: model people needs to have a 'S' (susceptible) attribute."
-        assert hasattr(self.model.people, "E"), "HumanToHuman: model people needs to have a 'E' (exposed) attribute."
+        check_attr(self.model, "people", "HumanToHuman: model needs to have a 'people' attribute.")
+        check_attr(self.model.people, "Isym", "HumanToHuman: model people needs to have a 'Isym' (symptomatic) attribute.")
+        check_attr(self.model.people, "Iasym", "HumanToHuman: model people needs to have a 'Iasym' (asymptomatic) attribute.")
+        check_attr(self.model.people, "S", "HumanToHuman: model people needs to have a 'S' (susceptible) attribute.")
+        check_attr(self.model.people, "E", "HumanToHuman: model people needs to have a 'E' (exposed) attribute.")
 
-        assert hasattr(self.model.patches, "N"), "HumanToHuman: model people needs to have a 'N' (current people) attribute."
+        check_attr(self.model.patches, "N", "HumanToHuman: model people needs to have a 'N' (current people) attribute.")
 
-        assert hasattr(self.model, "params"), "HumanToHuman: model needs to have a 'params' attribute."
-        assert "tau_i" in self.model.params, "HumanToHuman: model params needs to have a 'tau_i' (emmigration probability) parameter."
-        assert "beta_j0_hum" in self.model.params, "HumanToHuman: model params needs to have a 'beta_j0_hum' (baseline transmission rate) parameter."
+        check_attr(self.model, "params", "HumanToHuman: model needs to have a 'params' attribute.")
+        check_key(self.model.params, "tau_i", "HumanToHuman: model params needs to have a 'tau_i' (emmigration probability) parameter.")
+        check_key(
+            self.model.params, "beta_j0_hum", "HumanToHuman: model params needs to have a 'beta_j0_hum' (baseline transmission rate) parameter."
+        )
 
-        assert "alpha_1" in self.model.params, "HumanToHuman: model params needs to have an 'alpha_1' (numerator power) parameter."
-        assert "alpha_2" in self.model.params, "HumanToHuman: model params needs to have an 'alpha_2' (denominator power) parameter."
+        check_key(self.model.params, "alpha_1", "HumanToHuman: model params needs to have an 'alpha_1' (numerator power) parameter.")
+        check_key(self.model.params, "alpha_2", "HumanToHuman: model params needs to have an 'alpha_2' (denominator power) parameter.")
 
         return
 
     def __call__(self, model: "Model", tick: int) -> None:
-        r"""
-        Calculate the current human-to-human transmission rate per patch.
+        r"""Calculate the current human-to-human transmission rate per patch.
 
-        .. math::
-
-            \Lambda_{j,t+1} = \frac {\beta^{hum}_{jt}((S_{jt}(1 - \tau_j))(I_{jt}(1 - \tau_j) + \sum_{\forall i \neq j (\pi_{ij} \tau_j I_{it})}))^{\alpha_1}} {N^{\alpha_2}_{jt}}
-
+        $$
+        \Lambda_{j,t+1} = \frac {\beta^{hum}_{jt}((S_{jt}(1 - \tau_j))(I_{jt}(1 - \tau_j) + \sum_{\forall i \neq j (\pi_{ij} \tau_j I_{it})}))^{\alpha_1}} {N^{\alpha_2}_{jt}}
+        $$
         """
 
         # LambdaS

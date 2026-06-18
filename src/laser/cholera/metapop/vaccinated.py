@@ -33,6 +33,9 @@ from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
+from laser.cholera.metapop.utils import check_key
+
 logger = logging.getLogger("laser.cholera")
 
 
@@ -55,22 +58,28 @@ class Vaccinated:
                 `params.V2_j_initial` populated.
 
         Raises:
-            AssertionError: When `params.V1_j_initial` or
+            AttributeError: When `model` is missing `people` or
+                `patches`.
+            ValueError: When `params.V1_j_initial` or
                 `params.V2_j_initial` is missing.
         """
         self.model = model
 
-        assert hasattr(model, "people"), "Vaccinated: model needs to have a 'people' attribute."
+        check_attr(model, "people", "Vaccinated: model needs to have a 'people' attribute.")
         model.people.add_vector_property("V1", length=model.params.nticks + 1, dtype=np.int32, default=0)
         model.people.add_vector_property("V2", length=model.params.nticks + 1, dtype=np.int32, default=0)
         # We will track doses on the date (tick) given to more easily match nu_1_jt and nu_2_jt.
         model.patches.add_vector_property("dose_one_doses", length=model.params.nticks, dtype=np.int32, default=0)
         model.patches.add_vector_property("dose_two_doses", length=model.params.nticks, dtype=np.int32, default=0)
-        assert "V1_j_initial" in model.params, (
-            "Vaccinated: model params needs to have a 'V1_j_initial' (initial one dose vaccinated population) parameter."
+        check_key(
+            model.params,
+            "V1_j_initial",
+            "Vaccinated: model params needs to have a 'V1_j_initial' (initial one dose vaccinated population) parameter.",
         )
-        assert "V2_j_initial" in model.params, (
-            "Vaccinated: model params needs to have a 'V2_j_initial' (initial two dose vaccinated population) parameter."
+        check_key(
+            model.params,
+            "V2_j_initial",
+            "Vaccinated: model params needs to have a 'V2_j_initial' (initial two dose vaccinated population) parameter.",
         )
         model.people.V1[0] = model.params.V1_j_initial
         model.people.V2[0] = model.params.V2_j_initial
@@ -87,20 +96,21 @@ class Vaccinated:
         `nu_1_jt`, `nu_2_jt`, and `d_jt`.
 
         Raises:
-            AssertionError: When a required attribute or parameter is
-                missing.
+            AttributeError: When `model.people.S` or `.E` is missing.
+            ValueError: When any of `params.phi_1`, `phi_2`, `omega_1`,
+                `omega_2`, `nu_1_jt`, `nu_2_jt`, `d_jt` is missing.
         """
-        assert hasattr(self.model.people, "S"), "Vaccinated: model people needs to have a 'S' (susceptible) attribute."
-        assert hasattr(self.model.people, "E"), "Vaccinated: model people needs to have a 'e' (exposed) attribute."
+        check_attr(self.model.people, "S", "Vaccinated: model people needs to have a 'S' (susceptible) attribute.")
+        check_attr(self.model.people, "E", "Vaccinated: model people needs to have a 'E' (exposed) attribute.")
 
-        assert "phi_1" in self.model.params, "Vaccinated: model params needs to have a 'phi_1' parameter."
-        assert "phi_2" in self.model.params, "Vaccinated: model params needs to have a 'phi_2' parameter."
-        assert "omega_1" in self.model.params, "Vaccinated: model params needs to have a 'omega_1' parameter."
-        assert "omega_2" in self.model.params, "Vaccinated: model params needs to have a 'omega_2' parameter."
-        assert "nu_1_jt" in self.model.params, "Vaccinated: model params needs to have a 'nu_1_jt' parameter."
-        assert "nu_2_jt" in self.model.params, "Vaccinated: model params needs to have a 'nu_2_jt' parameter."
+        check_key(self.model.params, "phi_1", "Vaccinated: model params needs to have a 'phi_1' parameter.")
+        check_key(self.model.params, "phi_2", "Vaccinated: model params needs to have a 'phi_2' parameter.")
+        check_key(self.model.params, "omega_1", "Vaccinated: model params needs to have a 'omega_1' parameter.")
+        check_key(self.model.params, "omega_2", "Vaccinated: model params needs to have a 'omega_2' parameter.")
+        check_key(self.model.params, "nu_1_jt", "Vaccinated: model params needs to have a 'nu_1_jt' parameter.")
+        check_key(self.model.params, "nu_2_jt", "Vaccinated: model params needs to have a 'nu_2_jt' parameter.")
 
-        assert "d_jt" in self.model.params, "Susceptible: model.params needs to have a 'd_jt' attribute."
+        check_key(self.model.params, "d_jt", "Susceptible: model.params needs to have a 'd_jt' attribute.")
 
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)

@@ -26,6 +26,8 @@ from scipy.stats import beta
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
+from laser.cholera.metapop.utils import check_key
 
 
 class Environmental:
@@ -50,30 +52,36 @@ class Environmental:
                 populated.
 
         Raises:
-            AssertionError: When any required parameter is missing.
+            AttributeError: When `model.patches` or `model.params` is
+                missing.
+            ValueError: When any of `params.psi_jt`, `decay_days_short`,
+                `decay_days_long`, `decay_shape_1`, `decay_shape_2` is
+                missing.
         """
         self.model = model
 
-        assert hasattr(model, "patches"), "Environmental: model needs to have a 'patches' attribute."
+        check_attr(model, "patches", "Environmental: model needs to have a 'patches' attribute.")
 
         model.patches.add_vector_property("W", length=model.params.nticks + 1, dtype=np.float32, default=0.0)
-        assert hasattr(model, "params"), "Environmental: model needs to have a 'params' attribute."
-        assert "psi_jt" in model.params, "Environmental: model params needs to have a 'psi_jt' (environmental contagion rate) parameter."
+        check_attr(model, "params", "Environmental: model needs to have a 'params' attribute.")
+        check_key(model.params, "psi_jt", "Environmental: model params needs to have a 'psi_jt' (environmental contagion rate) parameter.")
         psi = model.params.psi_jt  # convenience
         # TODO - use newer laser_core with add_array_property and psi.shape
         model.patches.add_vector_property("delta_jt", length=psi.shape[0], dtype=np.float32, default=0.0)
 
-        assert "decay_days_short" in model.params, (
-            "Environmental: model params needs to have a 'decay_days_short' (maximum environmental decay) parameter."
+        check_key(
+            model.params,
+            "decay_days_short",
+            "Environmental: model params needs to have a 'decay_days_short' (maximum environmental decay) parameter.",
         )
-        assert "decay_days_long" in model.params, (
-            "Environmental: model params needs to have a 'decay_days_long' (minimum environmental decay) parameter."
+        check_key(
+            model.params, "decay_days_long", "Environmental: model params needs to have a 'decay_days_long' (minimum environmental decay) parameter."
         )
-        assert "decay_shape_1" in self.model.params, (
-            "Environmental: model params needs to have a 'decay_shape_1' (beta function parameter 1) parameter."
+        check_key(
+            self.model.params, "decay_shape_1", "Environmental: model params needs to have a 'decay_shape_1' (beta function parameter 1) parameter."
         )
-        assert "decay_shape_2" in self.model.params, (
-            "Environmental: model params needs to have a 'decay_shape_2' (beta function parameter 2) parameter."
+        check_key(
+            self.model.params, "decay_shape_2", "Environmental: model params needs to have a 'decay_shape_2' (beta function parameter 2) parameter."
         )
 
         model.patches.delta_jt[:, :] = map_suitability_to_decay(
@@ -90,16 +98,17 @@ class Environmental:
         """Validate `Isym` / `Iasym` are available and shedding parameters are present.
 
         Raises:
-            AssertionError: When `model.people.Isym` / `.Iasym` are
-                missing, or `params.zeta_1` / `params.zeta_2` /
-                `params.theta_j` are missing.
+            AttributeError: When `model.people.Isym` or `.Iasym` is
+                missing.
+            ValueError: When `params.zeta_1`, `params.zeta_2`, or
+                `params.theta_j` is missing.
         """
-        assert hasattr(self.model, "people"), "Environmental: model needs to have a 'people' attribute."
-        assert hasattr(self.model.people, "Isym"), "Environmental: model people needs to have a 'Isym' (symptomatic) attribute."
-        assert hasattr(self.model.people, "Iasym"), "Environmental: model people needs to have a 'Iasym' (asymptomatic) attribute."
-        assert "zeta_1" in self.model.params, "Environmental: model params needs to have a 'zeta_1' (symptomatic shedding rate) parameter."
-        assert "zeta_2" in self.model.params, "Environmental: model params needs to have a 'zeta_2' (asymptomatic shedding rate) parameter."
-        assert "theta_j" in self.model.params, "Environmental: model params needs to have a 'theta_j' (fraction of population with WASH) attribute."
+        check_attr(self.model, "people", "Environmental: model needs to have a 'people' attribute.")
+        check_attr(self.model.people, "Isym", "Environmental: model people needs to have a 'Isym' (symptomatic) attribute.")
+        check_attr(self.model.people, "Iasym", "Environmental: model people needs to have a 'Iasym' (asymptomatic) attribute.")
+        check_key(self.model.params, "zeta_1", "Environmental: model params needs to have a 'zeta_1' (symptomatic shedding rate) parameter.")
+        check_key(self.model.params, "zeta_2", "Environmental: model params needs to have a 'zeta_2' (asymptomatic shedding rate) parameter.")
+        check_key(self.model.params, "theta_j", "Environmental: model params needs to have a 'theta_j' (fraction of population with WASH) attribute.")
 
         return
 
@@ -186,37 +195,32 @@ class Environmental:
 
 
 # Put this is its own function so mapping plot is sure to use the same calculation.
-def map_suitability_to_decay(fast, slow, suitability, beta_a, beta_b):
-    """
-    Map suitability to decay using a beta distribution.
+def map_suitability_to_decay(fast: float, slow: float, suitability: np.ndarray, beta_a: float, beta_b: float) -> np.ndarray:
+    r"""Map suitability to decay using a beta distribution.
 
-    .. math::
+    $$
+    \delta_{jt} = \frac { 1 } { \text{days}_{short} + f( \psi_{jt}) ( \text{days}_{long}  - \text{days}_{short} ) }
+    $$
 
-        \\delta_{jt} = \\frac { 1 } { \\text {days}_{short} + f( \\psi_{jt}) ( \\text {days}_{long}  - \\text {days}_{short} ) }
+    We use a parameterized beta distribution to map suitability values
+    `[0, 1]` to `[0, 1]` in a, potentially, non-linear way.
 
-    We use a parameterized beta distribution to map suitability values [0, 1] to [0, 1] in a, potentially, non-linear way.
+    The resulting suitability factor determines a decay rate that is
+    large when suitability is low — i.e. when suitability is 0, the
+    decay rate is `1 / fast` and since `fast` is a short time or small
+    number of days, `1 / fast` is relatively large — and small when
+    suitability is high — i.e. when suitability is 1, the decay rate
+    is `1 / slow` and since `slow` is a long time or larger number of
+    days, `1 / slow` is relatively small.
 
-    The resulting suitability factor determines a decay rate that is large when suitability is low,
-    i.e., when suitability is 0, the decay rate is 1/fast and since fast is a short time or small number of days, 1/fast is relatively large,
-    and small when suitability is high,
-    i.e. when suitability is 1, the decay rate is 1/slow and since slow is a long time or larger number of days, 1/slow is relatively small.
+    Args:
+        fast: Fast decay time, in days.
+        slow: Slow decay time, in days.
+        suitability: Suitability values in `[0, 1]`.
+        beta_a: Alpha parameter for the beta distribution.
+        beta_b: Beta parameter for the beta distribution.
 
-    Parameters
-    ----------
-    fast : float
-        Fast decay time.
-    slow : float
-        Slow decay time.
-    suitability : np.ndarray
-        Suitability values.
-    beta_a : float
-        Alpha parameter for the beta distribution.
-    beta_b : float
-        Beta parameter for the beta distribution.
-
-    Returns
-    -------
-    np.ndarray
+    Returns:
         Decay rates corresponding to the suitability values.
     """
     return 1.0 / (fast + beta.cdf(suitability, beta_a, beta_b) * (slow - fast))

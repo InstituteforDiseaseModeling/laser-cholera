@@ -27,6 +27,66 @@ if TYPE_CHECKING:
     from laser.cholera.metapop.params import PropertySetEx
 
 
+def check_attr(obj: object, attr: str, message: str) -> None:
+    """Raise `AttributeError(message)` when `obj` lacks attribute `attr`.
+
+    Concise replacement for the `if not hasattr(obj, attr): raise
+    AttributeError(...)` idiom that pipeline components' `__init__` and
+    `check` methods use to verify that upstream components have set up
+    the model state this component will consume.
+
+    Args:
+        obj: The object whose attribute presence is being checked.
+        attr: Attribute name.
+        message: Diagnostic message included in the raised exception.
+
+    Raises:
+        AttributeError: When `obj` does not have an attribute named
+            `attr`.
+
+    Example:
+        >>> from types import SimpleNamespace
+        >>> from laser.cholera.metapop.utils import check_attr
+        >>> check_attr(SimpleNamespace(people=[]), "people", "model needs `people`")  # no-op
+        >>> check_attr(SimpleNamespace(), "people", "model needs `people`")
+        Traceback (most recent call last):
+            ...
+        AttributeError: model needs `people`
+    """
+    if not hasattr(obj, attr):
+        raise AttributeError(message)
+
+
+def check_key(mapping: object, key: str, message: str) -> None:
+    """Raise `ValueError(message)` when `mapping` lacks `key`.
+
+    Concise replacement for the `if key not in mapping: raise
+    ValueError(...)` idiom used in pipeline components' `__init__` and
+    `check` methods to verify that required entries are present in the
+    parameter set (`PropertySet` / `PropertySetEx`, plain dict, or
+    anything else supporting `in`).
+
+    Args:
+        mapping: Any container that supports the `in` operator (dict,
+            `PropertySet`, etc.).
+        key: The key whose presence is being checked.
+        message: Diagnostic message included in the raised exception.
+
+    Raises:
+        ValueError: When `key not in mapping`.
+
+    Example:
+        >>> from laser.cholera.metapop.utils import check_key
+        >>> check_key({"a": 1}, "a", "missing key 'a'")  # no-op
+        >>> check_key({"a": 1}, "b", "missing key 'b'")
+        Traceback (most recent call last):
+            ...
+        ValueError: missing key 'b'
+    """
+    if key not in mapping:
+        raise ValueError(message)
+
+
 class UnknownOverrideKey(ValueError):
     """Raised when `override_helper` receives a key that is not in its mapping.
 

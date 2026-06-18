@@ -18,6 +18,8 @@ from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
+from laser.cholera.metapop.utils import check_key
 
 
 class Exposed:
@@ -35,16 +37,17 @@ class Exposed:
                 `params` set up, with `params.E_j_initial` populated.
 
         Raises:
-            AssertionError: When `model` is missing `people` or
-                `params`, or `params` is missing `E_j_initial`.
+            AttributeError: When `model` is missing `people` or
+                `params`.
+            ValueError: When `params.E_j_initial` is missing.
         """
         self.model = model
 
-        assert hasattr(model, "people"), "Exposed: model needs to have a 'people' attribute."
+        check_attr(model, "people", "Exposed: model needs to have a 'people' attribute.")
         model.people.add_vector_property("E", length=model.params.nticks + 1, dtype=np.int32, default=0)
 
-        assert hasattr(self.model, "params"), "Exposed: model needs to have a 'params' attribute."
-        assert "E_j_initial" in self.model.params, "Exposed: model params needs to have a 'E_j_initial' parameter."
+        check_attr(self.model, "params", "Exposed: model needs to have a 'params' attribute.")
+        check_key(self.model.params, "E_j_initial", "Exposed: model params needs to have a 'E_j_initial' parameter.")
 
         model.people.E[0] = model.params.E_j_initial
 
@@ -54,10 +57,10 @@ class Exposed:
         """Validate the `iota` progression-rate parameter and ensure shared bookkeeping is allocated.
 
         Raises:
-            AssertionError: When `params.iota` is missing.
+            ValueError: When `params.iota` is missing.
         """
         # Don't bother checking for model.params, we did that in __init__()
-        assert "iota" in self.model.params, "Exposed: model params needs to have a 'iota' (progression rate) parameter."
+        check_key(self.model.params, "iota", "Exposed: model params needs to have a 'iota' (progression rate) parameter.")
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
 

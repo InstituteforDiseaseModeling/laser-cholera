@@ -20,6 +20,8 @@ from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.utils import check_attr
+from laser.cholera.metapop.utils import check_key
 
 
 class Component:
@@ -54,17 +56,18 @@ class Susceptible(Component):
                 populated.
 
         Raises:
-            AssertionError: When `model` is missing `people`, `patches`,
-                or `params`, or `params` is missing `S_j_initial`.
+            AttributeError: When `model` is missing `people`, `patches`,
+                or `params`.
+            ValueError: When `params.S_j_initial` is missing.
         """
         self.model = model
 
-        assert hasattr(model, "people"), "Susceptible: model needs to have an 'people' attribute."
+        check_attr(model, "people", "Susceptible: model needs to have an 'people' attribute.")
         model.people.add_vector_property("S", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        assert hasattr(model, "patches"), "Susceptible: model needs to have a 'patches' attribute."
+        check_attr(model, "patches", "Susceptible: model needs to have a 'patches' attribute.")
         model.patches.add_vector_property("births", length=model.params.nticks + 1, dtype=np.int32, default=0)
-        assert hasattr(self.model, "params"), "Susceptible: model needs to have a 'params' attribute."
-        assert "S_j_initial" in self.model.params, "Susceptible: model params needs to have a 'S_j_initial' parameter."
+        check_attr(self.model, "params", "Susceptible: model needs to have a 'params' attribute.")
+        check_key(self.model.params, "S_j_initial", "Susceptible: model params needs to have a 'S_j_initial' parameter.")
         model.people.S[0] = model.params.S_j_initial
 
         return
@@ -80,12 +83,12 @@ class Susceptible(Component):
         already done so.
 
         Raises:
-            AssertionError: When `model.patches.N`, `params.b_jt`, or
-                `params.d_jt` is missing.
+            AttributeError: When `model.patches.N` is missing.
+            ValueError: When `params.b_jt` or `params.d_jt` is missing.
         """
-        assert hasattr(self.model.patches, "N"), "Susceptible: model.patches needs to have a 'N' attribute."
-        assert hasattr(self.model.params, "b_jt"), "Susceptible: model.params needs to have a 'b_jt' attribute."
-        assert hasattr(self.model.params, "d_jt"), "Susceptible: model.params needs to have a 'd_jt' attribute."
+        check_attr(self.model.patches, "N", "Susceptible: model.patches needs to have a 'N' attribute.")
+        check_attr(self.model.params, "b_jt", "Susceptible: model.params needs to have a 'b_jt' attribute.")
+        check_attr(self.model.params, "d_jt", "Susceptible: model.params needs to have a 'd_jt' attribute.")
         if not hasattr(self.model.patches, "non_disease_deaths"):
             self.model.patches.add_vector_property("non_disease_deaths", length=self.model.params.nticks + 1, dtype=np.int32, default=0)
 

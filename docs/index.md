@@ -4,12 +4,11 @@
 the upstream R [`MOSAIC`](https://github.com/InstituteforDiseaseModeling/MOSAIC)
 cholera metapopulation model.
 
-This site is the canonical documentation. While the migration from
-Sphinx/RST to MkDocs/Markdown is in progress (see
-[`doc-conversion.md`](https://github.com/InstituteforDiseaseModeling/laser-cholera/blob/main/doc-conversion.md)),
-some prose pages still live as `.rst` files alongside this one and
-render on Read the Docs at the legacy URL — content is being moved page
-by page.
+This site is the canonical documentation. It is built with
+[MkDocs](https://www.mkdocs.org/) +
+[Material](https://squidfunk.github.io/mkdocs-material/) +
+[mkdocstrings](https://mkdocstrings.github.io/) and published to GitHub
+Pages from the repo's `main` branch on every push.
 
 ## Quick links
 
