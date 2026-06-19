@@ -319,18 +319,48 @@ Single source of truth for execution. Each box is one mergeable unit. Keep order
 
 ### Wave 5 — Explanation
 
-- [ ] `docs/explanation/model-overview.md` — compartments (S, E, I_sym, I_asym, R, V1, V2), tick cadence, component pipeline.
-- [ ] `docs/explanation/transmission.md` — split between `humantohuman.py` + `envtohuman.py` + `environmental.py`; how the `beta_*`, `theta_j`, `kappa`, `decay_days_*`, `zeta_*` parameters combine.
-- [ ] `docs/explanation/seasonality.md` — two-mode harmonic; what `a_*`, `b_*`, `p` do.
-- [ ] `docs/explanation/mobility.md` — gravity-model `pi_ij`; role of `tau_i`, `mobility_omega`, `mobility_gamma`; what falls out at single-patch.
-- [ ] `docs/explanation/reporting-and-likelihood.md` — `rho`, `rho_deaths`, `delta_reporting_*`, observed-vs-estimated, NB core, four shape terms.
+- [x] `docs/explanation/model-overview.md` — compartments (S, E, I_sym, I_asym, R, V1, V2), tick cadence, component pipeline. *334 lines; the central Explanation page that the other four cross-link back to.*
+- [x] `docs/explanation/transmission.md` — split between `humantohuman.py` + `envtohuman.py` + `environmental.py`; how the `beta_*`, `theta_j`, `kappa`, `decay_days_*`, `zeta_*` parameters combine.
+- [x] `docs/explanation/seasonality.md` — two-mode harmonic; what `a_*`, `b_*`, `p` do. *LaTeX-rendered via `pymdownx.arithmatex`; documents the (a, b) ↔ (amplitude, phase) conversion.*
+- [x] `docs/explanation/mobility.md` — gravity-model `pi_ij`; role of `tau_i`, `mobility_omega`, `mobility_gamma`; what falls out at single-patch. *Wave-5 verify discovery: `pi_ij` is computed ONCE in `HumanToHuman.__init__` and cached for the run (not per-tick as the wave-5 plan prompt suggested); the page documents the actual behaviour and where to inject per-tick recomputation if a future use case demands it.*
+- [x] `docs/explanation/reporting-and-likelihood.md` — `rho`, `rho_deaths`, `delta_reporting_*`, observed-vs-estimated, NB core, four shape terms.
 
 ### Cross-cutting / Definition of done
 
 - [x] Every parameter in `default_parameters.json` is referenced by exactly one Reference group page (enforced by the wave-1 coverage test). *76 keys ↔ 76 H3 anchors across the 10 group pages.*
 - [x] Every parameter has a documented off-value (or a documented note explaining why one doesn't exist). *Three §4 claims corrected by the wave-1 verify phase (`b_1_j`, `b_2_j`, `epidemic_threshold`); all documented in the Reference pages and in the plan itself.*
 - [x] `properdocs build --strict` is green in CI. *(Was "`mkdocs build --strict`" in the original DoD; project standardized on `properdocs`. Currently green locally; CI wiring is a wave-3+ concern.)*
-- [ ] Doctest CI is green. *Wave 3 deliverable (added with the tutorial pages).*
+- [x] Doctest CI is green. *`[testenv:doctest-docs]` added in wave 3; sweep stays green through waves 4 and 5 (1 doctest collected and passing, in `docs/tutorials/single-location.md`). CI wiring is its own follow-up: add `doctest-docs` to the CI matrix alongside `check`.*
 - [x] All three configurations pass `tests/test_docs_configurations.py`.
 - [x] `CHANGELOG.md` updated at each wave boundary. *Unreleased section now records wave 1 (scaffold + reference + seed) and wave 2 (three configurations + smoke test); will be extended at each subsequent wave boundary.*
 - [x] Resolve the two §11 still-open items (likelihood-no-data admonition placement; `nu_jt_sources` how-to worked example) before declaring the doc set done. *Both resolved in wave 4: prominent `!!! warning` admonition at the top of `calibrate-and-score.md`; dedicated worked-example section in `enable-vaccination.md` contrasting `["S"]`-only against the bundled default.*
+
+## 14. Follow-ups surfaced during wave 1–5 execution
+
+Non-critical decisions and discoveries that came up while executing the plan. Each one is captured here for later review rather than scope-creeping into the wave that surfaced it.
+
+### Code bugs to file
+
+- **`get_parameters(mods={...})` skips ndarray coercion** (surfaced during wave-3 doctest hardening). The `mods=` path applies overrides via PropertySet's `<<=` operator which bypasses `dict_to_propertysetex`'s scalar / array coercion, so list values like `{"S_j_initial": [99990]}` survive into `validate_parameters` and raise `AttributeError: 'list' object has no attribute 'shape'`. Worked around in `tutorials/single-location.md` and documented in the `!!! warning` admonition at the top of `how-to/override-parameters.md`. The JSON-load path and the `mods=` path should produce identically-typed results. **Fix recommendation:** route the `mods` merge through the same coercion pass as `dict_to_propertysetex`, or apply coercion to the merged result before `validate_parameters` runs.
+
+### Documented divergences from the original plan
+
+- **`pi_ij` is computed once, not per-tick** (surfaced during wave-5 verify phase). The wave-5 explanation/mobility prompt claimed `pi_ij` is rebuilt every tick to track time-varying populations. Inspecting `humantohuman.py` showed it is actually computed once in `HumanToHuman.__init__` from seed initial populations and cached on `model.patches.pi_ij` for the whole run. The `mobility.md` Explanation page documents the actual behaviour and flags where to inject per-tick recomputation if a future use case demands it.
+- **mobility off-form caveat** (already in §4 corrected): `mobility_omega` and `mobility_gamma` are required by the validator even when `tau_i = 0`. Workaround in every inert configuration: set them to `1.0` / `1.0`. Could be fixed by making the validator skip the check when `tau_i.sum() == 0`.
+
+### Build-system / CI follow-ups
+
+- **`mkdocs.yml` → `properdocs.yml` rename**: `properdocs build --strict` emits an INFO suggesting the config file be renamed (or passed explicitly via `-f mkdocs.yml`). Not blocking; cleanup would be a one-line `git mv` + a search-replace in any tox env / CI workflow that names the file explicitly.
+- **Add `doctest-docs` to CI**: the new `[testenv:doctest-docs]` env is green locally; needs wiring into `.github/workflows/*` alongside the existing `check` env so PRs catch doctest regressions.
+- **`properdocs build --strict` to CI**: today nothing in CI gates on a strict docs build. Add it (with `properdocs` not `mkdocs`).
+
+### Docs-architecture decisions worth a second look
+
+- **R cross-check section still lives in `usage.md`** (~25 lines): the wave-1 catch-up trim moved the parameter-override and likelihood content into how-to pages but had no obvious home for the R cross-check. Candidate destinations: (a) keep in `usage.md` (current), (b) move to `contributing.md` (it is largely a contributor workflow), (c) carve out a new `how-to/cross-check-against-r-reference.md` page. Recommend (b) — the audience is contributors, not end users.
+- **`ssa-baseline.json` shipped by reference, not symlink**: wave-2's `configurations/ssa-baseline.md` and `tests/test_docs_configurations.py::test_ssa_baseline_loads` point at the bundled `src/laser/cholera/metapop/data/default_parameters.json` directly rather than via a `docs/configurations/code/ssa-baseline.json` symlink. Slightly less symmetric with the other two configs (which DO live under `docs/configurations/code/`) but avoids shipping a redundant symlink. Decision can be revisited if the asymmetry becomes confusing.
+- **Tutorials author the same config twice**: `tutorials/single-location.md` builds the same final state as `docs/configurations/code/single-location.json`, but via `get_parameters(mods=…)` rather than from a JSON file. Cross-link makes the relationship visible; could be tightened further by having the tutorial assert equivalence at the end (or having the smoke test confirm both produce identical model state). Either as cleanup.
+- **Visualisation flags live only in `how-to/override-parameters.md`**: per the wave-1 §11 decision they were not added to the per-parameter Reference pages. Re-examine if a Reference reader complains about not finding them.
+
+### Doctest coverage growth
+
+- Currently 1 doctest collected across all of `docs/**/*.md` (Step 1 of `tutorials/single-location.md`). Most code blocks are intentionally plain `python` fences because outputs are stochastic or environment-dependent. As Reference / how-to pages add stable claims (parameter ranges, type assertions, shape checks), prefer `>>>` blocks where the output is genuinely deterministic.
