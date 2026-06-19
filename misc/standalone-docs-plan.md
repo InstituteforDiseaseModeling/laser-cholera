@@ -310,12 +310,12 @@ Single source of truth for execution. Each box is one mergeable unit. Keep order
 
 ### Wave 4 — How-to guides
 
-- [ ] `docs/how-to/override-parameters.md` — lifted from `usage.md`; extends with the full CLI flag list including the visualisation toggles (`--viz`, `--pdf`, `-q`/`--quiet`).
-- [ ] `docs/how-to/enable-vaccination.md` — set `nu_1_jt` / `nu_2_jt`, choose `phi_1` / `phi_2`, decide on `omega_1` / `omega_2`; **decide whether to include a worked `["S"]`-only vs. bundled-default contrast for `nu_jt_sources`** (open question §11).
-- [ ] `docs/how-to/configure-mobility.md` — `tau_i`, `mobility_omega`, `mobility_gamma`; explicit treatment of `tau_i = 0` as the off-switch.
-- [ ] `docs/how-to/enable-seasonality.md` — `a_*` / `b_*` / `p`; off-trick is to zero the amplitudes, not the periods.
-- [ ] `docs/how-to/calibrate-and-score.md` — `calc_likelihood`, the four shape weights, `reported_cases` / `reported_deaths`, `epidemic_peaks`; **opens with a prominent admonition that any meaningful likelihood calculation requires observed cases and deaths data**.
-- [ ] `docs/how-to/interoperate-with-mosaic.md` — one-page stub: "MOSAIC's JSON is a valid `paramsource`; pass the path to `get_parameters`"; link out to MOSAIC's own docs.
+- [x] `docs/how-to/override-parameters.md` — lifted from `usage.md`; extends with the full CLI flag list including the visualisation toggles (`--viz`, `--pdf`, `-q`/`--quiet`). *Includes a `!!! warning` admonition documenting the wave-3-discovered `mods` ndarray-coercion bug and the `np.array(..., dtype=...)` workaround.*
+- [x] `docs/how-to/enable-vaccination.md` — set `nu_1_jt` / `nu_2_jt`, choose `phi_1` / `phi_2`, decide on `omega_1` / `omega_2`; **decide whether to include a worked `["S"]`-only vs. bundled-default contrast for `nu_jt_sources`** (open question §11). *Decision: yes, included as a dedicated worked-example section showing both `mods` dicts side-by-side and the qualitative V1-trajectory difference.*
+- [x] `docs/how-to/configure-mobility.md` — `tau_i`, `mobility_omega`, `mobility_gamma`; explicit treatment of `tau_i = 0` as the off-switch.
+- [x] `docs/how-to/enable-seasonality.md` — `a_*` / `b_*` / `p`; off-trick is to zero the amplitudes, not the periods.
+- [x] `docs/how-to/calibrate-and-score.md` — `calc_likelihood`, the four shape weights, `reported_cases` / `reported_deaths`, `epidemic_peaks`; **opens with a prominent admonition that any meaningful likelihood calculation requires observed cases and deaths data**. *Decision: prominent `!!! warning "Observed data required"` admonition at the top of the page (§11 still-open #1 resolved).*
+- [x] `docs/how-to/interoperate-with-mosaic.md` — one-page stub: "MOSAIC's JSON is a valid `paramsource`; pass the path to `get_parameters`"; link out to MOSAIC's own docs.
 
 ### Wave 5 — Explanation
 
@@ -333,4 +333,4 @@ Single source of truth for execution. Each box is one mergeable unit. Keep order
 - [ ] Doctest CI is green. *Wave 3 deliverable (added with the tutorial pages).*
 - [x] All three configurations pass `tests/test_docs_configurations.py`.
 - [x] `CHANGELOG.md` updated at each wave boundary. *Unreleased section now records wave 1 (scaffold + reference + seed) and wave 2 (three configurations + smoke test); will be extended at each subsequent wave boundary.*
-- [ ] Resolve the two §11 still-open items (likelihood-no-data admonition placement; `nu_jt_sources` how-to worked example) before declaring the doc set done. *Wave 4 — both opens land on how-to pages.*
+- [x] Resolve the two §11 still-open items (likelihood-no-data admonition placement; `nu_jt_sources` how-to worked example) before declaring the doc set done. *Both resolved in wave 4: prominent `!!! warning` admonition at the top of `calibrate-and-score.md`; dedicated worked-example section in `enable-vaccination.md` contrasting `["S"]`-only against the bundled default.*
