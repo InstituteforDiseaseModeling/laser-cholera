@@ -303,10 +303,10 @@ Single source of truth for execution. Each box is one mergeable unit. Keep order
 
 ### Wave 3 — Tutorials
 
-- [ ] Author `docs/tutorials/first-run.md` — install, `metapop --seed 20240930`, inspect outputs.
-- [ ] Author `docs/tutorials/single-location.md` — build the single-patch SEIRV config from scratch via `get_parameters(mods=…)`, with every optional feature off; turn one feature on at a time at the end.
-- [ ] Author `docs/tutorials/multi-location-country.md` — extend single-location to N admin units of one country; turn on mobility; show what `pi_ij` does to a seeded outbreak.
-- [ ] Add a doctest tox env (e.g. `[testenv:doctest-docs]`) that runs `pytest --doctest-glob='docs/**/*.md'`; wire into CI alongside `check`.
+- [x] Author `docs/tutorials/first-run.md` — install, `metapop --seed 20240930`, inspect outputs.
+- [x] Author `docs/tutorials/single-location.md` — build the single-patch SEIRV config from scratch via `get_parameters(mods=…)`, with every optional feature off; turn one feature on at a time at the end. *During doctest hardening, surfaced a real `params.py` bug: `get_parameters(mods={...})` applies overrides via `<<=` which skips `dict_to_propertysetex`'s ndarray coercion, so list values like `S_j_initial: [99990]` survive into `validate_parameters` and raise `AttributeError("'list' object has no attribute 'shape'")`. Worked around in the tutorial by using `np.array(...)`-typed values in the `mods` dict; the underlying bug should be filed for a future fix (the JSON-load path and the `mods=` path should produce identically-typed results).*
+- [x] Author `docs/tutorials/multi-location-country.md` — extend single-location to N admin units of one country; turn on mobility; show what `pi_ij` does to a seeded outbreak.
+- [x] Add a doctest tox env (e.g. `[testenv:doctest-docs]`) that runs `pytest --doctest-glob='docs/**/*.md'`; wire into CI alongside `check`. *Added as `[testenv:doctest-docs]` in `tox.ini`, mirroring the existing `[testenv:docs]` pattern. Currently 1 doctest collected (Step 1 of `single-location.md`); will grow as how-to and explanation pages add stable `>>>` blocks.*
 
 ### Wave 4 — How-to guides
 
