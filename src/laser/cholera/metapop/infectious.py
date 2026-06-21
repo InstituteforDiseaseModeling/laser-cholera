@@ -263,7 +263,7 @@ class Infectious:
             infected_fraction = model.people.Isym[idx_probe] / model.patches.N[idx_probe]
             # Use chi_endemic or chi_epidemic depending on local infected fraction.
             chi_eff = np.where(infected_fraction < model.params.epidemic_threshold, model.params.chi_endemic, model.params.chi_epidemic)
-            model.patches.reported_cases[tick + 1] += np.round(
+            model.patches.reported_cases[tick] += np.round(
                 model.prng.binomial(model.patches.new_symptomatic[idx_probe], model.params.rho) / chi_eff
             ).astype(model.patches.reported_cases.dtype)
 

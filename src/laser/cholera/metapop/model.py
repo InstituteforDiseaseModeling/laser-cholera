@@ -93,41 +93,48 @@ class RInterface:
                 attr = getattr(model.people, compartment)
                 setattr(self, compartment, attr[1:, :].T)
 
-        # self.births = model.patches.births[1:, :].T
-        # self.disease_deaths = model.patches.disease_deaths[1:, :].T
         # self.new_symptomatic = model.patches.new_symptomatic[1:, :].T
         # self.incidence = model.patches.incidence[1:, :].T
         # self.incidence_env = model.patches.incidence_env[1:, :].T
         # self.incidence_human = model.patches.incidence_human[1:, :].T
         # self.Lambda = model.patches.Lambda[1:, :].T
         # self.N = model.patches.N[1:, :].T
-        # self.non_disease_deaths = model.patches.non_disease_deaths[1:, :].T
         # self.Psi = model.patches.Psi[1:, :].T
-        # self.reported_cases = model.patches.reported_cases[1:, :].T
-        # self.reported_deaths = model.patches.reported_deaths[1:, :].T
         # self.spatial_hazard = model.patches.spatial_hazard[1:, :].T
         # self.W = model.patches.W[1:, :].T
 
         # Trim the first column (t=0) and transpose for R compatibility
         for prop in [
-            "births",
-            "disease_deaths",
             "new_symptomatic",
             "incidence",
             "incidence_env",
             "incidence_human",
             "Lambda",
             "N",
-            "non_disease_deaths",
             "Psi",
-            "reported_cases",
-            "reported_deaths",
             "spatial_hazard",
             "W",
         ]:
             if hasattr(model.patches, prop):
                 attr = getattr(model.patches, prop)
                 setattr(self, prop, attr[1:, :].T)
+
+        # self.births = model.patches.births[:-1, :].T
+        # self.disease_deaths = model.patches.disease_deaths[:-1, :].T
+        # self.reported_cases = model.patches.reported_cases[:-1, :].T
+        # self.non_disease_deaths = model.patches.non_disease_deaths[:-1, :].T
+        # self.reported_deaths = model.patches.reported_deaths[:-1, :].T
+        # Trim the last column and transpose for R compatibility
+        for prop in [
+            "births",
+            "disease_deaths",
+            "non_disease_deaths",
+            "reported_cases",
+            "reported_deaths",
+        ]:
+            if hasattr(model.patches, prop):
+                attr = getattr(model.patches, prop)
+                setattr(self, prop, attr[:-1, :].T)
 
         # self.dose_one_doses = model.patches.dose_one_doses[:].T
         # self.dose_two_doses = model.patches.dose_two_doses[:].T
