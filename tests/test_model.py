@@ -136,8 +136,7 @@ class TestModel(unittest.TestCase):
             patches_buf[-1, :],
             np.zeros(nnodes, dtype=patches_buf.dtype),
             err_msg=(
-                f"model.patches.{channel}[-1, :] is not all zeros — the sentinel row got written into; "
-                "downstream views will be off by one tick"
+                f"model.patches.{channel}[-1, :] is not all zeros — the sentinel row got written into; downstream views will be off by one tick"
             ),
         )
         # (3) Results view shape: R-style transposed.
@@ -148,10 +147,7 @@ class TestModel(unittest.TestCase):
         np.testing.assert_array_equal(
             results_view,
             patches_buf[:-1, :].T,
-            err_msg=(
-                f"model.results.{channel} drifted from model.patches.{channel}[:-1, :].T "
-                "(first-nticks rows of the buffer, transposed)"
-            ),
+            err_msg=(f"model.results.{channel} drifted from model.patches.{channel}[:-1, :].T (first-nticks rows of the buffer, transposed)"),
         )
         # (5) Results view != LAST nticks rows transposed (the swapped slice) —
         # only meaningful when the trajectory is non-uniform across rows.
