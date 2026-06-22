@@ -109,6 +109,81 @@ def mask_weights(
     return w2
 
 
+def weights_obs_row_trivial(
+    wobs_row: np.ndarray | None,
+    obs_vec: np.ndarray,
+) -> bool:
+    """Decide whether a per-cell confidence-weight row is trivial.
+
+    A row is "trivial" (and therefore must route through the unweighted code
+    path for byte identity with the legacy ``weights_obs_* is None`` case)
+    when:
+
+    - ``wobs_row is None``, or
+    - every cell with a finite observation has ``wobs_row[i] == 1.0`` AND is
+      finite.
+
+    A non-finite weight on a finite-obs cell is NOT trivial — it is a real
+    "no confidence" signal that must flow through the mass-preserving path.
+    Non-finite weight cells where the observation is also non-finite are
+    irrelevant because :func:`mask_weights` already zeroes them out.
+
+    Args:
+        wobs_row: Per-cell weights for one location/channel, length matching
+            ``obs_vec``, or ``None``.
+        obs_vec: Observation row (length T).
+
+    Returns:
+        ``True`` if the unweighted code path is appropriate for this row.
+    """
+    if wobs_row is None:
+        return True
+    fin = np.isfinite(obs_vec)
+    if not np.any(fin):
+        return True
+    wf = wobs_row[fin]
+    return bool(np.all(np.isfinite(wf) & (wf == 1.0)))
+
+
+def weights_obs_effective(
+    weights_time: np.ndarray,
+    wobs_row: np.ndarray,
+    obs_vec: np.ndarray,
+    est_vec: np.ndarray,
+) -> np.ndarray:
+    """Build the mass-preserving effective weight vector for one location / channel.
+
+    Combines the (length-T) ``weights_time`` (after masking on non-finite obs
+    / est) with the per-cell confidence row ``wobs_row``, then rescales so the
+    resulting vector sums to the masked-``weights_time`` total. This preserves
+    each location's total LL mass exactly as in the unweighted path — only
+    the *shape* of which cells are trusted changes, so ``weights_location``
+    stays the sole cross-location lever.
+
+    Non-finite entries in ``wobs_row`` are treated as zero (no per-cell
+    trust). A fully-zero ``w_raw`` (e.g. an all-zero ``wobs_row``) returns a
+    zero vector, which contributes zero LL.
+
+    Args:
+        weights_time: Length-T time weights (raw, not masked).
+        wobs_row: Length-T per-cell confidence weights, values in ``[0, 1]``
+            or NaN.
+        obs_vec: Length-T observation row.
+        est_vec: Length-T estimate row.
+
+    Returns:
+        Length-T effective weight vector (zeros on masked / zero-confidence cells).
+    """
+    masked_wt = mask_weights(weights_time, obs_vec, est_vec)
+    target_j = float(np.sum(masked_wt))
+    wobs_use = np.where(np.isfinite(wobs_row), wobs_row, 0.0)
+    w_raw = masked_wt * wobs_use
+    s = float(np.sum(w_raw))
+    if s <= 0.0 or not np.isfinite(target_j) or target_j <= 0.0:
+        return np.zeros(len(weights_time), dtype=float)
+    return w_raw / s * target_j
+
+
 def _calc_log_likelihood_nb(
     observed: np.ndarray,
     estimated: np.ndarray,
@@ -516,6 +591,9 @@ def calc_model_likelihood(
     weight_deaths: float = 1.0,
     weights_location: np.ndarray | None = None,  # [n_locs] | None
     weights_time: np.ndarray | None = None,  # [n_steps] | None
+    # --- per-observation confidence weights ([n_locs x n_steps], in [0, 1] or NaN); affect ONLY the NB core ---
+    weights_obs_cases: np.ndarray | None = None,
+    weights_obs_deaths: np.ndarray | None = None,
     # -- shape term weights (0 = OFF; 0.25 = 25% of NB core influence) ---
     weight_peak_timing: float = 0,
     weight_peak_magnitude: float = 0,
@@ -577,6 +655,21 @@ def calc_model_likelihood(
         weights_time: Non-negative time weights, length n_time_steps. Defaults to
             ones. Must contain at least one positive entry; an all-zero vector
             raises ``ValueError`` (see Raises).
+        weights_obs_cases: Optional per-cell confidence weights for the case
+            observations, shape ``(n_locations, n_time_steps)``, values in
+            ``[0, 1]`` or NaN. Affects ONLY the NB core (shape terms remain
+            unweighted in v1). ``None`` or an all-1.0 matrix on finite-obs
+            cells routes through the unweighted code path and is byte-identical
+            to the legacy behaviour. Non-trivial weights apply a per-location,
+            mass-preserving renormalisation: each location's total NB
+            log-likelihood mass equals the unweighted equivalent — only the
+            *shape* of which cells are trusted changes; ``weights_location``
+            remains the sole cross-location lever. The ESS-style observation
+            gate on the weighted path requires ``sum(weights_obs_cases[finite,
+            positive-weights_time]) >= 3`` (cases and deaths gate
+            independently). Defaults to ``None``.
+        weights_obs_deaths: Same as ``weights_obs_cases`` but for the death
+            observations. Defaults to ``None``.
         weight_peak_timing: Weight for peak timing term (T-normalized). Defaults to 0.
         weight_peak_magnitude: Weight for peak magnitude term (T-normalized). Defaults to 0.
         weight_cumulative_total: Weight for cumulative progression term. Defaults to 0.
@@ -659,6 +752,22 @@ def calc_model_likelihood(
     if np.sum(weights_location) == 0 or np.sum(weights_time) == 0:
         raise ValueError("weights_location and weights_time must not all be zero.")
 
+    def _validate_weights_obs(name: str, w_in: np.ndarray | None) -> np.ndarray | None:
+        if w_in is None:
+            return None
+        if not isinstance(w_in, np.ndarray) or w_in.ndim != 2:
+            raise ValueError(f"{name} must be a 2-D ndarray (matrix), got type={type(w_in).__name__}")
+        if w_in.shape != (n_locations, n_time_steps):
+            raise ValueError(f"{name} must have the same dimensions as the observation matrices ({n_locations}, {n_time_steps}); got {w_in.shape}")
+        arr = np.asarray(w_in, dtype=float)
+        finite = np.isfinite(arr)
+        if np.any(finite & (arr < 0)):
+            raise ValueError(f"{name} must be >= 0 (NaN permitted; negative values are not)")
+        return arr
+
+    weights_obs_cases = _validate_weights_obs("weights_obs_cases", weights_obs_cases)
+    weights_obs_deaths = _validate_weights_obs("weights_obs_deaths", weights_obs_deaths)
+
     # --- precompute peak indices per location (once, not per call) ---
     # `_peak_idx_lists[j]` will hold the 0-based time-step indices of known peaks
     # for location j, or stay None if the peak terms cannot run.
@@ -706,35 +815,57 @@ def calc_model_likelihood(
         obs_d = obs_deaths[j, :]
         est_d = est_deaths[j, :]
 
-        have_cases = int(np.sum(np.isfinite(obs_c))) >= min_obs_for_likelihood
-        have_deaths = int(np.sum(np.isfinite(obs_d))) >= min_obs_for_likelihood
+        # Per-cell confidence-weight rows for this location, if any.
+        wobs_c_row = weights_obs_cases[j, :] if weights_obs_cases is not None else None
+        wobs_d_row = weights_obs_deaths[j, :] if weights_obs_deaths is not None else None
 
-        # k is estimated from observed data (property of observation noise, not fit quality)
-        k_c = nb_size_from_obs_weighted(obs_c, weights_time, k_min=nb_k_min_cases) if have_cases else np.inf
-        k_d = nb_size_from_obs_weighted(obs_d, weights_time, k_min=nb_k_min_deaths) if have_deaths else np.inf
+        # Trivial rows (None or all-1.0 on finite obs) route through the legacy
+        # unweighted path for byte-identical results.
+        triv_c = weights_obs_row_trivial(wobs_c_row, obs_c)
+        triv_d = weights_obs_row_trivial(wobs_d_row, obs_d)
 
-        ll_cases = (
-            _calc_log_likelihood_nb(
-                observed=obs_c,
-                estimated=est_c,
-                weights=mask_weights(weights_time, obs_c, est_c),
-                k=k_c,
-                k_min=nb_k_min_cases,
-            )
-            if have_cases
-            else 0.0
-        )
-        ll_deaths = (
-            _calc_log_likelihood_nb(
-                observed=obs_d,
-                estimated=est_d,
-                weights=mask_weights(weights_time, obs_d, est_d),
-                k=k_d,
-                k_min=nb_k_min_deaths,
-            )
-            if have_deaths
-            else 0.0
-        )
+        # Observation gate. Trivial / None path: raw finite-count >= 3
+        # (back-compat). Weighted path: effective-sample-size gate
+        # `sum(wobs_row[finite & positive weights_time]) >= 3`.
+        if triv_c:
+            have_cases = int(np.sum(np.isfinite(obs_c))) >= min_obs_for_likelihood
+        else:
+            sel_c = np.isfinite(obs_c) & np.isfinite(weights_time) & (weights_time > 0)
+            wobs_c_for_sum = np.where(np.isfinite(wobs_c_row), wobs_c_row, 0.0)
+            have_cases = float(np.sum(wobs_c_for_sum[sel_c])) >= min_obs_for_likelihood
+        if triv_d:
+            have_deaths = int(np.sum(np.isfinite(obs_d))) >= min_obs_for_likelihood
+        else:
+            sel_d = np.isfinite(obs_d) & np.isfinite(weights_time) & (weights_time > 0)
+            wobs_d_for_sum = np.where(np.isfinite(wobs_d_row), wobs_d_row, 0.0)
+            have_deaths = float(np.sum(wobs_d_for_sum[sel_d])) >= min_obs_for_likelihood
+
+        # Effective scoring weights per channel. Trivial -> exact unweighted
+        # (masked weights_time); weighted -> mass-preserving renorm.
+        if have_cases:
+            w_eff_c = mask_weights(weights_time, obs_c, est_c) if triv_c else weights_obs_effective(weights_time, wobs_c_row, obs_c, est_c)
+        else:
+            w_eff_c = None
+        if have_deaths:
+            w_eff_d = mask_weights(weights_time, obs_d, est_d) if triv_d else weights_obs_effective(weights_time, wobs_d_row, obs_d, est_d)
+        else:
+            w_eff_d = None
+
+        # k-coherence: on the trivial path k uses raw `weights_time` (exact
+        # prior behaviour); on the weighted path k uses the same masked,
+        # mass-preserving `w_eff` it is scored under, so the dispersion is
+        # anchored to the cells the LL actually weights.
+        if have_cases:
+            k_c = nb_size_from_obs_weighted(obs_c, weights_time if triv_c else w_eff_c, k_min=nb_k_min_cases)
+        else:
+            k_c = np.inf
+        if have_deaths:
+            k_d = nb_size_from_obs_weighted(obs_d, weights_time if triv_d else w_eff_d, k_min=nb_k_min_deaths)
+        else:
+            k_d = np.inf
+
+        ll_cases = _calc_log_likelihood_nb(observed=obs_c, estimated=est_c, weights=w_eff_c, k=k_c, k_min=nb_k_min_cases) if have_cases else 0.0
+        ll_deaths = _calc_log_likelihood_nb(observed=obs_d, estimated=est_d, weights=w_eff_d, k=k_d, k_min=nb_k_min_deaths) if have_deaths else 0.0
 
         ll_peak_time_c = ll_peak_time_d = 0.0
         ll_peak_mag_c = ll_peak_mag_d = 0.0
