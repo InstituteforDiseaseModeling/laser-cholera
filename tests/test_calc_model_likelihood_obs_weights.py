@@ -171,12 +171,12 @@ class TestEffectiveWeights:
 
         ll = calc_model_likelihood(obs, est, zd, zd, weights_obs_cases=wobs)
 
-        # The R tolerance is 1e-10 because R's `dnbinom` matches the hand
-        # closed-form to that precision. The Python scorer routes through
-        # `scipy.stats.nbinom.logpmf` whose internal special-function paths
-        # diverge from the closed-form by a few ULPs across the multi-term
-        # sum; the issue's stated cross-R/Python parity tolerance is ~1e-8
-        # for total LL, which comfortably covers this.
+        # R's testthat suite uses tolerance = 1e-10. Python's
+        # `scipy.stats.nbinom.logpmf` and the closed-form hand kernel
+        # agree to a few ULPs on the multi-term sum, well inside 1e-8.
+        # (R's `dpois(0, 0) = 1` exact-zero match is now mirrored in the
+        # Python implementation, but the cases-branch here has est > 0
+        # everywhere so the standard NB kernel is exercised either way.)
         assert ll == pytest.approx(expected, abs=1e-8)
 
 
@@ -241,15 +241,14 @@ class TestZeroRowContribution:
 
         ll = calc_model_likelihood(obs, est, zd, zd, weights_obs_cases=np.zeros((1, 4)))
 
-        # R asserts `expect_equal(ll, 0, tolerance = 1e-12)`. R's `dpois(0, 0)
-        # = 1` so the perfect-match zero-data deaths channel evaluates to
-        # exactly 0. Python's `_calc_log_likelihood_nb` floors `est` at 1e-10
-        # to avoid `log(0)`, which leaks `~ -1e-10` per cell through the
-        # Poisson kernel (estimated mean -> 1e-10, observed = 0, logpmf =
-        # -1e-10). With four cells the deaths channel contributes ~ -4e-10
-        # rather than exactly 0. 1e-7 absolute tolerance covers that drift
-        # while still distinguishing zero from any real contribution.
-        assert ll == pytest.approx(0.0, abs=1e-7)
+        # `_calc_log_likelihood_nb` now matches the R reference's three-branch
+        # zero-prediction handler: `est <= 0 AND obs == 0` returns exactly 0
+        # (perfect-match zero) rather than leaking ~ -1e-10 through a
+        # Poisson(0, mu=1e-10) evaluation. So the deaths channel here
+        # contributes 0 and we can assert byte-precise equality to 0 — same
+        # tolerance the R `testthat` suite uses (`expect_equal(ll, 0,
+        # tolerance = 1e-12)`).
+        assert ll == pytest.approx(0.0, abs=1e-12)
 
     def test_weights_obs_effective_zero_row_returns_zero_vector(self):
         """The helper itself returns an all-zero vector for a zero confidence row.
@@ -300,10 +299,11 @@ class TestGateBoundary:
 
         obs_2 = np.array([[0.0, 5.0, np.nan, np.nan]])
         ll_2 = calc_model_likelihood(obs_2, est, zd, zd, weights_obs_cases=np.ones((1, 4)))
-        # Same Poisson-floor drift as `test_fully_zeroed_weight_row_contributes_zero`:
-        # the zero-data deaths channel leaks ~ -4e-10. R asserts exact zero;
-        # Python's `est`-floor at 1e-10 makes the equivalent assertion 1e-7.
-        assert ll_2 == pytest.approx(0.0, abs=1e-7)
+        # The zero-data deaths channel now returns exactly 0 via the new
+        # three-branch zero-prediction handler in `_calc_log_likelihood_nb`,
+        # matching R's `dpois(0, 0) = 1`. Cases channel drops out under the
+        # 3-finite-obs gate (only 2 finite cells). Total LL is byte-precise 0.
+        assert ll_2 == pytest.approx(0.0, abs=1e-12)
 
 
 # ---------------------------------------------------------------------------

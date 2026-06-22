@@ -196,6 +196,23 @@ def _calc_log_likelihood_nb(
     When k is infinite the distribution collapses to Poisson. The k_min floor is
     applied before evaluation to prevent near-Poisson collapse on low-variance series.
 
+    Zero-prediction cells (``estimated <= 0``) are handled in three explicit
+    branches that match the R reference (``MOSAIC::calc_log_likelihood_negbin``,
+    body switch at the per-cell loop):
+
+    1. ``estimated <= 0`` and ``observed > 0``: a proportional zero-prediction
+       penalty ``-observed * log(1e6)`` is applied. This is much less harsh
+       than the implicit "treat est as 1e-10 then evaluate NB" path the
+       previous Python implementation used; that route gave ``logpmf`` values
+       of ~-95 for ``observed=4, mu=1e-10`` versus R's ~-55 penalty, producing
+       a ~50% LL drift on fixtures where any patch had an ``est=0, obs>0``
+       cell.
+    2. ``estimated <= 0`` and ``observed == 0``: exactly zero contribution
+       (perfect-match zero data). Replaces the previous Python path that
+       leaked ``~ -1e-10`` per cell through ``Poisson(0, mu=1e-10)``.
+    3. otherwise: standard NB (or Poisson when ``k_eff`` is infinite) on
+       ``max(estimated, 1e-10)``, identical to the R kernel.
+
     Args:
         observed: Observed counts (rounded to integers internally).
         estimated: Estimated means (must be non-negative).
@@ -204,24 +221,40 @@ def _calc_log_likelihood_nb(
         k_min: Minimum dispersion floor applied before evaluation. Defaults to 3.
 
     Returns:
-        Weighted sum of NB (or Poisson) log-PMF values. Returns 0.0 if no valid
-        observations exist.
+        Weighted sum of NB (or Poisson) log-PMF values, plus the
+        proportional zero-prediction penalty where applicable. Returns
+        ``0.0`` if no valid observations exist.
     """
     mask = np.isfinite(observed) & np.isfinite(estimated) & (weights > 0)
     if not np.any(mask):
         return 0.0
 
     obs_m = np.round(observed[mask]).astype(int)
-    est_m = np.maximum(estimated[mask], 1e-10)
+    est_m_raw = estimated[mask].astype(float)
     w_m = weights[mask]
 
-    k_eff = max(k_min, k) if np.isfinite(k) else np.inf
+    zero_pred = est_m_raw <= 0.0
+    nz_pred = ~zero_pred
 
-    if np.isinf(k_eff):
-        ll_vals = scipy.stats.poisson.logpmf(obs_m, mu=est_m)
-    else:
-        p_nb = k_eff / (k_eff + est_m)
-        ll_vals = scipy.stats.nbinom.logpmf(obs_m, n=k_eff, p=p_nb)
+    ll_vals = np.zeros_like(est_m_raw, dtype=float)
+
+    # Branch 1: est <= 0 AND obs > 0 -> proportional penalty.
+    pen = zero_pred & (obs_m > 0)
+    if np.any(pen):
+        ll_vals[pen] = -obs_m[pen].astype(float) * np.log(1e6)
+
+    # Branch 2: est <= 0 AND obs == 0 -> exactly zero (already initialised).
+
+    # Branch 3: est > 0 -> standard NB (or Poisson when k_eff is infinite).
+    if np.any(nz_pred):
+        est_safe = np.maximum(est_m_raw[nz_pred], 1e-10)
+        obs_nz = obs_m[nz_pred]
+        k_eff = max(k_min, k) if np.isfinite(k) else np.inf
+        if np.isinf(k_eff):
+            ll_vals[nz_pred] = scipy.stats.poisson.logpmf(obs_nz, mu=est_safe)
+        else:
+            p_nb = k_eff / (k_eff + est_safe)
+            ll_vals[nz_pred] = scipy.stats.nbinom.logpmf(obs_nz, n=k_eff, p=p_nb)
 
     return float(np.sum(w_m * ll_vals))
 
