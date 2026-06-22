@@ -4,7 +4,7 @@
 
 **Goals**
 
-- Make `laser-cholera` usable end-to-end by someone who has **never touched the upstream R [`MOSAIC`](https://github.com/InstituteforDiseaseModeling/MOSAIC) package**. Today the documentation assumes MOSAIC drives parameter construction; we need a parallel path for direct callers.
+- Make `laser-cholera` usable end-to-end by someone who has **never touched the upstream R [`MOSAIC`](https://github.com/InstituteforDiseaseModeling/MOSAIC-pkg) package**. Today the documentation assumes MOSAIC drives parameter construction; we need a parallel path for direct callers.
 - Give every field in `default_parameters.json` a documented purpose, shape/dtype, valid range, and — critically — **the value that turns the feature off**.
 - Provide three working starter configurations that span the spectrum we actually care about:
   1. A **single-location** toy run (no mobility, no spatial structure, every optional feature off).

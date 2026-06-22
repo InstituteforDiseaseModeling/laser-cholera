@@ -83,7 +83,7 @@ Install `testthat` and the upstream `MOSAIC` R package:
 
 ```bash
 Rscript -e 'install.packages("testthat")'
-Rscript -e 'remotes::install_github("InstituteforDiseaseModeling/MOSAIC")'
+Rscript -e 'remotes::install_github("InstituteforDiseaseModeling/MOSAIC-pkg")'
 ```
 
 If `MOSAIC` is already on your R library path, you can skip the second

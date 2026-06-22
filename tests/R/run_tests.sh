@@ -5,7 +5,7 @@
 #   - R (Rscript on PATH)
 #   - R packages: testthat, reticulate, MOSAIC
 #       Rscript -e 'install.packages(c("testthat", "reticulate"))'
-#       Rscript -e 'remotes::install_github("InstituteforDiseaseModeling/MOSAIC")'
+#       Rscript -e 'remotes::install_github("InstituteforDiseaseModeling/MOSAIC-pkg")'
 #   - The project venv at .venv/ with laser-cholera installed
 #       (uv pip install -e . from the repo root)
 #

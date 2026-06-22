@@ -28,7 +28,7 @@ OFF (or omitted) in the bundled defaults:
 - `src/laser/cholera/metapop/data/default_parameters.json.gz` — gzipped copy of the same JSON, distributed alongside the uncompressed form for size-sensitive contexts.
 - `docs/configurations/code/ssa-baseline.json` — a thin pointer back to the bundled defaults so the wave-2 smoke test treats this configuration the same way as the other two.
 
-This configuration does not need a `laser-init` extract: the country-level admin layer, populations, coordinates, and per-tick demographic rates were assembled upstream by the R [`MOSAIC`](https://github.com/InstituteforDiseaseModeling/MOSAIC) package from UN WPP, WorldPop, and WHO weekly cholera reports, then frozen into the bundled JSON. The `laser-init` workflow is the route for *new* country-and-admin-level extracts (see the [multi-admin configuration](multi-admin.md)).
+This configuration does not need a `laser-init` extract: the country-level admin layer, populations, coordinates, and per-tick demographic rates were assembled upstream by the R [`MOSAIC`](https://github.com/InstituteforDiseaseModeling/MOSAIC-pkg) package from UN WPP, WorldPop, and WHO weekly cholera reports, then frozen into the bundled JSON. The `laser-init` workflow is the route for *new* country-and-admin-level extracts (see the [multi-admin configuration](multi-admin.md)).
 
 ## Running it
 

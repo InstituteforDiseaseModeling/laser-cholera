@@ -1,6 +1,6 @@
 # Interoperate with MOSAIC
 
-`laser.cholera` was originally a Python port of [MOSAIC](https://github.com/InstituteforDiseaseModeling/MOSAIC), and MOSAIC remains the canonical R-side scenario authoring tool for the metapopulation cholera workflow. MOSAIC writes parameter sets as JSON files that `laser.cholera` consumes directly via `get_parameters(<path>)` — no glue code, no schema translation, no intermediate format.
+`laser.cholera` is the Python-based simulation engine for [MOSAIC](https://github.com/InstituteforDiseaseModeling/MOSAIC-pkg), and MOSAIC remains the canonical R-side scenario authoring tool for the metapopulation cholera workflow. MOSAIC writes parameter sets as JSON files that `laser.cholera` consumes directly via `get_parameters(<path>)` — no glue code, no schema translation, no intermediate format.
 
 ## Use a MOSAIC-produced JSON
 
@@ -16,7 +16,7 @@ model = run_model(params)
 
 ## MOSAIC documentation
 
-The MOSAIC project documents its own JSON schema, scenario builder, and calibration workflow at <https://github.com/InstituteforDiseaseModeling/MOSAIC>. This page intentionally does not duplicate that content — go to the MOSAIC repository for the authoritative description of how scenarios are authored on the R side.
+The MOSAIC project documents its own JSON schema, scenario builder, and calibration workflow at <https://github.com/InstituteforDiseaseModeling/MOSAIC-pkg>. This page intentionally does not duplicate that content — go to the MOSAIC repository for the authoritative description of how scenarios are authored on the R side.
 
 ## See also
 
