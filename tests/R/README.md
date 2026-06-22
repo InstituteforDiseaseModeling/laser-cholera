@@ -10,8 +10,8 @@ Each test builds an R-side fixture, calls `MOSAIC::calc_model_likelihood` (the c
 
 ```bash
 # R packages
-Rscript -e 'install.packages(c("testthat", "reticulate"))'
-Rscript -e 'remotes::install_github("InstituteforDiseaseModeling/MOSAIC")'
+Rscript -e 'install.packages(c("testthat", "reticulate", "remotes"))'
+Rscript -e 'remotes::install_github("InstituteforDiseaseModeling/MOSAIC-pkg")'
 
 # Python: laser-cholera installed in the project venv
 uv pip install -e .
@@ -20,7 +20,7 @@ uv pip install -e .
 ### Minimum MOSAIC version
 
 The Python `calc_model_likelihood` tracks the MOSAIC reference at **v0.45.3**
-(commit [`7a265b1d`](https://github.com/InstituteforDiseaseModeling/MOSAIC),
+(commit [`7a265b1d`](https://github.com/InstituteforDiseaseModeling/MOSAIC-pkg/commit/7a265b1d),
 see [`misc/calc_model_likelihood.R`](../../misc/calc_model_likelihood.R) for the
 checked-in copy). The Python implementation has been updated to match this
 version, including the new `weights_obs_cases` / `weights_obs_deaths` arguments.

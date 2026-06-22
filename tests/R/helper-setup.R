@@ -25,7 +25,7 @@
 if (!requireNamespace("MOSAIC", quietly = TRUE)) {
   stop(
     "MOSAIC package not installed. Install with:\n",
-    "  Rscript -e 'remotes::install_github(\"InstituteforDiseaseModeling/MOSAIC\")'"
+    "  Rscript -e 'remotes::install_github(\"InstituteforDiseaseModeling/MOSAIC-pkg\")'"
   )
 }
 if (!requireNamespace("reticulate", quietly = TRUE)) {
@@ -107,7 +107,7 @@ if (!.mosaic_ok) {
               .installed_mosaic_version, .MIN_MOSAIC_VERSION))
   cat("     `calc_model_likelihood` tracks. All parity tests will SKIP.\n")
   cat("     Update with:\n")
-  cat("       Rscript -e 'remotes::install_github(\"InstituteforDiseaseModeling/MOSAIC\")'\n")
+  cat("       Rscript -e 'remotes::install_github(\"InstituteforDiseaseModeling/MOSAIC-pkg\")'\n")
 }
 cat("\n")
 

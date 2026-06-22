@@ -1,7 +1,7 @@
 # LASER Cholera (LASIK)
 
-**LASIK** — *LASER-based SImulation of Kolera* — is the Python port of
-the upstream R [`MOSAIC`](https://github.com/InstituteforDiseaseModeling/MOSAIC)
+**LASIK** — *LASER-based SImulation of Kolera* — is the Python-based simulation
+engine for the R-based [`MOSAIC`](https://github.com/InstituteforDiseaseModeling/MOSAIC-pkg)
 cholera metapopulation model.
 
 ## Where do I start?
