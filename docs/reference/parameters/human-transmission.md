@@ -12,8 +12,8 @@ This group sets the direct, person-to-person transmission term of the cholera mo
 | [`b_1_j`](#b_1_j) | `(npatches,)` | `np.float32` | unconstrained | `np.zeros(npatches)` |
 | [`b_2_j`](#b_2_j) | `(npatches,)` | `np.float32` | unconstrained | `np.zeros(npatches)` |
 | [`p`](#p) | scalar | `np.int32` | integral; `"p" in params` | `365` (any non-zero) |
-| [`alpha_1`](#alpha_1) | scalar | `np.float32` | `(0, 1]` | n/a (not a toggle) |
-| [`alpha_2`](#alpha_2) | scalar | `np.float32` | `[0, 1]` | n/a (not a toggle) |
+| [`alpha_1`](#alpha_1) | scalar **or** `(npatches,)` | `np.float32` | scalar or per-element in `(0, 1]` | n/a (not a toggle) |
+| [`alpha_2`](#alpha_2) | scalar **or** `(npatches,)` | `np.float32` | scalar or per-element in `[0, 1]` | n/a (not a toggle) |
 | [`beta_j0_tot`](#beta_j0_tot) | `(npatches,)` | `np.float32` | unconstrained | n/a (inert / unused) |
 | [`p_beta`](#p_beta) | `(npatches,)` | `np.float32` | unconstrained | n/a (inert / unused) |
 
@@ -88,24 +88,24 @@ This group sets the direct, person-to-person transmission term of the cholera mo
 ### `alpha_1`
 
 - **What it controls**: Exponent on the effective-infected count in the human-to-human force of infection (mixing nonlinearity in the numerator).
-- **Shape**: scalar
+- **Shape**: scalar **or** `(npatches,)` array.
 - **Dtype**: `np.float32`
-- **Range**: `(0, 1]` — the validator asserts `(params.alpha_1 > 0.0) & (params.alpha_1 <= 1.0)`, strict-positive at the low end.
+- **Range**: scalar or per-element in `(0, 1]` — the validator asserts strict-positive at the low end. The lower bound is strict because `alpha_1 = 0` collapses `np.power(effective_i, 0)` to `1`, breaking the FOI's dependence on infected counts.
 - **Off-value**: n/a — `alpha_1` is a mixing-shape parameter, not a feature toggle. To turn the human-to-human term off, set [`beta_j0_hum`](#beta_j0_hum) to zero; the validator forbids `alpha_1 = 0`, which would collapse the I-dependence to a constant.
 - **Consumer code**: [`src/laser/cholera/metapop/humantohuman.py`](../../reference/index.md), [`src/laser/cholera/metapop/params.py`](../../reference/index.md)
 - **Related parameters**: [`alpha_2`](#alpha_2), [`beta_j0_hum`](#beta_j0_hum), [`tau_i`](geography-and-mobility.md#tau_i)
-- **Notes**: Applied as `np.power(effective_i, alpha_1)` in `humantohuman.py:149`, where `effective_i` is the mobility-weighted infected count.
+- **Notes**: Applied as `np.power(effective_i, alpha_1)` in `humantohuman.py`, where `effective_i` is the mobility-weighted infected count. `np.power` broadcasts cleanly over either shape — pass a scalar when every patch should share the same mixing nonlinearity, or a length-`npatches` array when the nonlinearity is heterogeneous across admin units. Ingestion length-checks the array against `npatches`; a wrong-length array is rejected at `get_parameters` time, not at `model.run()`.
 
 ### `alpha_2`
 
 - **What it controls**: Exponent on the patch population in the FOI denominator: `alpha_2 = 1` gives frequency-dependent mixing, `alpha_2 = 0` gives density-dependent mixing.
-- **Shape**: scalar
+- **Shape**: scalar **or** `(npatches,)` array.
 - **Dtype**: `np.float32`
-- **Range**: `[0, 1]` — the validator asserts `(params.alpha_2 >= 0.0) & (params.alpha_2 <= 1.0)`.
+- **Range**: scalar or per-element in `[0, 1]`.
 - **Off-value**: n/a — not a feature toggle; this parameter selects between mixing regimes. Disable the human-to-human term via [`beta_j0_hum`](#beta_j0_hum) instead.
 - **Consumer code**: [`src/laser/cholera/metapop/humantohuman.py`](../../reference/index.md), [`src/laser/cholera/metapop/params.py`](../../reference/index.md)
 - **Related parameters**: [`alpha_1`](#alpha_1), [`beta_j0_hum`](#beta_j0_hum)
-- **Notes**: Applied as `np.power(N, alpha_2)` in `humantohuman.py:152`. The validator's assert message at `params.py:755` says `"alpha_1 value must be in the range [0, 1]"` but the check is on `alpha_2` — a copy-paste typo in the error string; the check itself is correct.
+- **Notes**: Applied as `np.power(N, alpha_2)` in `humantohuman.py`. Same dual-mode acceptance as [`alpha_1`](#alpha_1): scalar for a globally-uniform mixing regime, or a length-`npatches` array to mix regimes across patches (e.g. dense urban districts at frequency-dependent, sparse rural districts at density-dependent).
 
 ### `beta_j0_tot`
 

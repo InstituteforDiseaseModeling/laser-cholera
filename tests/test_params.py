@@ -8,6 +8,7 @@ and the column-presence checks enforced by ``validate_parameters``.
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -286,6 +287,278 @@ class TestEpidemicPeaksValidation:
         params.epidemic_peaks = params.epidemic_peaks.rename(columns={"peak_date": "date"})
 
         with pytest.raises(AssertionError, match="peak_date"):
+            validate_parameters(params)
+
+
+class TestAlphaDualMode:
+    """Tests for ``alpha_1`` / ``alpha_2`` accepting either a scalar or a length-``npatches`` array.
+
+    Both parameters drive `np.power(..., alpha_*)` in ``humantohuman.py``; the
+    consumer broadcasts either form, so the ingestion path must accept both and
+    the validator must enforce shape + range invariants on both.
+    """
+
+    def test_alpha_scalar_round_trip(self):
+        """A scalar ``alpha_1`` / ``alpha_2`` in the input dict survives as a ``np.float32`` scalar.
+
+        Given the bundled defaults (which ship with scalar alphas),
+        when ``get_parameters`` ingests them,
+        then ``params.alpha_1`` and ``params.alpha_2`` are ``np.float32`` scalars,
+        validation passes, and the values round-trip from the input JSON.
+
+        Failure implies the dual-mode ingestion branch regressed and is no longer
+        accepting the existing scalar-only configurations.
+        """
+        raw = _load_default_dict()
+        raw["alpha_1"] = 0.85
+        raw["alpha_2"] = 0.95
+
+        params = dict_to_propertysetex(raw)
+        validate_parameters(params)
+
+        assert isinstance(params.alpha_1, np.floating)
+        assert isinstance(params.alpha_2, np.floating)
+        assert float(params.alpha_1) == pytest.approx(0.85)
+        assert float(params.alpha_2) == pytest.approx(0.95)
+
+    def test_alpha_array_round_trip(self):
+        """A length-``npatches`` ``alpha_1`` / ``alpha_2`` array is coerced to ``np.ndarray[np.float32]``.
+
+        Given default parameters where ``alpha_1`` / ``alpha_2`` are replaced
+        with length-``npatches`` lists of in-range per-patch values,
+        when ``get_parameters`` ingests them,
+        then both end up as ``np.ndarray`` with shape ``(npatches,)`` and dtype
+        ``float32``, and validation passes.
+
+        Failure implies the dual-mode ingestion branch regressed for the per-patch
+        scenario — the consumer in ``humantohuman.__call__`` would then receive
+        the wrong shape and either crash or broadcast incorrectly.
+        """
+        raw = _load_default_dict()
+        npatches = len(raw["location_name"])
+        raw["alpha_1"] = [0.85] * npatches
+        raw["alpha_2"] = [0.95] * npatches
+
+        params = dict_to_propertysetex(raw)
+        validate_parameters(params)
+
+        assert isinstance(params.alpha_1, np.ndarray)
+        assert params.alpha_1.shape == (npatches,)
+        assert params.alpha_1.dtype == np.float32
+        assert isinstance(params.alpha_2, np.ndarray)
+        assert params.alpha_2.shape == (npatches,)
+        assert params.alpha_2.dtype == np.float32
+
+    @pytest.mark.parametrize("name", ["alpha_1", "alpha_2"])
+    def test_alpha_wrong_length_array_rejected_at_ingestion(self, name):
+        """A wrong-length ``alpha_1`` / ``alpha_2`` array is rejected during ingestion.
+
+        Given default parameters with ``alpha_*`` replaced by a list whose
+        length is ``npatches + 1`` (a common upstream-data mistake),
+        when ``dict_to_propertysetex`` runs,
+        then it raises an ``AssertionError`` naming the shape mismatch.
+
+        Failure implies the per-patch shape guard regressed and a wrong-length
+        array would silently flow into the consumer where ``np.power`` would
+        either broadcast-error at runtime or — worse — produce a result of an
+        unexpected shape.
+        """
+        raw = _load_default_dict()
+        npatches = len(raw["location_name"])
+        raw[name] = [0.5] * (npatches + 1)
+
+        with pytest.raises(AssertionError, match=f"{name} array shape"):
+            dict_to_propertysetex(raw)
+
+    def test_alpha_1_scalar_zero_rejected_by_validator(self):
+        """A scalar ``alpha_1 == 0`` is rejected (strict ``>`` lower bound).
+
+        Given the default parameters with ``alpha_1`` set to ``0.0``,
+        when ``validate_parameters`` runs,
+        then it raises an ``AssertionError`` naming the ``(0, 1]`` range.
+
+        Failure implies the lower-bound guard relaxed from strict ``>`` to ``>=``;
+        ``alpha_1 = 0`` collapses ``np.power(effective_i, 0)`` to ``1`` and
+        breaks the FOI dependence on infected counts.
+        """
+        params = get_parameters(DEFAULT_PARAMS_JSON, do_validation=False)
+        params.alpha_1 = np.float32(0.0)
+
+        with pytest.raises(AssertionError, match=r"alpha_1 scalar .* must be in \(0, 1\]"):
+            validate_parameters(params)
+
+    def test_alpha_1_array_with_zero_entry_rejected(self):
+        """An ``alpha_1`` array containing a zero entry is rejected.
+
+        Given default parameters with an in-range ``alpha_1`` array except for
+        a single zero entry,
+        when ``validate_parameters`` runs,
+        then it raises an ``AssertionError`` referencing the ``(0, 1]`` range.
+
+        Failure implies the per-element range guard regressed and a zero entry
+        would silently pass through, breaking the FOI for that one patch.
+        """
+        params = get_parameters(DEFAULT_PARAMS_JSON, do_validation=False)
+        npatches = len(params.location_name)
+        params.alpha_1 = np.full(npatches, 0.85, dtype=np.float32)
+        params.alpha_1[0] = 0.0
+
+        with pytest.raises(AssertionError, match=r"alpha_1 array values must be in \(0, 1\]"):
+            validate_parameters(params)
+
+    @pytest.mark.parametrize("bad_value", [-0.1, 1.1])
+    def test_alpha_2_scalar_out_of_range_rejected(self, bad_value):
+        """A scalar ``alpha_2`` outside ``[0, 1]`` is rejected.
+
+        Given the default parameters with ``alpha_2`` set to a value below 0
+        or above 1,
+        when ``validate_parameters`` runs,
+        then it raises an ``AssertionError`` naming the ``[0, 1]`` range.
+
+        Failure implies the range guard regressed; an out-of-range ``alpha_2``
+        would skew the population-scaling exponent into a regime the model
+        was not designed for.
+        """
+        params = get_parameters(DEFAULT_PARAMS_JSON, do_validation=False)
+        params.alpha_2 = np.float32(bad_value)
+
+        with pytest.raises(AssertionError, match=r"alpha_2 scalar .* must be in \[0, 1\]"):
+            validate_parameters(params)
+
+    @pytest.mark.parametrize("name", ["alpha_1", "alpha_2"])
+    def test_alpha_wrong_length_array_rejected_at_validation(self, name):
+        """A wrong-length ``alpha_*`` array set directly on the params is rejected by the validator.
+
+        Given a parameter set whose ``alpha_1`` / ``alpha_2`` is replaced after
+        ingestion with a wrong-length ``np.ndarray`` (bypassing the ingestion
+        shape guard),
+        when ``validate_parameters`` runs,
+        then it raises an ``AssertionError`` naming the shape mismatch.
+
+        This is the belt-and-braces check that catches direct in-Python mutations
+        like ``params.alpha_1 = np.zeros(npatches - 1)`` which never go through
+        ``dict_to_propertysetex``. Parallel to the equivalent check on
+        ``epidemic_threshold``.
+        """
+        params = get_parameters(DEFAULT_PARAMS_JSON, do_validation=False)
+        npatches = len(params.location_name)
+        # Use 0.5 — in range for both alpha_1 (0, 1] and alpha_2 [0, 1] — so
+        # the failure mode is purely shape, not range.
+        setattr(params, name, np.full(npatches - 1, 0.5, dtype=np.float32))
+
+        with pytest.raises(AssertionError, match=f"{name} array shape"):
+            validate_parameters(params)
+
+    def test_alpha_2_array_out_of_range_rejected(self):
+        """An ``alpha_2`` array with any out-of-range entry is rejected.
+
+        Given default parameters with an otherwise-valid ``alpha_2`` array
+        except for one entry above 1,
+        when ``validate_parameters`` runs,
+        then it raises an ``AssertionError`` referencing the ``[0, 1]`` range
+        and the offending min / max values.
+
+        Failure implies the per-element range guard regressed.
+        """
+        params = get_parameters(DEFAULT_PARAMS_JSON, do_validation=False)
+        npatches = len(params.location_name)
+        params.alpha_2 = np.full(npatches, 0.5, dtype=np.float32)
+        params.alpha_2[0] = 1.5
+
+        with pytest.raises(AssertionError, match=r"alpha_2 array values must be in \[0, 1\]"):
+            validate_parameters(params)
+
+
+class TestEpidemicThresholdShape:
+    """Tests for the tightened ``epidemic_threshold`` shape guard.
+
+    ``epidemic_threshold`` accepts either a scalar or a length-``npatches``
+    array (consumed in ``infectious.py`` against the per-patch infected
+    fraction). Before this change, the array form was not length-checked at
+    ingestion — a wrong-length array would either crash later inside
+    ``np.where`` or, worse, silently broadcast into a wrong-shape result.
+    """
+
+    def test_epidemic_threshold_scalar_round_trip(self):
+        """A scalar ``epidemic_threshold`` survives as a ``np.float32`` scalar.
+
+        Given the bundled defaults (which ship with a scalar ``epidemic_threshold``),
+        when ``get_parameters`` ingests them,
+        then ``params.epidemic_threshold`` is a ``np.float32`` scalar and
+        validation passes.
+
+        Failure implies the dual-mode ingestion branch regressed for the
+        scalar case.
+        """
+        raw = _load_default_dict()
+        raw["epidemic_threshold"] = 0.05
+
+        params = dict_to_propertysetex(raw)
+        validate_parameters(params)
+
+        assert isinstance(params.epidemic_threshold, np.floating)
+        assert float(params.epidemic_threshold) == pytest.approx(0.05)
+
+    def test_epidemic_threshold_array_round_trip(self):
+        """A length-``npatches`` ``epidemic_threshold`` array is coerced to ``np.ndarray[np.float32]``.
+
+        Given default parameters with ``epidemic_threshold`` replaced by a
+        length-``npatches`` list of non-negative per-patch thresholds,
+        when ``get_parameters`` ingests them,
+        then ``params.epidemic_threshold`` is a ``np.ndarray`` of shape
+        ``(npatches,)`` and dtype ``float32``, and validation passes.
+
+        Failure implies the per-patch ingestion branch regressed.
+        """
+        raw = _load_default_dict()
+        npatches = len(raw["location_name"])
+        raw["epidemic_threshold"] = [0.05] * npatches
+
+        params = dict_to_propertysetex(raw)
+        validate_parameters(params)
+
+        assert isinstance(params.epidemic_threshold, np.ndarray)
+        assert params.epidemic_threshold.shape == (npatches,)
+        assert params.epidemic_threshold.dtype == np.float32
+
+    def test_epidemic_threshold_wrong_length_array_rejected_at_ingestion(self):
+        """A wrong-length ``epidemic_threshold`` array is rejected during ingestion.
+
+        Given default parameters with ``epidemic_threshold`` replaced by a list
+        whose length is ``npatches - 1``,
+        when ``dict_to_propertysetex`` runs,
+        then it raises an ``AssertionError`` naming the shape mismatch.
+
+        Failure implies the shape guard regressed and a wrong-length array
+        would silently flow into ``infectious.py``'s ``np.where`` comparison,
+        producing either a broadcast error or a silently mis-aligned regime
+        mask.
+        """
+        raw = _load_default_dict()
+        npatches = len(raw["location_name"])
+        raw["epidemic_threshold"] = [0.05] * (npatches - 1)
+
+        with pytest.raises(AssertionError, match="epidemic_threshold array shape"):
+            dict_to_propertysetex(raw)
+
+    def test_epidemic_threshold_wrong_length_array_rejected_at_validation(self):
+        """A wrong-length ``epidemic_threshold`` array set directly on the params is rejected by the validator.
+
+        Given a parameter set whose ``epidemic_threshold`` is replaced after
+        ingestion with a wrong-length ``np.ndarray`` (bypassing the ingestion
+        shape guard),
+        when ``validate_parameters`` runs,
+        then it raises an ``AssertionError`` naming the shape mismatch.
+
+        This is the belt-and-braces check that catches direct in-Python
+        mutations like ``params.epidemic_threshold = np.zeros(npatches - 1)``
+        which never go through ``dict_to_propertysetex``.
+        """
+        params = get_parameters(DEFAULT_PARAMS_JSON, do_validation=False)
+        npatches = len(params.location_name)
+        params.epidemic_threshold = np.zeros(npatches - 1, dtype=np.float32)
+
+        with pytest.raises(AssertionError, match="epidemic_threshold array shape"):
             validate_parameters(params)
 
 

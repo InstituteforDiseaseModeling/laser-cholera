@@ -467,8 +467,8 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
         ("mobility_omega", np.float32),
         ("mobility_gamma", np.float32),
         ("p", np.int32),
-        ("alpha_1", np.float32),
-        ("alpha_2", np.float32),
+        # alpha_1 and alpha_2 handled in a dedicated dual-mode branch below
+        # (scalar or `(num_nodes,)` array of float32).
         ("zeta_1", np.float32),
         ("zeta_2", np.float32),
         ("kappa", np.float32),
@@ -550,6 +550,26 @@ def dict_to_propertysetex(parameters: dict) -> PropertySetEx:
             f"epidemic_threshold must be a scalar or list of values, got {type(params.epidemic_threshold)}"
         )
         params.epidemic_threshold = np.asarray(params.epidemic_threshold, dtype=np.float32)
+        assert params.epidemic_threshold.shape == (num_nodes,), (
+            f"epidemic_threshold array shape {params.epidemic_threshold.shape} does not match (num_nodes,) = ({num_nodes},)"
+        )
+
+    # alpha_1: scalar or 1-D array of length num_nodes (float32). `np.power` in
+    # `humantohuman.py` broadcasts cleanly over both shapes.
+    if isinstance(params.alpha_1, Number):
+        params.alpha_1 = np.float32(params.alpha_1)
+    else:
+        assert isinstance(params.alpha_1, (list, np.ndarray)), f"alpha_1 must be a scalar or list of values, got {type(params.alpha_1)}"
+        params.alpha_1 = np.asarray(params.alpha_1, dtype=np.float32)
+        assert params.alpha_1.shape == (num_nodes,), f"alpha_1 array shape {params.alpha_1.shape} does not match (num_nodes,) = ({num_nodes},)"
+
+    # alpha_2: scalar or 1-D array of length num_nodes (float32).
+    if isinstance(params.alpha_2, Number):
+        params.alpha_2 = np.float32(params.alpha_2)
+    else:
+        assert isinstance(params.alpha_2, (list, np.ndarray)), f"alpha_2 must be a scalar or list of values, got {type(params.alpha_2)}"
+        params.alpha_2 = np.asarray(params.alpha_2, dtype=np.float32)
+        assert params.alpha_2.shape == (num_nodes,), f"alpha_2 array shape {params.alpha_2.shape} does not match (num_nodes,) = ({num_nodes},)"
 
     assert np.all((params.tau_i >= 0.0) & (params.tau_i <= 1.0)), "tau_i values must be in the range [0, 1]"
 
@@ -694,6 +714,9 @@ def validate_parameters(params: PropertySetEx) -> None:
     if isinstance(params.epidemic_threshold, (Number, np.number)):
         assert params.epidemic_threshold >= 0, f"epidemic_threshold {params.epidemic_threshold} must be >= 0"
     elif isinstance(params.epidemic_threshold, np.ndarray):
+        assert params.epidemic_threshold.shape == (npatches,), (
+            f"epidemic_threshold array shape {params.epidemic_threshold.shape} does not match (npatches,) = ({npatches},)"
+        )
         assert np.all(params.epidemic_threshold >= 0), f"epidemic_threshold values must be >= 0 ({params.epidemic_threshold.min()=})"
     else:
         raise RuntimeError(f"params.epidemic_threshold is of an unexpected type: {type(params.epidemic_threshold)}")
@@ -745,14 +768,32 @@ def validate_parameters(params: PropertySetEx) -> None:
     # tau_i must be between 0 (no emigration) and 1 (all emigration)
     assert np.all((params.tau_i >= 0.0) & (params.tau_i <= 1.0)), "tau_i values must be in the range [0, 1]"
 
-    # alpha_1 and alpha_2
-    # TODO - TBD
+    # alpha_1: scalar or `(npatches,)` array, must be in (0, 1] (strict > 0 — a
+    # value of 0 collapses the I-dependence to a constant). Shape was already
+    # asserted during ingestion in `dict_to_propertysetex`.
+    if isinstance(params.alpha_1, (Number, np.number)):
+        assert params.alpha_1 > 0.0, f"alpha_1 scalar {params.alpha_1} must be in (0, 1]"
+        assert params.alpha_1 <= 1.0, f"alpha_1 scalar {params.alpha_1} must be in (0, 1]"
+    elif isinstance(params.alpha_1, np.ndarray):
+        assert params.alpha_1.shape == (npatches,), f"alpha_1 array shape {params.alpha_1.shape} does not match (npatches,) = ({npatches},)"
+        assert np.all((params.alpha_1 > 0.0) & (params.alpha_1 <= 1.0)), (
+            f"alpha_1 array values must be in (0, 1] (got min={params.alpha_1.min()}, max={params.alpha_1.max()})"
+        )
+    else:
+        raise RuntimeError(f"params.alpha_1 is of an unexpected type: {type(params.alpha_1)}")
 
-    # alpha_1 must be above 0 (zero population mixing) and below 1 (full mass action), cannot equal zero
-    assert (params.alpha_1 > 0.0) & (params.alpha_1 <= 1.0), "alpha_1 value must be in the range [0, 1]"
-
-    # alpha_2 must be between 0 (full density dependence) and 1 (full frequency dependence)
-    assert (params.alpha_2 >= 0.0) & (params.alpha_2 <= 1.0), "alpha_1 value must be in the range [0, 1]"
+    # alpha_2: scalar or `(npatches,)` array, must be in [0, 1]. `alpha_2 = 1`
+    # gives frequency-dependent mixing, `alpha_2 = 0` gives density-dependent.
+    if isinstance(params.alpha_2, (Number, np.number)):
+        assert params.alpha_2 >= 0.0, f"alpha_2 scalar {params.alpha_2} must be in [0, 1]"
+        assert params.alpha_2 <= 1.0, f"alpha_2 scalar {params.alpha_2} must be in [0, 1]"
+    elif isinstance(params.alpha_2, np.ndarray):
+        assert params.alpha_2.shape == (npatches,), f"alpha_2 array shape {params.alpha_2.shape} does not match (npatches,) = ({npatches},)"
+        assert np.all((params.alpha_2 >= 0.0) & (params.alpha_2 <= 1.0)), (
+            f"alpha_2 array values must be in [0, 1] (got min={params.alpha_2.min()}, max={params.alpha_2.max()})"
+        )
+    else:
+        raise RuntimeError(f"params.alpha_2 is of an unexpected type: {type(params.alpha_2)}")
 
     # length of beta_j0_env must be equal to number of locations
     assert len(params.beta_j0_env) == npatches, (
