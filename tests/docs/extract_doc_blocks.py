@@ -135,8 +135,14 @@ def _dedent_body(indent: str, body: str) -> str:
 
 
 def _slug(path: Path) -> str:
+    # Use `as_posix()` (not `str()`) so the separator is always `/` on every
+    # platform. On Windows `str(rel)` returns `configurations\multi-admin`,
+    # which makes `.replace("/", "_")` a no-op and the resulting "slug" still
+    # contains a backslash — `out_dir / f"{slug}.py"` then resolves to a
+    # path inside a non-existent `configurations\` subdirectory and the
+    # write fails with `FileNotFoundError`.
     rel = path.relative_to(DOCS_DIR)
-    return str(rel.with_suffix("")).replace("/", "_")
+    return rel.with_suffix("").as_posix().replace("/", "_")
 
 
 def _is_doctest_block(body: str) -> bool:
