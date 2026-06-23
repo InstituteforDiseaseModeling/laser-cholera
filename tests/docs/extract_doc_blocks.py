@@ -272,7 +272,8 @@ def emit(out_dir: Path) -> dict[str, dict[str, object]]:
     # sentinel on line 1. Anything else stays.
     for stale in out_dir.glob("*.py"):
         try:
-            first_line = stale.open("r", encoding="utf-8").readline()
+            with stale.open("r", encoding="utf-8") as fh:
+                first_line = fh.readline()
         except OSError:
             continue
         if first_line.startswith(GENERATED_HEADER_SENTINEL):
@@ -339,7 +340,12 @@ def main() -> None:
     print(f"Pages scanned: {len(summary)}")
     print(f"Pages with runnable blocks: {pages_with_runnable}")
     print(f"Runnable Python blocks: {total_runnable}")
-    print(f"Skipped blocks (doctest + tagged): {total_skipped}")
+    # `skipped` counts the `<!-- doc-test:skip -->`-tagged blocks and the
+    # blocks dropped by the per-file `skip-all` / `extract-last` policy.
+    # Doctest blocks are NOT counted here — they go into `runnable` (with
+    # prompts stripped) so subsequent plain-python blocks on the same page
+    # can see their symbols.
+    print(f"Skipped blocks (policy / doc-test:skip tag): {total_skipped}")
     for rel, counts in sorted(summary.items()):
         if counts["runnable"] or counts["skipped"]:
             policy = counts.get("policy", "extract-all")

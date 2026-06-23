@@ -98,11 +98,10 @@ def test_doc_code_block_runs(script: Path) -> None:
     # subprocess env catches the case where someone tweaks the extractor
     # header in a way that drops the preamble).
     env = {**os.environ, "MPLBACKEND": "Agg"}
-    # 60 s per script. Generous enough that the heaviest doc example
-    # (5x20 fixture × full pipeline) finishes comfortably under it; small
-    # enough that a hung doc example fails CI in bounded time rather than
-    # stalling the runner indefinitely. The full harness today runs in
-    # ~30 s wall-clock across all 10 scripts.
+    # Per-script timeout. Big enough that the heaviest doc example
+    # (full pipeline against a non-trivial fixture) finishes comfortably,
+    # small enough that a hung doc example fails CI in bounded time rather
+    # than stalling the runner indefinitely.
     try:
         proc = subprocess.run(
             [sys.executable, str(script)],
