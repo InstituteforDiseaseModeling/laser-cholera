@@ -69,8 +69,9 @@ This guide shows how to override individual parameters without forking the bundl
 from laser.cholera.metapop.model import run_model
 
 # Two scalar overrides applied at load time; `run_model` forwards `**kwargs`
-# to `get_parameters` as `mods`. For an array-typed field (e.g. `S_j_initial`)
-# wrap the value with `np.array(..., dtype=...)` per the warning above.
+# to `get_parameters` as `mods`. For an array-typed field (e.g.
+# `S_j_initial`) wrap the value with `numpy.array(..., dtype=...)` per the
+# warning above — otherwise the list survives untyped into the validator.
 model = run_model(None, seed=20240930, phi_1=0.65)
 ```
 

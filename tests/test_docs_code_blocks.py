@@ -64,6 +64,18 @@ def _scripts() -> list[Path]:
 def pytest_generate_tests(metafunc):
     if "script" in metafunc.fixturenames:
         scripts = _scripts()
+        if not scripts:
+            # An empty parametrize list silently "passes" — pytest collects
+            # zero items and the suite reports green without actually
+            # verifying anything. Fail loudly instead so a regression in
+            # the extractor (or every page being skip-all'd) surfaces
+            # immediately rather than degrading coverage silently.
+            raise RuntimeError(
+                f"extract_doc_blocks.py produced no runnable scripts under {SCRIPTS_DIR}. "
+                "Either every doc page is tagged skip-all in EXTRACTION_POLICY, the "
+                "FENCE_RE regex stopped matching, or the docs subtree is empty. "
+                "Investigate before declaring the doc-code-blocks suite green."
+            )
         metafunc.parametrize("script", scripts, ids=[s.stem for s in scripts])
 
 
@@ -86,13 +98,26 @@ def test_doc_code_block_runs(script: Path) -> None:
     # subprocess env catches the case where someone tweaks the extractor
     # header in a way that drops the preamble).
     env = {**os.environ, "MPLBACKEND": "Agg"}
-    proc = subprocess.run(
-        [sys.executable, str(script)],
-        cwd=str(REPO_ROOT),
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    # 60 s per script. Generous enough that the heaviest doc example
+    # (5x20 fixture × full pipeline) finishes comfortably under it; small
+    # enough that a hung doc example fails CI in bounded time rather than
+    # stalling the runner indefinitely. The full harness today runs in
+    # ~30 s wall-clock across all 10 scripts.
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(script)],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=60,
+        )
+    except subprocess.TimeoutExpired as exc:
+        pytest.fail(
+            f"{script.name} did not finish within {exc.timeout} s — likely an infinite loop in a doc example.\n"
+            f"--- stdout (partial) ---\n{exc.stdout!r}\n--- stderr (partial) ---\n{exc.stderr!r}",
+            pytrace=False,
+        )
     if proc.returncode != 0:
         pytest.fail(
             f"{script.name} exited with code {proc.returncode}.\n--- stdout ---\n{proc.stdout}\n--- stderr ---\n{proc.stderr}",
