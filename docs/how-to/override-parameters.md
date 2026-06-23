@@ -66,23 +66,12 @@ This guide shows how to override individual parameters without forking the bundl
 ## Full example
 
 ```python
-from datetime import datetime
-import numpy as np
+from laser.cholera.metapop.model import run_model
 
-from laser.cholera.metapop.model import Model
-from laser.cholera.metapop.params import get_parameters
-from laser.cholera.utils import sim_duration
-
-short_run = sim_duration(datetime(2024, 1, 1), datetime(2024, 1, 31))
-params = get_parameters(
-    mods={
-        "seed": 20240930,
-        "phi_1": 0.65,
-        "S_j_initial": np.array([99990], dtype=np.int32),
-        **short_run,
-    }
-)
-model = Model(params)
+# Two scalar overrides applied at load time; `run_model` forwards `**kwargs`
+# to `get_parameters` as `mods`. For an array-typed field (e.g. `S_j_initial`)
+# wrap the value with `np.array(..., dtype=...)` per the warning above.
+model = run_model(None, seed=20240930, phi_1=0.65)
 ```
 
 And the equivalent CLI invocation, with visualisations written to a PDF:

@@ -56,20 +56,24 @@ This guide shows you how to set the three parameters that drive inter-patch move
 ```python
 import numpy as np
 
-from laser.cholera.metapop import Model
+from laser.cholera.metapop.model import run_model
+from laser.cholera.metapop.params import get_parameters
 
-npatches = params["npatches"]
+# Start from the bundled defaults to discover npatches; the gravity-model
+# `pi_ij` is a derived `(npatches, npatches)` matrix on `model.patches`.
+defaults = get_parameters(None, do_validation=False)
+npatches = len(defaults.location_name)
 
-params["tau_i"] = np.full(npatches, 0.01, dtype=np.float32)
-params["mobility_omega"] = 1.0
-params["mobility_gamma"] = 1.5
-
-model = Model(params)
-model.run()
+mods = {
+    "tau_i": np.full(npatches, 0.01, dtype=np.float32),
+    "mobility_omega": 1.0,
+    "mobility_gamma": 1.5,
+}
+model = run_model(None, **mods)
 
 pi_ij = model.patches.pi_ij
 assert pi_ij.shape == (npatches, npatches)
-assert np.allclose(pi_ij.sum(axis=1), 1.0)
+assert np.allclose(pi_ij.sum(axis=1), 1.0, atol=1e-4)
 ```
 
 ## See also

@@ -42,11 +42,11 @@ From Python:
 
 ```python
 from pathlib import Path
-from laser.cholera.metapop import run_model
-from laser.cholera.metapop.params import get_parameters
 
-params = get_parameters(paramsource=Path("docs/configurations/code/multi-admin.json.gz"))
-results = run_model(params)
+from laser.cholera.metapop.model import run_model
+
+params_path = Path("docs/configurations/code/multi-admin.json.gz")
+model = run_model(params_path, seed=20240930)
 ```
 
 `get_parameters` transparently decompresses the gzipped JSON; the `params` object exposes `params.nticks == 1827` and `len(params.location_name) == 157`.

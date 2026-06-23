@@ -81,12 +81,15 @@ The dynamic consequence: with `["S"]`, every delivered dose has a chance of movi
 ```python
 import numpy as np
 
-from laser.cholera.metapop.model import Model
+from laser.cholera.metapop.model import run_model
 from laser.cholera.metapop.params import get_parameters
 
-params = get_parameters()
-nticks = params.nticks
-npatches = len(params.location_name)
+# Use `run_model` for the full default component pipeline; it forwards kwargs
+# as `mods` to `get_parameters`, so any per-tick array we build here lands on
+# the params set before validation runs.
+defaults = get_parameters(None, do_validation=False)
+nticks = defaults.nticks
+npatches = len(defaults.location_name)
 
 nu_1_jt = np.zeros((nticks, npatches), dtype=np.float32)
 nu_1_jt[30:, :] = 50.0
@@ -94,19 +97,16 @@ nu_1_jt[30:, :] = 50.0
 nu_2_jt = np.zeros((nticks, npatches), dtype=np.float32)
 nu_2_jt[60:, :] = 50.0
 
-mods = {
-    "nu_1_jt": nu_1_jt,
-    "nu_2_jt": nu_2_jt,
-    "phi_1": 0.75,
-    "phi_2": 0.85,
-    "omega_1": np.log(2) / (5 * 365.25),
-    "omega_2": np.log(2) / (5 * 365.25),
-    "nu_jt_sources": ["S", "E", "Isym", "Iasym", "R"],
-}
-
-params = get_parameters(overrides=mods)
-model = Model(params)
-model.run()
+model = run_model(
+    None,
+    nu_1_jt=nu_1_jt,
+    nu_2_jt=nu_2_jt,
+    phi_1=0.75,
+    phi_2=0.85,
+    omega_1=float(np.log(2) / (5 * 365.25)),
+    omega_2=float(np.log(2) / (5 * 365.25)),
+    nu_jt_sources=["S", "E", "Isym", "Iasym", "R"],
+)
 ```
 
 ## See also
