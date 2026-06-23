@@ -586,7 +586,7 @@ def compute_wis_parametric_row(
     mae_term = 0.0
     if has_med:
         q_med = qfun(0.5)
-        mae_term = 0.5 * float(np.sum(np.abs(y - q_med) * w_use) / np.sum(w_use))
+        mae_term = 0.5 * float(np.nansum(np.abs(y - q_med) * w_use) / np.sum(w_use))
 
     lowers = probs_sorted[probs_sorted < 0.5]
     uppers = probs_sorted[probs_sorted > 0.5]
@@ -609,7 +609,7 @@ def compute_wis_parametric_row(
         width = q_u - q_l
         under = np.maximum(0.0, q_l - y) * (2.0 / alpha)
         over = np.maximum(0.0, y - q_u) * (2.0 / alpha)
-        contrib = float(np.sum((width + under + over) * w_use) / np.sum(w_use))
+        contrib = float(np.nansum((width + under + over) * w_use) / np.sum(w_use))
         sum_is += (alpha / 2.0) * contrib
 
     return float((mae_term + sum_is) / (k_pairs + 0.5))
