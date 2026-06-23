@@ -98,6 +98,57 @@ class TestComputeWisParametricRow:
         # With 0.5 coefficient: WIS = (0.5 * mae) / 0.5 = mae
         assert abs(wis - mae) <= 0.01
 
+    def test_wis_returns_finite_for_partial_na_input(self):
+        """A single non-finite observation does not poison the whole row (issue #91).
+
+        The function zeroes the per-timestep weight at any non-finite cell, but the
+        numerators must drop that cell entirely (R's `na.rm = TRUE`). If they instead
+        form `NaN * 0.0` the IEEE result is `NaN`, which poisons `np.sum` and returns
+        `NaN` for any row with a reporting gap — i.e. effectively every real series.
+
+        Given y with one NaN cell, finite est, uniform weights and k_use=10,
+        when compute_wis_parametric_row is called,
+        then wis should be finite and non-negative (not NaN).
+
+        Failure implies the numerators use `np.sum` rather than `np.nansum`, so a
+        single gap flips a valid score to NaN (the local-vs-Dask WIS divergence).
+        """
+        y = np.array([0.0, 3.0, np.nan, 5.0, 2.0])
+        est = np.array([1.0, 2.5, 4.0, 4.5, 2.0])
+        w = np.ones_like(y)
+        probs = np.array([0.025, 0.25, 0.5, 0.75, 0.975])
+        wis = compute_wis_parametric_row(y, est, w, probs, k_use=10.0)
+        assert np.isfinite(wis)
+        assert wis >= 0
+
+    def test_wis_partial_na_matches_dropped_cell(self):
+        """`na.rm` semantics: a gap cell contributes nothing to the score.
+
+        Because the gap cell carries zero weight, its numerator and denominator
+        contributions are both zero, so scoring the full row with a NaN at index i
+        must equal scoring the row with cell i removed entirely.
+
+        Given a 5-cell row with a NaN at index 2,
+        when compute_wis_parametric_row is called on the full row and on the row with
+            that cell (and its weight) removed,
+        then the two WIS values should be equal.
+
+        Failure implies the zeroed gap cell still influences the weighted average,
+        i.e. the numerator/denominator handling of missing data is inconsistent.
+        """
+        probs = np.array([0.025, 0.25, 0.5, 0.75, 0.975])
+        y_full = np.array([0.0, 3.0, np.nan, 5.0, 2.0])
+        est_full = np.array([1.0, 2.5, 4.0, 4.5, 2.0])
+        w_full = np.ones_like(y_full)
+        keep = ~np.isnan(y_full)
+
+        wis_full = compute_wis_parametric_row(y_full, est_full, w_full, probs, k_use=10.0)
+        wis_dropped = compute_wis_parametric_row(
+            y_full[keep], est_full[keep], w_full[keep], probs, k_use=10.0
+        )
+        assert np.isfinite(wis_full)
+        assert abs(wis_full - wis_dropped) <= 1e-9
+
     def test_wis_works_with_non_standard_quantiles(self):
         """WIS is finite for non-standard quantile levels.
 
