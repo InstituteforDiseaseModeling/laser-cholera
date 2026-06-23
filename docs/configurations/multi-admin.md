@@ -49,7 +49,7 @@ params_path = Path("docs/configurations/code/multi-admin.json.gz")
 model = run_model(params_path, seed=20240930)
 ```
 
-`get_parameters` transparently decompresses the gzipped JSON; the `params` object exposes `params.nticks == 1827` and `len(params.location_name) == 157`.
+`get_parameters` transparently decompresses the gzipped JSON; the loaded parameter set on `model.params` exposes `model.params.nticks == 1827` and `len(model.params.location_name) == 157`.
 
 To regenerate the extract from scratch (different country, different admin level, or a refreshed pull) re-run `laser-init` with the desired arguments:
 

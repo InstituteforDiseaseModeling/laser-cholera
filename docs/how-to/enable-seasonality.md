@@ -71,11 +71,10 @@ The harmonic bracket collapses to `1.0` and the per-tick transmission rate becom
 
 ```python
 import numpy as np
+
 from laser.cholera.metapop.params import get_parameters
 
 # Start from the bundled defaults to discover npatches.
-import numpy as np
-
 defaults = get_parameters(None, do_validation=False)
 npatches = len(defaults.location_name)
 

@@ -1,25 +1,40 @@
 """Walk docs/**/*.md, extract Python code blocks, and emit a per-page script.
 
-Two block kinds are extracted:
-
-- **Doctest blocks** — fenced ``python`` or ``pycon`` blocks whose first
-  non-blank line starts with ``>>> ``. These are already executed by the
-  ``[testenv:doctest-docs]`` tox env via ``pytest --doctest-glob`` and are
-  intentionally skipped by this extractor — there is no value in running them
-  twice.
+Block kinds and how they are handled:
 
 - **Plain-script blocks** — fenced ``python`` blocks without ``>>>`` prompts.
-  These are illustrative-but-runnable Python (parameter overrides, model
-  builds, tutorial walk-throughs). They get concatenated, in document order,
-  into one ``tests/docs/scripts/<slug>.py`` per source file.
+  These are the canonical "runnable" content: parameter overrides, model
+  builds, tutorial walk-throughs. They are concatenated, in document order,
+  into one ``tests/docs/scripts/<slug>.py`` per source page.
 
-A few blocks are demonstrative-only (they show partial state, intentionally
-broken code, or shell sessions like ``$ metapop ...``) and are tagged via a
-preceding ``<!-- doc-test:skip -->`` comment in the markdown. The extractor
-honours that tag and emits the block as a Python comment in the output script
-so the doctest harness still sees it for context but doesn't try to run it.
+- **Doctest blocks** — fenced ``python`` / ``pycon`` blocks whose first
+  non-blank line starts with ``>>>``. These ARE included in the runnable
+  concatenation, with their ``>>> `` / ``... `` prompts stripped, so later
+  plain-script blocks on the same page can reference symbols the doctest
+  block introduces (e.g. a tutorial whose Step 1 imports
+  ``get_parameters`` in a pycon block and whose Step 2 uses that import in
+  a plain-python block). Their expected-output lines are preserved as
+  ``# expected:`` comments rather than dropped, so the doctest contract is
+  visible in the extracted script. These blocks are ALSO run separately by
+  the ``[testenv:doctest-docs]`` tox env via ``pytest --doctest-glob`` —
+  the duplicate cost is small and the alternative (extracting only the
+  plain blocks) breaks any page where a doctest block carries the imports.
 
-Bash / R / shell blocks are also skipped.
+- **``<!-- doc-test:skip -->`` blocks** — fenced ``python`` blocks
+  preceded by that HTML comment in the markdown. They are dropped from
+  the runnable concatenation entirely (counted in ``skipped`` for
+  reporting). Use this when a block is intentionally a placeholder
+  (e.g. ``/path/to/...``), demonstrates partial state, or shows an
+  example that cannot be run standalone.
+
+- **Other fence languages** — ``bash``, ``r``, ``shell``, ``json``, etc.
+  are silently ignored.
+
+Per-page extraction policy is controlled by the ``EXTRACTION_POLICY``
+mapping below: ``skip-all`` drops every block (for narrative pages with
+illustrative-only excerpts) and ``extract-last`` keeps only the final
+runnable block (for How-to pages whose canonical "Full example" lives at
+the bottom).
 
 Usage:
 
@@ -187,10 +202,19 @@ def _preceding_skip_tag(text: str, start: int) -> bool:
 def extract(md_path: Path) -> tuple[list[str], list[str]]:
     """Return ``(runnable_blocks, skipped_blocks)`` for ``md_path``.
 
-    ``runnable_blocks`` are plain ``python`` fenced blocks without ``>>>``
-    prompts and without a preceding ``doc-test:skip`` tag.
-    ``skipped_blocks`` are the bodies that were intentionally dropped, so
-    callers can report on coverage.
+    ``runnable_blocks`` are the per-block bodies that will be concatenated
+    into the generated script. This includes ordinary plain ``python``
+    blocks AND doctest-style blocks (``pycon`` or ``python`` whose first
+    non-blank line starts with ``>>>``) — the doctest bodies are passed
+    through :func:`_strip_doctest_prompts` first so the resulting script
+    is plain executable Python with expected-output lines preserved as
+    ``# expected:`` comments. Including the doctest blocks here is what
+    lets a later plain-python block see symbols (imports, variables) the
+    doctest block introduced.
+
+    ``skipped_blocks`` are the bodies that were intentionally dropped via
+    a preceding ``<!-- doc-test:skip -->`` HTML comment. Callers use the
+    count for reporting.
     """
     text = md_path.read_text(encoding="utf-8")
     runnable: list[str] = []
@@ -218,12 +242,36 @@ def extract(md_path: Path) -> tuple[list[str], list[str]]:
     return runnable, skipped
 
 
-def emit(out_dir: Path) -> dict[str, dict[str, int]]:
+GENERATED_HEADER_SENTINEL = '"""Auto-generated runnable concatenation of Python blocks in'
+
+
+def emit(out_dir: Path) -> dict[str, dict[str, object]]:
+    """Generate the per-page scripts under ``out_dir`` and return a coverage summary.
+
+    Returns a ``dict[rel_md_path, {"runnable": int, "skipped": int,
+    "policy": str}]`` — note ``policy`` is a ``str`` (one of
+    ``extract-all`` / ``extract-last`` / ``skip-all``), hence the
+    ``dict[str, object]`` value type rather than the tighter
+    ``dict[str, int]``.
+
+    Cleanup is conservative — only files whose first line matches the
+    extractor's docstring sentinel are removed. This guards against the
+    case where a user runs ``--out`` against a directory that contains
+    unrelated Python files; deleting only the extractor's own output is
+    safer than blanket ``*.py`` removal.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
-    # Clean previous runs so removed source blocks don't leave stale scripts.
+    # Clean previous runs so removed source blocks don't leave stale scripts —
+    # but only files that we ourselves emitted, identified by the docstring
+    # sentinel on line 1. Anything else stays.
     for stale in out_dir.glob("*.py"):
-        stale.unlink()
-    summary: dict[str, dict[str, int]] = {}
+        try:
+            first_line = stale.open("r", encoding="utf-8").readline()
+        except OSError:
+            continue
+        if first_line.startswith(GENERATED_HEADER_SENTINEL):
+            stale.unlink()
+    summary: dict[str, dict[str, object]] = {}
     for md_path in sorted(DOCS_DIR.rglob("*.md")):
         rel = md_path.relative_to(DOCS_DIR).as_posix()
         if any(rel.startswith(skip) for skip in SKIP_RELATIVE_DIRS):
@@ -242,14 +290,16 @@ def emit(out_dir: Path) -> dict[str, dict[str, int]]:
         slug = _slug(md_path)
         script = out_dir / f"{slug}.py"
         header = [
-            '"""Auto-generated runnable concatenation of Python blocks in',
+            f"{GENERATED_HEADER_SENTINEL}",
             f"docs/{rel}.",
             "",
             "Regenerated by tests/docs/extract_doc_blocks.py — do not hand-edit.",
             "",
             f"Blocks extracted: {len(runnable)} runnable, {len(skipped)} skipped",
-            "(doctest blocks are excluded because the doctest-docs tox env",
-            "already runs them via `pytest --doctest-glob`).",
+            "(`runnable` includes plain `python` blocks AND `pycon` / `>>>` doctest",
+            "blocks with prompts stripped; the latter also run independently via",
+            "the `doctest-docs` tox env's `pytest --doctest-glob`. `skipped` are",
+            "the `<!-- doc-test:skip -->`-tagged blocks that were dropped.)",
             '"""',
             "",
             "from __future__ import annotations",
