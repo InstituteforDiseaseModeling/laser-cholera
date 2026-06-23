@@ -41,10 +41,10 @@ Equivalently, from Python:
 ```python
 from pathlib import Path
 
-from laser.cholera.metapop import run_model
+from laser.cholera.metapop.model import run_model
 
 params_path = Path("docs/configurations/code/single-location.json")
-run_model(paramsource=params_path, seed=20240930)
+run_model(params_path, seed=20240930)
 ```
 
 For comparison, the SSA baseline (the bundled `default_parameters.json`) runs without a `--params` flag:

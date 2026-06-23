@@ -41,9 +41,9 @@ metapop --seed 20240930
 No `--params` flag is required because `get_parameters` falls back to the bundled `default_parameters.json` when no `paramsource` is supplied. Equivalently, from Python:
 
 ```python
-from laser.cholera.metapop import run_model
+from laser.cholera.metapop.model import run_model
 
-run_model(seed=20240930)
+run_model(None, seed=20240930)
 ```
 
 To run the same configuration but pointing explicitly at the JSON on disk (useful when you want to diff your `--over` overrides against the baseline):
@@ -55,10 +55,10 @@ metapop --params src/laser/cholera/metapop/data/default_parameters.json --seed 2
 ```python
 from pathlib import Path
 
-from laser.cholera.metapop import run_model
+from laser.cholera.metapop.model import run_model
 
 params_path = Path("src/laser/cholera/metapop/data/default_parameters.json")
-run_model(paramsource=params_path, seed=20240930)
+run_model(params_path, seed=20240930)
 ```
 
 ## What to expect
