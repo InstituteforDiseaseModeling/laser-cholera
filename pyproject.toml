@@ -73,7 +73,7 @@ source-include = [
     ]
 
 [tool.ruff]
-extend-exclude = ["static", "ci/templates", "misc"]
+extend-exclude = ["static", "ci/templates", "misc", "tests/docs/scripts"]
 line-length = 150
 src = ["src", "tests"]
 target-version = "py310"
