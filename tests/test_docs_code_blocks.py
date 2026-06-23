@@ -95,7 +95,6 @@ def test_doc_code_block_runs(script: Path) -> None:
     )
     if proc.returncode != 0:
         pytest.fail(
-            f"{script.name} exited with code {proc.returncode}.\n"
-            f"--- stdout ---\n{proc.stdout}\n--- stderr ---\n{proc.stderr}",
+            f"{script.name} exited with code {proc.returncode}.\n--- stdout ---\n{proc.stdout}\n--- stderr ---\n{proc.stderr}",
             pytrace=False,
         )

@@ -41,9 +41,15 @@ DEFAULT_OUT = REPO_ROOT / "tests" / "docs" / "scripts"
 
 # Skip the autogen reference subtree; it's generated from docstrings, not
 # hand-authored doc prose with code examples.
-SKIP_RELATIVE_DIRS = ("reference/metapop", "reference/calc_log_likelihood_distributions.md",
-                      "reference/calc_model_likelihood.md", "reference/core.md",
-                      "reference/index.md", "reference/iso_codes.md", "reference/utils.md")
+SKIP_RELATIVE_DIRS = (
+    "reference/metapop",
+    "reference/calc_log_likelihood_distributions.md",
+    "reference/calc_model_likelihood.md",
+    "reference/core.md",
+    "reference/index.md",
+    "reference/iso_codes.md",
+    "reference/utils.md",
+)
 
 # Per-file extraction policy. Default is `extract-all` — every Python block on
 # the page is concatenated, in order, into one runnable script.
