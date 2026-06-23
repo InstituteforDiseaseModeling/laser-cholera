@@ -143,9 +143,7 @@ class TestComputeWisParametricRow:
         keep = ~np.isnan(y_full)
 
         wis_full = compute_wis_parametric_row(y_full, est_full, w_full, probs, k_use=10.0)
-        wis_dropped = compute_wis_parametric_row(
-            y_full[keep], est_full[keep], w_full[keep], probs, k_use=10.0
-        )
+        wis_dropped = compute_wis_parametric_row(y_full[keep], est_full[keep], w_full[keep], probs, k_use=10.0)
         assert np.isfinite(wis_full)
         assert abs(wis_full - wis_dropped) <= 1e-9
 
